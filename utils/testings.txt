@@ -1,0 +1,7 @@
+4 + (let x = 3 in x + 7)
+
+let x = let y = 3 in 4 in 5
+
+(let x = 3 in () => x)()
+
+while (4 < 3) (4)
