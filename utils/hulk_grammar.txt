@@ -1,6 +1,11 @@
 statement -> func_def 
 	| type_def
+  | const_def
 	| expression
+
+-----------------------------------------------------------------
+
+const_def -> CONSTANT assignment
 
 -----------------------------------------------------------------
 
@@ -16,6 +21,7 @@ param -> ID COLON ID
 
 
 -----------------------------------------------------------------
+
 type_def -> TYPE ID (inherits ID)? type_def_body
 
 type_def_body -> LBRAC type_def_item RBRAC
@@ -26,7 +32,7 @@ tpye_def_item -> (assignment | func_assign)
 
 expression -> dassignment
 
-dassignment -> ID := expression
+dassignment -> ID COLON_EQ expression
 dassignment -> logic_or
 
 logic_or -> logic_or OR logic_and
@@ -35,7 +41,7 @@ logic_or -> logic_and
 logic_and -> logic_and AND equality
 logic_and -> equality
 
-equality ->  comparison ( EQ | NEQ) comparison
+equality ->  comparison (EQ | NEQ) comparison
 equality ->  comparison
 
 // ver si esto asocia de alguna manera
@@ -63,28 +69,33 @@ atom -> ID
 	| let_in_exp
 	| if_else_exp
 	| while_exp
+  | for_exp
 	| block
 	| group
 
 -----------------------------------------------------------------
 
-??
-while_exp -> WHILE LPAREN expression RPAREN expression
+boolean -> TRUE | FALSE
 
-block -> LBRACE (expression SEMICOLON )* RBRACE
+call -> ID LPAREN arg_list RPAREN
 
 let_in_exp -> LET assignment_list IN expression
 
 if_else_exp -> IF LPAREN expression RPAREN (ELIF LPAREN expression RPAREN expression)* ELSE expression 
 
-call -> ID LPAREN arg_list RPAREN
+while_exp -> WHILE LPAREN expression RPAREN expression
+
+for_exp -> FOR LPAREN expression RPAREN expression
+
+block -> LBRACE (expression SEMICOLON )* RBRACE
+
+group -> LPAREN expression RPAREN
 
 arg_list -> expression (, expression)*
+arg_list -> EMPTY
 
 assignment_list -> assignment (, assignment)*
 
 assignment -> ID EQUAL expression
 
-group -> LPAREN expression RPAREN
 
-boolean -> TRUE | FALSE
