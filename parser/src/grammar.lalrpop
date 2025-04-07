@@ -1,0 +1,133 @@
+use crate::ast;
+
+grammar;
+
+pub Expression: ast::Expression = {
+    DestructiveAssignment,
+    Addition => {
+        ast::Expression::new_addition(<>)
+    },
+}
+
+DestructiveAssignment: ast::Expression = {
+    <id:Identifier> <o:ColonEqualOperator> <e:Expression>
+        => ast::Expression::new_destructive_assignment(id, o, e),
+}
+
+ColonEqualOperator: ast::Operator = {
+    <s: @L> ":" <e: @R>
+        => ast::Operator::ColonEqual(ast::TokenPosition::new(s, e)),
+}
+
+pub Addition: ast::Addition = {
+    <x:Addition> <o:PlusMinusOperator> <y:Term>
+        => ast::Addition::new_binary_op(x, o, y),
+    <x:Term>
+        => ast::Addition::new_term(x),
+}
+
+PlusMinusOperator: ast::Operator = {
+    <s: @L> "+" <e: @R>
+        => ast::Operator::Plus(ast::TokenPosition::new(s, e)),
+    <s: @L> "-" <e: @R>
+        => ast::Operator::Minus(ast::TokenPosition::new(s, e)),
+}
+
+pub Term: ast::Term = {
+    <x:Term> <o:MultiplicationOperator> <y:Factor>
+        => ast::Term::new_binary_op(x, o, y),
+    <x:Factor>
+        => ast::Term::new_factor(x),
+}
+
+MultiplicationOperator: ast::Operator = {
+    <s: @L> "*" <e: @R>
+        => ast::Operator::Times(ast::TokenPosition::new(s, e)),
+    <s: @L> "/" <e: @R>
+        => ast::Operator::Divide(ast::TokenPosition::new(s, e)),
+    <s: @L> "%" <e: @R>
+        => ast::Operator::Modulo(ast::TokenPosition::new(s, e)),
+}
+
+pub Factor: ast::Factor = {
+    <x:Atom>
+        => ast::Factor::new_atom(x),
+}
+
+pub Atom: ast::Atom = {
+    <n:NumberLiteral> => 
+        ast::Atom::NumberLiteral(n),
+    <i:Identifier> => 
+        ast::Atom::Identifier(i),
+    UnaryOperation
+}
+
+Assignment: ast::Assignment = {
+    <id:Identifier> <o:EqualOperator> <e:Expression>
+        => ast::Assignment::new(id, o, e),
+}
+
+EqualOperator: ast::Operator = {
+    <s: @L> "=" <e: @R>
+        => ast::Operator::Equal(ast::TokenPosition::new(s, e)),
+}
+
+AssignmentList: Vec<ast::Assignment> = {
+    <h:AssignmentList> "," <t:Assignment>
+        => {
+            let mut h = h;
+            h.push(t);
+            h
+        },
+    <t:Assignment> 
+        => {
+            let mut v = Vec::new();
+            v.push(t);
+            v
+        },
+}
+
+LetKeyword: ast::Keyword = {
+    <s: @L> "let" <e: @R>
+        => ast::Keyword::Let(ast::TokenPosition::new(s, e)),
+}
+
+InKeyword: ast::Keyword = {
+    <s: @L> "in" <e: @R>
+        => ast::Keyword::In(ast::TokenPosition::new(s, e)),
+}
+
+IfKeyword: ast::Keyword = {
+    <s: @L> "if" <e: @R>
+        => ast::Keyword::If(ast::TokenPosition::new(s, e)),
+}
+
+ElseKeyword: ast::Keyword = {
+    <s: @L> "else" <e: @R>
+        => ast::Keyword::Else(ast::TokenPosition::new(s, e)),
+}
+
+ElifKeyword: ast::Keyword = {
+    <s: @L> "elif" <e: @R>
+        => ast::Keyword::Elif(ast::TokenPosition::new(s, e)),
+}
+
+PrintKeyword: ast::Keyword = {
+    <s: @L> "print" <e: @R>
+        => ast::Keyword::Print(ast::TokenPosition::new(s, e)),
+}
+
+Identifier: ast::Identifier = {
+    <s: @L> <i:r"[A-Za-z][A-Za-z_0-9]*"> <e: @R>
+        => ast::Identifier::new(s, e, i),
+}
+
+UnaryOperation: ast::Atom = {
+     <o:PlusMinusOperator> <x:Atom>
+        => ast::Atom::new_unary_op(o, x),
+}
+
+NumberLiteral: ast::NumberLiteral = {
+    <s: @L> <n:r"[0-9]+(\.[0-9]+)?"> <e: @R>
+        => ast::NumberLiteral::new(s, e, n),
+}

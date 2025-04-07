@@ -1,0 +1,35 @@
+program -> (expression SEMICOLON)*
+
+expression -> dassignment
+
+dassignment -> ID COLON_EQ expression
+dassignment -> term
+
+term -> term (MINUS | PLUS) factor
+term -> atom
+
+atom -> ID
+	| NUMBER
+	| let_in_exp
+	| if_else_exp
+	| while_exp
+	| block
+	| print
+	| group
+
+print -> PRINT group
+
+let_in_exp -> LET assignment_list IN expression
+
+if_else_exp -> IF LPAREN expression RPAREN (ELIF LPAREN expression RPAREN expression)* ELSE expression
+
+while_exp -> WHILE LPAREN expression RPAREN expression
+
+block -> LBRACE (expression SEMICOLON)* RBRACE
+
+group -> LPAREN expression RPAREN
+
+assignment_list -> assignment (, assignment)*
+
+assignment -> ID EQUAL expression
+

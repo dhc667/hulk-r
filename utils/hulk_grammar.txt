@@ -1,7 +1,9 @@
+// TODO: Add semicolon \n option
+
 statement -> func_def 
 	| type_def
-  | const_def
-	| expression
+	| const_def
+	| expression SEMICOLON
 
 -----------------------------------------------------------------
 
@@ -11,14 +13,13 @@ const_def -> CONSTANT assignment
 
 func_def -> FUNCTION func_assign
 
-func_assign -> ID LPAREN param_list? RPAREN func_body
+func_assign -> ID LPAREN param_list? RPAREN COLON ID func_body
 
 func_body -> block
-func_body -> ARROW expression
+func_body -> ARROW expression SEMICOLON
 
 param_list -> param (, param)* 
 param -> ID COLON ID
-
 
 -----------------------------------------------------------------
 
@@ -29,6 +30,9 @@ type_def_body -> LBRAC type_def_item RBRAC
 tpye_def_item -> (assignment | func_assign)
 
 -----------------------------------------------------------------
+
+emptyable_exp -> expression
+emptyable_exp -> EMPTY
 
 expression -> dassignment
 
@@ -69,7 +73,7 @@ atom -> ID
 	| let_in_exp
 	| if_else_exp
 	| while_exp
-  | for_exp
+	| for_exp
 	| block
 	| group
 
@@ -83,11 +87,11 @@ let_in_exp -> LET assignment_list IN expression
 
 if_else_exp -> IF LPAREN expression RPAREN (ELIF LPAREN expression RPAREN expression)* ELSE expression 
 
-while_exp -> WHILE LPAREN expression RPAREN expression
+while_exp -> WHILE LPAREN expression RPAREN expression (ELSE expression)?
 
-for_exp -> FOR LPAREN expression RPAREN expression
+for_exp -> FOR LPAREN expression RPAREN expression (ELSE expression)?
 
-block -> LBRACE (expression SEMICOLON )* RBRACE
+block -> LBRACE (emptyable_exp SEMICOLON)* RBRACE
 
 group -> LPAREN expression RPAREN
 
@@ -97,5 +101,3 @@ arg_list -> EMPTY
 assignment_list -> assignment (, assignment)*
 
 assignment -> ID EQUAL expression
-
-
