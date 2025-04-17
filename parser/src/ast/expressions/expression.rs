@@ -1,5 +1,5 @@
-use super::*;
 use super::super::atoms::Atom;
+use super::*;
 use crate::tokens::*;
 
 pub enum Expression {

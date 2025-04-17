@@ -1,5 +1,5 @@
-use crate::tokens::*;
 use super::Expression;
+use crate::tokens::*;
 
 pub struct DestructiveAssignment {
     pub identifier: Identifier,

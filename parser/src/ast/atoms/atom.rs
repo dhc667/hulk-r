@@ -1,15 +1,15 @@
-use crate::tokens::*;
+use super::super::*;
 use super::block::ExpressionList;
 use super::let_in::Assignment;
 use super::*;
-use super::super::*;
+use crate::tokens::*;
 
 pub enum Atom {
-    LetExpression(LetExpression),
-    IfExpression(IfExpression),
-    GroupedExpression(Box<Expression>),
-    PrintExpression(PrintExpression),
-    WhileExpression(WhileExpression),
+    LetIn(LetIn),
+    IfElse(IfElse),
+    Group(Box<Expression>),
+    Print(Print),
+    While(While),
     Block(Box<Block>),
 
     NumberLiteral(NumberLiteral),
@@ -43,11 +43,11 @@ impl Atom {
     }
 
     pub fn new_grouped_expression(expression: Expression) -> Self {
-        Atom::GroupedExpression(Box::new(expression))
+        Atom::Group(Box::new(expression))
     }
 
     pub fn as_grouped_expression(&self) -> Option<&Expression> {
-        if let Atom::GroupedExpression(expression) = self {
+        if let Atom::Group(expression) = self {
             Some(expression)
         } else {
             None
@@ -60,16 +60,11 @@ impl Atom {
         in_token: Keyword,
         expression: Atom,
     ) -> Self {
-        Atom::LetExpression(LetExpression::new(
-            let_token,
-            assignments,
-            in_token,
-            expression,
-        ))
+        Atom::LetIn(LetIn::new(let_token, assignments, in_token, expression))
     }
 
-    pub fn as_let_expression(&self) -> Option<&LetExpression> {
-        if let Atom::LetExpression(let_expression) = self {
+    pub fn as_let_expression(&self) -> Option<&LetIn> {
+        if let Atom::LetIn(let_expression) = self {
             Some(let_expression)
         } else {
             None
@@ -95,7 +90,7 @@ impl Atom {
         else_token: Keyword,
         else_expression: Atom,
     ) -> Self {
-        Atom::IfExpression(IfExpression::new(
+        Atom::IfElse(IfElse::new(
             if_token,
             condition,
             then_expression,
@@ -104,8 +99,8 @@ impl Atom {
         ))
     }
 
-    pub fn as_if_expression(&self) -> Option<&IfExpression> {
-        if let Atom::IfExpression(if_expression) = self {
+    pub fn as_if_expression(&self) -> Option<&IfElse> {
+        if let Atom::IfElse(if_expression) = self {
             Some(if_expression)
         } else {
             None
@@ -113,18 +108,22 @@ impl Atom {
     }
 
     pub fn new_while_expression(while_token: Keyword, condition: Expression, body: Atom) -> Self {
-        Atom::WhileExpression(WhileExpression::new(while_token, condition, body))
+        Atom::While(While::new(while_token, condition, body))
     }
 
-    pub fn as_while_expression(&self) -> Option<&WhileExpression> {
-        if let Atom::WhileExpression(while_expression) = self {
+    pub fn as_while_expression(&self) -> Option<&While> {
+        if let Atom::While(while_expression) = self {
             Some(while_expression)
         } else {
             None
         }
     }
 
-    pub fn new_block(open_brace: GroupingOperator, expressions: ExpressionList, close_brace: GroupingOperator) -> Self {
+    pub fn new_block(
+        open_brace: GroupingOperator,
+        expressions: ExpressionList,
+        close_brace: GroupingOperator,
+    ) -> Self {
         Atom::Block(Box::new(Block::new(open_brace, expressions, close_brace)))
     }
 
@@ -137,14 +136,14 @@ impl Atom {
     }
 
     pub fn new_print_expression(print_token: Keyword, expression: Expression) -> Self {
-        Atom::PrintExpression(PrintExpression {
+        Atom::Print(Print {
             print_token,
             expression: Box::new(expression),
         })
     }
 
-    pub fn as_print_expression(&self) -> Option<&PrintExpression> {
-        if let Atom::PrintExpression(print_expression) = self {
+    pub fn as_print_expression(&self) -> Option<&Print> {
+        if let Atom::Print(print_expression) = self {
             Some(print_expression)
         } else {
             None

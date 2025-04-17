@@ -2,12 +2,12 @@ use crate::{ast::Atom, tokens::UnaryOperator};
 
 use super::super::grammar;
 
-mod if_else_parser;
-mod let_in_parser;
+mod block;
+mod if_else;
+mod let_in;
+mod literal;
+mod print;
 mod while_parser;
-mod block_parser;
-mod literal_parser;
-mod print_parser;
 
 #[test]
 fn parses_unary_op() {

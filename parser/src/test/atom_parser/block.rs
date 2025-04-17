@@ -101,14 +101,20 @@ x - 4 + 6 / (2 + 3 - x);;
                 .as_bin_op()
                 .unwrap()
                 .rhs
-                .as_bin_op().unwrap()
+                .as_bin_op()
+                .unwrap()
                 .rhs
-                .as_atom().unwrap()
-                .as_grouped_expression().unwrap()
-                .as_bin_op().unwrap()
+                .as_atom()
+                .unwrap()
+                .as_grouped_expression()
+                .unwrap()
+                .as_bin_op()
+                .unwrap()
                 .rhs
-                .as_atom().unwrap()
-                .as_identifier().unwrap()
+                .as_atom()
+                .unwrap()
+                .as_identifier()
+                .unwrap()
                 .id,
             "x"
         );

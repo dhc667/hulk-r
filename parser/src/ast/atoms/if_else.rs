@@ -1,8 +1,8 @@
-use crate::tokens::Keyword;
-use super::Atom;
 use super::super::Expression;
+use super::Atom;
+use crate::tokens::Keyword;
 
-pub struct IfExpression {
+pub struct IfElse {
     pub if_token: Keyword,
     pub condition: Box<Expression>,
     pub then_expression: Box<Atom>,
@@ -10,7 +10,7 @@ pub struct IfExpression {
     pub else_expression: Box<Atom>,
 }
 
-impl IfExpression {
+impl IfElse {
     pub fn new(
         if_token: Keyword,
         condition: Expression,
@@ -18,7 +18,7 @@ impl IfExpression {
         else_token: Keyword,
         else_expression: Atom,
     ) -> Self {
-        IfExpression {
+        IfElse {
             if_token,
             condition: Box::new(condition),
             then_expression: Box::new(then_expression),

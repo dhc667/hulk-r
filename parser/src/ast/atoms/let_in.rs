@@ -1,6 +1,6 @@
-use crate::tokens::*;
 use super::super::Expression;
 use super::Atom;
+use crate::tokens::*;
 
 pub struct Assignment {
     pub identifier: Identifier,
@@ -18,25 +18,21 @@ impl Assignment {
     }
 }
 
-
-
-
-
-pub struct LetExpression {
+pub struct LetIn {
     pub let_token: Keyword,
     pub assignments: Vec<Assignment>,
     pub in_token: Keyword,
     pub body: Box<Atom>,
 }
 
-impl LetExpression {
+impl LetIn {
     pub fn new(
         let_token: Keyword,
         assignments: Vec<Assignment>,
         in_token: Keyword,
         expression: Atom,
     ) -> Self {
-        LetExpression {
+        LetIn {
             let_token,
             assignments,
             in_token,
@@ -44,4 +40,3 @@ impl LetExpression {
         }
     }
 }
-

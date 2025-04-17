@@ -23,7 +23,11 @@ pub struct Block {
 }
 
 impl Block {
-    pub fn new(open_brace: GroupingOperator, expression_list: ExpressionList, close_brace: GroupingOperator) -> Self {
+    pub fn new(
+        open_brace: GroupingOperator,
+        expression_list: ExpressionList,
+        close_brace: GroupingOperator,
+    ) -> Self {
         Block {
             open_brace,
             close_brace,
