@@ -1,12 +1,37 @@
 use crate::ast;
+use crate::tokens;
 
 grammar;
 
+pub ExpressionList: ast::ExpressionList = {
+    <l:ExpressionList> <x:SemicolonExpression> => {
+        let mut l = l.expressions;
+        l.push(x.0);
+        ast::ExpressionList::new(l, x.1)
+    },
+    <x:SemicolonExpression> => {
+        let mut l = Vec::new();
+        l.push(x.0);
+        ast::ExpressionList::new(l, x.1)
+    },
+}
+
+SemicolonExpression: (ast::Expression, bool) = {
+    <x:Expression> <n: MultipleSemicolons> => {
+        (x, n > 1)
+    }
+}
+
+MultipleSemicolons: u32 = {
+    <h: MultipleSemicolons> ";"
+        => h + 1,
+    <n: ";">
+        => 1,
+}
+
 pub Expression: ast::Expression = {
     DestructiveAssignment,
-    Addition => {
-        ast::Expression::new_addition(<>)
-    },
+    Addition,
 }
 
 DestructiveAssignment: ast::Expression = {
@@ -14,52 +39,62 @@ DestructiveAssignment: ast::Expression = {
         => ast::Expression::new_destructive_assignment(id, o, e),
 }
 
-ColonEqualOperator: ast::Operator = {
-    <s: @L> ":" <e: @R>
-        => ast::Operator::ColonEqual(ast::TokenPosition::new(s, e)),
+ColonEqualOperator: tokens::BinaryOperator = {
+    <s: @L> ":=" <e: @R>
+        => tokens::BinaryOperator::ColonEqual(tokens::TokenPosition::new(s, e)),
 }
 
-pub Addition: ast::Addition = {
-    <x:Addition> <o:PlusMinusOperator> <y:Term>
-        => ast::Addition::new_binary_op(x, o, y),
-    <x:Term>
-        => ast::Addition::new_term(x),
+pub Addition: ast::Expression = {
+    <x:Addition> <o:PlusMinusBinaryOp> <y:Term>
+        => ast::Expression::new_binary_op(x, o, y),
+    Term
 }
 
-PlusMinusOperator: ast::Operator = {
+PlusMinusBinaryOp: tokens::BinaryOperator = {
     <s: @L> "+" <e: @R>
-        => ast::Operator::Plus(ast::TokenPosition::new(s, e)),
+        => tokens::BinaryOperator::Plus(tokens::TokenPosition::new(s, e)),
     <s: @L> "-" <e: @R>
-        => ast::Operator::Minus(ast::TokenPosition::new(s, e)),
+        => tokens::BinaryOperator::Minus(tokens::TokenPosition::new(s, e)),
 }
 
-pub Term: ast::Term = {
+pub Term: ast::Expression = {
     <x:Term> <o:MultiplicationOperator> <y:Factor>
-        => ast::Term::new_binary_op(x, o, y),
-    <x:Factor>
-        => ast::Term::new_factor(x),
+        => ast::Expression::new_binary_op(x, o, y),
+    Factor
 }
 
-MultiplicationOperator: ast::Operator = {
+MultiplicationOperator: tokens::BinaryOperator = {
     <s: @L> "*" <e: @R>
-        => ast::Operator::Times(ast::TokenPosition::new(s, e)),
+        => tokens::BinaryOperator::Times(tokens::TokenPosition::new(s, e)),
     <s: @L> "/" <e: @R>
-        => ast::Operator::Divide(ast::TokenPosition::new(s, e)),
+        => tokens::BinaryOperator::Divide(tokens::TokenPosition::new(s, e)),
     <s: @L> "%" <e: @R>
-        => ast::Operator::Modulo(ast::TokenPosition::new(s, e)),
+        => tokens::BinaryOperator::Modulo(tokens::TokenPosition::new(s, e)),
 }
 
-pub Factor: ast::Factor = {
+pub Factor: ast::Expression = {
     <x:Atom>
-        => ast::Factor::new_atom(x),
+        => ast::Expression::new_atom(x),
 }
+
 
 pub Atom: ast::Atom = {
     <n:NumberLiteral> => 
         ast::Atom::NumberLiteral(n),
     <i:Identifier> => 
         ast::Atom::Identifier(i),
+    LetExpression,
+    IfExpression,
+    WhileExpression,
+    GroupedExpression,
+    PrintExpression,
+    Block,
     UnaryOperation
+}
+
+LetExpression: ast::Atom = {
+    <k: LetKeyword> <a:AssignmentList> <i:InKeyword> <e:Atom>
+        => ast::Atom::new_let_expression(k, a, i, e),
 }
 
 Assignment: ast::Assignment = {
@@ -67,9 +102,9 @@ Assignment: ast::Assignment = {
         => ast::Assignment::new(id, o, e),
 }
 
-EqualOperator: ast::Operator = {
+EqualOperator: tokens::BinaryOperator = {
     <s: @L> "=" <e: @R>
-        => ast::Operator::Equal(ast::TokenPosition::new(s, e)),
+        => tokens::BinaryOperator::Equal(tokens::TokenPosition::new(s, e)),
 }
 
 AssignmentList: Vec<ast::Assignment> = {
@@ -79,7 +114,7 @@ AssignmentList: Vec<ast::Assignment> = {
             h.push(t);
             h
         },
-    <t:Assignment> 
+    <t:Assignment>
         => {
             let mut v = Vec::new();
             v.push(t);
@@ -87,47 +122,95 @@ AssignmentList: Vec<ast::Assignment> = {
         },
 }
 
-LetKeyword: ast::Keyword = {
-    <s: @L> "let" <e: @R>
-        => ast::Keyword::Let(ast::TokenPosition::new(s, e)),
+IfExpression: ast::Atom = {
+    <k:IfKeyword> "(" <c:Expression> ")" <x:Atom> <k2:ElseKeyword> <x2:Atom> 
+        => ast::Atom::new_if_expression(k, c, x, k2, x2),
 }
 
-InKeyword: ast::Keyword = {
-    <s: @L> "in" <e: @R>
-        => ast::Keyword::In(ast::TokenPosition::new(s, e)),
+WhileExpression: ast::Atom = {
+    <k:WhileKeyword> "(" <c:Expression> ")" <b:Block>
+        => ast::Atom::new_while_expression(k, c, b),
 }
 
-IfKeyword: ast::Keyword = {
-    <s: @L> "if" <e: @R>
-        => ast::Keyword::If(ast::TokenPosition::new(s, e)),
+Block: ast::Atom = {
+    <k:OpenBrace> <e:ExpressionList> <k2:CloseBrace>
+        => ast::Atom::new_block(k, e, k2),
 }
 
-ElseKeyword: ast::Keyword = {
-    <s: @L> "else" <e: @R>
-        => ast::Keyword::Else(ast::TokenPosition::new(s, e)),
+GroupedExpression: ast::Atom = {
+     "(" <e: Expression> ")"
+        => ast::Atom::new_grouped_expression(e),
 }
 
-ElifKeyword: ast::Keyword = {
-    <s: @L> "elif" <e: @R>
-        => ast::Keyword::Elif(ast::TokenPosition::new(s, e)),
-}
 
-PrintKeyword: ast::Keyword = {
-    <s: @L> "print" <e: @R>
-        => ast::Keyword::Print(ast::TokenPosition::new(s, e)),
-}
-
-Identifier: ast::Identifier = {
-    <s: @L> <i:r"[A-Za-z][A-Za-z_0-9]*"> <e: @R>
-        => ast::Identifier::new(s, e, i),
+PlusMinusUnaryOp: tokens::UnaryOperator = {
+    <s: @L> "+" <e: @R>
+        => tokens::UnaryOperator::Plus(tokens::TokenPosition::new(s, e)),
+    <s: @L> "-" <e: @R>
+        => tokens::UnaryOperator::Minus(tokens::TokenPosition::new(s, e)),
 }
 
 UnaryOperation: ast::Atom = {
-     <o:PlusMinusOperator> <x:Atom>
+     <o:PlusMinusUnaryOp> <x:Atom>
         => ast::Atom::new_unary_op(o, x),
 }
 
-NumberLiteral: ast::NumberLiteral = {
+PrintExpression: ast::Atom = {
+    <k: PrintKeyword> "(" <e:Expression> ")"
+        => ast::Atom::new_print_expression(k, e),
+}
+
+OpenBrace: tokens::GroupingOperator = {
+    <s: @L> "{" <e: @R>
+        => tokens::GroupingOperator::OpenBrace(tokens::TokenPosition::new(s, e)),
+}
+
+CloseBrace: tokens::GroupingOperator = {
+    <s: @L> "}" <e: @R>
+        => tokens::GroupingOperator::CloseBrace(tokens::TokenPosition::new(s, e)),
+}
+
+LetKeyword: tokens::Keyword = {
+    <s: @L> "let" <e: @R>
+        => tokens::Keyword::Let(tokens::TokenPosition::new(s, e)),
+}
+
+InKeyword: tokens::Keyword = {
+    <s: @L> "in" <e: @R>
+        => tokens::Keyword::In(tokens::TokenPosition::new(s, e)),
+}
+
+IfKeyword: tokens::Keyword = {
+    <s: @L> "if" <e: @R>
+        => tokens::Keyword::If(tokens::TokenPosition::new(s, e)),
+}
+
+ElseKeyword: tokens::Keyword = {
+    <s: @L> "else" <e: @R>
+        => tokens::Keyword::Else(tokens::TokenPosition::new(s, e)),
+}
+
+ElifKeyword: tokens::Keyword = {
+    <s: @L> "elif" <e: @R>
+        => tokens::Keyword::Elif(tokens::TokenPosition::new(s, e)),
+}
+
+WhileKeyword: tokens::Keyword = {
+    <s: @L> "while" <e: @R>
+        => tokens::Keyword::While(tokens::TokenPosition::new(s, e)),
+}
+
+PrintKeyword: tokens::Keyword = {
+    <s: @L> "print" <e: @R>
+        => tokens::Keyword::Print(tokens::TokenPosition::new(s, e)),
+}
+
+Identifier: tokens::Identifier = {
+    <s: @L> <i:r"[A-Za-z][A-Za-z_0-9]*"> <e: @R>
+        => tokens::Identifier::new(s, e, i),
+}
+
+NumberLiteral: tokens::NumberLiteral = {
     <s: @L> <n:r"[0-9]+(\.[0-9]+)?"> <e: @R>
-        => ast::NumberLiteral::new(s, e, n),
+        => tokens::NumberLiteral::new(s, e, n),
 }
