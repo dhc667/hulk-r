@@ -4,6 +4,7 @@ lalrpop_mod!(pub grammar);
 
 mod ast;
 pub mod tokens;
+pub mod visitors;
 
 #[cfg(test)]
 mod test {
