@@ -4,7 +4,6 @@ use crate::{
 };
 
 #[test]
-#[should_panic(expected = "Variable x is not defined")]
 fn not_defined_variable() {
     let p = ExpressionListParser::new();
 
@@ -13,6 +12,10 @@ fn not_defined_variable() {
     let mut semantic_visitor = SemanticVisitor::new();
 
     answ.accept(&mut semantic_visitor);
+    assert_eq!(
+        semantic_visitor.errors,
+        vec!["Variable x is not defined".to_string()]
+    );
 }
 
 #[test]
@@ -62,7 +65,6 @@ fn lookup_in_let_in_with_shadow() {
 }
 
 #[test]
-#[should_panic(expected = "Variable x is not defined")]
 fn not_defined_variable_different_let_in() {
     let p = ExpressionListParser::new();
 
@@ -71,4 +73,29 @@ fn not_defined_variable_different_let_in() {
     let mut semantic_visitor = SemanticVisitor::new();
 
     answ.accept(&mut semantic_visitor);
+
+    assert_eq!(
+        semantic_visitor.errors,
+        vec!["Variable x is not defined".to_string()]
+    );
+}
+
+#[test]
+fn several_undefinitions() {
+    let p = ExpressionListParser::new();
+
+    let mut answ = p.parse("let x=3, y=4, z=5 in {x;}; x+y+z+18;").unwrap();
+
+    let mut semantic_visitor = SemanticVisitor::new();
+
+    answ.accept(&mut semantic_visitor);
+
+    assert_eq!(
+        semantic_visitor.errors,
+        vec![
+            "Variable x is not defined".to_string(),
+            "Variable y is not defined".to_string(),
+            "Variable z is not defined".to_string()
+        ]
+    );
 }

@@ -6,7 +6,8 @@ use crate::{
 use super::{DefContext, def_context::Frame};
 
 pub struct SemanticVisitor {
-    definitions: DefContext,
+    pub definitions: DefContext,
+    pub errors: Vec<String>,
 }
 
 impl SemanticVisitor {
@@ -15,6 +16,7 @@ impl SemanticVisitor {
             definitions: DefContext {
                 current_frame: Some(Box::new(Frame::new())),
             },
+            errors: Vec::new(),
         }
     }
 }
@@ -27,7 +29,8 @@ impl Visitor<()> for SemanticVisitor {
     fn visit_destructive_assignment(&mut self, node: &mut crate::DestructiveAssignment) {
         node.expression.accept(self);
         if !self.definitions.is_defined(&node.identifier.id) {
-            panic!("Variable {} is not defined", node.identifier);
+            let message = format!("Variable {} is not defined", node.identifier);
+            self.errors.push(message);
         }
     }
 
@@ -54,7 +57,8 @@ impl Visitor<()> for SemanticVisitor {
     fn visit_assignment(&mut self, node: &mut crate::Assignment) {
         node.rhs.accept(self);
         if !self.definitions.define(&node.identifier.id) {
-            panic!("Variable {} is already defined", node.identifier);
+            let message = format!("Variable {} is already defined", node.identifier);
+            self.errors.push(message);
         }
     }
 
@@ -83,7 +87,8 @@ impl Visitor<()> for SemanticVisitor {
 
     fn visit_variable(&mut self, node: &mut crate::Identifier) -> () {
         if !self.definitions.is_defined(&node.id) {
-            panic!("Variable {} is not defined", node.id);
+            let message = format!("Variable {} is not defined", node.id);
+            self.errors.push(message);
         }
     }
 
