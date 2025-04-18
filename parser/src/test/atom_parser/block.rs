@@ -14,10 +14,10 @@ x - 4;
     );
 
     if let Ok(ast::Atom::Block(block)) = answ {
-        assert_eq!(block.expressions.len(), 3);
-        assert!(!block.multiple_semicolon_terminated);
+        assert_eq!(block.expression_list.expressions.len(), 3);
+        assert!(!block.expression_list.multiple_semicolon_terminated);
         assert_eq!(
-            block.expressions[0]
+            block.expression_list.expressions[0]
                 .as_bin_op()
                 .unwrap()
                 .lhs
@@ -29,7 +29,7 @@ x - 4;
             "a"
         );
         assert_eq!(
-            block.expressions[1]
+            block.expression_list.expressions[1]
                 .as_bin_op()
                 .unwrap()
                 .lhs
@@ -41,7 +41,7 @@ x - 4;
             "c"
         );
         assert_eq!(
-            block.expressions[2]
+            block.expression_list.expressions[2]
                 .as_bin_op()
                 .unwrap()
                 .lhs
@@ -70,10 +70,10 @@ x - 4 + 6 / (2 + 3 - x);;
     );
 
     if let Ok(ast::Atom::Block(block)) = answ {
-        assert_eq!(block.expressions.len(), 3);
-        assert!(block.multiple_semicolon_terminated);
+        assert_eq!(block.expression_list.expressions.len(), 3);
+        assert!(block.expression_list.multiple_semicolon_terminated);
         assert_eq!(
-            block.expressions[0]
+            block.expression_list.expressions[0]
                 .as_bin_op()
                 .unwrap()
                 .lhs
@@ -85,7 +85,7 @@ x - 4 + 6 / (2 + 3 - x);;
             "a"
         );
         assert_eq!(
-            block.expressions[1]
+            block.expression_list.expressions[1]
                 .as_bin_op()
                 .unwrap()
                 .lhs
@@ -97,7 +97,7 @@ x - 4 + 6 / (2 + 3 - x);;
             "c"
         );
         assert_eq!(
-            block.expressions[2]
+            block.expression_list.expressions[2]
                 .as_bin_op()
                 .unwrap()
                 .rhs

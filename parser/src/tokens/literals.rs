@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use super::*;
 
 pub struct NumberLiteral {
@@ -11,5 +13,11 @@ impl NumberLiteral {
             position: TokenPosition::new(start, end),
             value: value.parse::<f64>().unwrap(),
         }
+    }
+}
+
+impl Display for NumberLiteral {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.value)
     }
 }

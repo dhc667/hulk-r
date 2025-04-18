@@ -24,12 +24,12 @@ pub fn parses_while_expression() {
             "x"
         );
 
-        assert_eq!(body.as_block().unwrap().expressions.len(), 2);
+        assert_eq!(body.as_block().unwrap().expression_list.expressions.len(), 2);
 
-        assert!(body.as_block().unwrap().multiple_semicolon_terminated,);
+        assert!(body.as_block().unwrap().expression_list.multiple_semicolon_terminated,);
 
         assert_eq!(
-            body.as_block().unwrap().expressions[1]
+            body.as_block().unwrap().expression_list.expressions[1]
                 .as_bin_op()
                 .unwrap()
                 .lhs

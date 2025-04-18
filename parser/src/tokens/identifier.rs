@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use super::*;
 
 pub struct Identifier {
@@ -11,5 +13,11 @@ impl Identifier {
             position: TokenPosition::new(start, end),
             id: id.to_string(),
         }
+    }
+}
+
+impl Display for Identifier {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.id)
     }
 }

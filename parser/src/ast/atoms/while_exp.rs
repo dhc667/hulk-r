@@ -1,6 +1,8 @@
 use super::super::Expression;
 use super::Atom;
 use crate::tokens::Keyword;
+use crate::visitors::visitable::Visitable;
+use crate::visitors::Visitor;
 
 pub struct While {
     pub while_token: Keyword,
@@ -15,5 +17,11 @@ impl While {
             condition: Box::new(condition),
             body: Box::new(body),
         }
+    }
+}
+
+impl<T: Visitor<R>, R> Visitable<T, R> for While {
+    fn accept(&mut self, visitor: &mut T) -> R {
+        visitor.visit_while(self)
     }
 }

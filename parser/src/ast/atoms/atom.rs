@@ -3,6 +3,8 @@ use super::block::ExpressionList;
 use super::let_in::Assignment;
 use super::*;
 use crate::tokens::*;
+use crate::visitors::visitable::Visitable;
+use crate::visitors::Visitor;
 
 pub enum Atom {
     LetIn(LetIn),
@@ -150,3 +152,20 @@ impl Atom {
         }
     }
 }
+
+impl<T: Visitor<R>, R> Visitable<T, R> for Atom {
+    fn accept(&mut self, visitor: &mut T) -> R {
+        match self {
+            Atom::LetIn(let_in) => let_in.accept(visitor),
+            Atom::Group(expression) => expression.accept(visitor),
+            Atom::IfElse(if_else) => if_else.accept(visitor),
+            Atom::Print(print) => print.accept(visitor),
+            Atom::While(while_exp) => while_exp.accept(visitor),
+            Atom::Block(block) => block.accept(visitor),
+            Atom::NumberLiteral(number_literal) => visitor.visit_number_literal(number_literal),
+            Atom::Variable(identifier) => visitor.visit_variable(identifier),
+            Atom::UnaryOp(un_op) => un_op.accept(visitor),
+        }
+    }
+}
+

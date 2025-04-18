@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use super::*;
 
 pub enum Keyword {
@@ -8,4 +10,18 @@ pub enum Keyword {
     Print(TokenPosition),
     In(TokenPosition),
     Elif(TokenPosition),
+}
+
+impl Display for Keyword {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Keyword::Let(_) => write!(f, "let"),
+            Keyword::If(_) => write!(f, "if"),
+            Keyword::Else(_) => write!(f, "else"),
+            Keyword::While(_) => write!(f, "while"),
+            Keyword::Print(_) => write!(f, "print"),
+            Keyword::In(_) => write!(f, "in"),
+            Keyword::Elif(_) => write!(f, "elif"),
+        }
+    }
 }
