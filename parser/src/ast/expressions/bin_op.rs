@@ -1,5 +1,5 @@
 use super::Expression;
-use crate::tokens::*;
+use crate::{tokens::*, visitors::{visitable::Visitable, Visitor}};
 
 pub struct BinOp {
     pub lhs: Box<Expression>,
@@ -14,5 +14,11 @@ impl BinOp {
             op,
             rhs: Box::new(rhs),
         }
+    }
+}
+
+impl<T: Visitor<R>, R> Visitable<T, R> for BinOp {
+    fn accept(&mut self, visitor: &mut T) -> R {
+        visitor.visit_bin_op(self)
     }
 }

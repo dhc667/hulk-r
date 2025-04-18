@@ -1,6 +1,8 @@
 use super::super::Expression;
 use super::Atom;
 use crate::tokens::*;
+use crate::visitors::visitable::Visitable;
+use crate::visitors::Visitor;
 
 pub struct Assignment {
     pub identifier: Identifier,
@@ -38,5 +40,11 @@ impl LetIn {
             in_token,
             body: Box::new(expression),
         }
+    }
+}
+
+impl<T: Visitor<R>, R> Visitable<T, R> for LetIn {
+    fn accept(&mut self, visitor: &mut T) -> R {
+        visitor.visit_let_in(self)
     }
 }

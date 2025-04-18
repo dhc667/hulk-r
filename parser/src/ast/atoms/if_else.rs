@@ -1,6 +1,8 @@
 use super::super::Expression;
 use super::Atom;
 use crate::tokens::Keyword;
+use crate::visitors::visitable::Visitable;
+use crate::visitors::Visitor;
 
 pub struct IfElse {
     pub if_token: Keyword,
@@ -25,5 +27,11 @@ impl IfElse {
             else_token,
             else_expression: Box::new(else_expression),
         }
+    }
+}
+
+impl<T: Visitor<R>, R> Visitable<T, R> for IfElse {
+    fn accept(&mut self, visitor: &mut T) -> R {
+        visitor.visit_if_else(self)
     }
 }

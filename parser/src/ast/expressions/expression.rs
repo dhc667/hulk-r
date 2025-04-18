@@ -1,6 +1,8 @@
 use super::super::atoms::Atom;
 use super::*;
 use crate::tokens::*;
+use crate::visitors::visitable::Visitable;
+use crate::visitors::Visitor;
 
 pub enum Expression {
     DestructiveAssignment(DestructiveAssignment),
@@ -46,6 +48,16 @@ impl Expression {
             Some(atom)
         } else {
             None
+        }
+    }
+}
+
+impl<T: Visitor<R>, R> Visitable<T, R> for Expression {
+    fn accept(&mut self, visitor: &mut T) -> R {
+        match self {
+            Expression::DestructiveAssignment(assignment) => assignment.accept(visitor),
+            Expression::BinOp(bin_op) => bin_op.accept(visitor),
+            Expression::Atom(atom) => atom.accept(visitor),
         }
     }
 }

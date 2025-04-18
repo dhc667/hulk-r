@@ -1,5 +1,5 @@
 use super::Expression;
-use crate::tokens::*;
+use crate::{tokens::*, visitors::{visitable::Visitable, Visitor}};
 
 pub struct DestructiveAssignment {
     pub identifier: Identifier,
@@ -14,5 +14,11 @@ impl DestructiveAssignment {
             op,
             expression: Box::new(rhs),
         }
+    }
+}
+
+impl<T: Visitor<R>, R> Visitable<T, R> for DestructiveAssignment {
+    fn accept(&mut self, visitor: &mut T) -> R {
+        visitor.visit_destructive_assignment(self)
     }
 }

@@ -1,5 +1,5 @@
 use super::super::Expression;
-use crate::tokens::GroupingOperator;
+use crate::{tokens::GroupingOperator, visitors::{visitable::Visitable, Visitor}};
 
 pub struct ExpressionList {
     pub expressions: Vec<Expression>,
@@ -15,11 +15,16 @@ impl ExpressionList {
     }
 }
 
+impl<T: Visitor<R>, R> Visitable<T, R> for ExpressionList {
+    fn accept(&mut self, visitor: &mut T) -> R {
+        visitor.visit_expression_list(self)
+    }
+}
+
 pub struct Block {
     pub open_brace: GroupingOperator,
     pub close_brace: GroupingOperator,
-    pub expressions: Vec<Expression>,
-    pub multiple_semicolon_terminated: bool,
+    pub expression_list: ExpressionList,
 }
 
 impl Block {
@@ -31,8 +36,13 @@ impl Block {
         Block {
             open_brace,
             close_brace,
-            expressions: expression_list.expressions,
-            multiple_semicolon_terminated: expression_list.multiple_semicolon_terminated,
+            expression_list,
         }
+    }
+}
+
+impl<T: Visitor<R>, R> Visitable<T, R> for Block {
+    fn accept(&mut self, visitor: &mut T) -> R {
+        visitor.visit_block(self)
     }
 }
