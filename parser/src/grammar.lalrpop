@@ -82,7 +82,7 @@ pub Atom: ast::Atom = {
     <n:NumberLiteral> => 
         ast::Atom::NumberLiteral(n),
     <i:Identifier> => 
-        ast::Atom::Identifier(i),
+        ast::Atom::Variable(i),
     LetExpression,
     IfExpression,
     WhileExpression,

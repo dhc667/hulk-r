@@ -38,21 +38,21 @@ fn parses_identifier() {
     let p = grammar::AtomParser::new();
 
     let answ1 = p.parse("abc").unwrap();
-    if let Atom::Identifier(identifier) = answ1 {
+    if let Atom::Variable(identifier) = answ1 {
         assert_eq!(identifier.id, "abc");
     } else {
         panic!("Expected Identifier");
     }
 
     let answ2 = p.parse("abc123").unwrap();
-    if let Atom::Identifier(identifier) = answ2 {
+    if let Atom::Variable(identifier) = answ2 {
         assert_eq!(identifier.id, "abc123");
     } else {
         panic!("Expected Identifier");
     }
 
     let answ3 = p.parse("abc_123").unwrap();
-    if let Atom::Identifier(identifier) = answ3 {
+    if let Atom::Variable(identifier) = answ3 {
         assert_eq!(identifier.id, "abc_123");
     } else {
         panic!("Expected Identifier");

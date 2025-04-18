@@ -13,7 +13,7 @@ pub enum Atom {
     Block(Box<Block>),
 
     NumberLiteral(NumberLiteral),
-    Identifier(Identifier),
+    Variable(Identifier),
     UnaryOp(UnOp),
 }
 
@@ -31,11 +31,11 @@ impl Atom {
     }
 
     pub fn new_identifier(start: usize, end: usize, id: &str) -> Self {
-        Atom::Identifier(Identifier::new(start, end, id))
+        Atom::Variable(Identifier::new(start, end, id))
     }
 
     pub fn as_identifier(&self) -> Option<&Identifier> {
-        if let Atom::Identifier(identifier) = self {
+        if let Atom::Variable(identifier) = self {
             Some(identifier)
         } else {
             None
