@@ -29,24 +29,9 @@ impl Visitor<String> for EchoVisitor {
     }
 
     fn visit_let_in(&mut self, node: &mut crate::ast::LetIn) -> String {
-        let assignments: Vec<String> = node
-            .assignments
-            .iter_mut()
-            .map(|assignment| format!(
-                "{} {} {}",
-                assignment.identifier,
-                assignment.op,
-                assignment.rhs.accept(self)
-            ))
-            .collect();
+        let assignment = node.assignment.accept(self);
         let body = node.body.accept(self);
-        format!(
-            "{} {} {} {}",
-            node.let_token,
-            assignments.join(", "),
-            node.in_token,
-            body
-        )
+        format!("{} {} {} {}", node.let_token, assignment, node.in_token, body)
     }
 
     fn visit_assignment(&mut self, node: &mut crate::ast::Assignment) -> String {

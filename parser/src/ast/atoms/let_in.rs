@@ -1,3 +1,5 @@
+use std::vec;
+
 use super::super::Expression;
 use super::Atom;
 use crate::tokens::*;
@@ -22,7 +24,7 @@ impl Assignment {
 
 pub struct LetIn {
     pub let_token: Keyword,
-    pub assignments: Vec<Assignment>,
+    pub assignment: Box<Assignment>,
     pub in_token: Keyword,
     pub body: Box<Atom>,
 }
@@ -34,11 +36,31 @@ impl LetIn {
         in_token: Keyword,
         expression: Atom,
     ) -> Self {
-        LetIn {
+        let mut iter = assignments.into_iter();
+        let first = iter.next().expect("Assignment list must contain at least one assignment");
+
+        LetIn{
             let_token,
-            assignments,
+            assignment: Box::new(first),
             in_token,
-            body: Box::new(expression),
+            body: LetIn::build_let_in_expression(let_token, iter, in_token, expression),
+        }
+    }
+
+    fn build_let_in_expression(let_token: Keyword, mut assignments: vec::IntoIter<Assignment>, in_token: Keyword, expression: Atom) -> Box<Atom> {
+        let current_assignment = assignments.next();
+
+        match current_assignment {
+            None => Box::new(expression),
+
+            Some(assignment) => {
+                Box::new(Atom::LetIn(LetIn{
+                    let_token,
+                    assignment: Box::new(assignment),
+                    in_token,
+                    body: LetIn::build_let_in_expression(let_token, assignments, in_token, expression)
+                }))
+            }
         }
     }
 }
