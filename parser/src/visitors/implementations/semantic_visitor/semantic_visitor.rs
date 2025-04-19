@@ -44,14 +44,12 @@ impl Visitor<()> for SemanticVisitor {
     }
 
     fn visit_let_in(&mut self, node: &mut crate::LetIn) {
-        for assignment in &mut node.assignments {
-            self.definitions.push_frame();
-            assignment.accept(self);
-        }
+        self.definitions.push_frame();
+
+        node.assignment.accept(self);
         node.body.accept(self);
-        for _ in &node.assignments {
-            self.definitions.pop_frame();
-        }
+
+        self.definitions.pop_frame();
     }
 
     fn visit_assignment(&mut self, node: &mut crate::Assignment) {

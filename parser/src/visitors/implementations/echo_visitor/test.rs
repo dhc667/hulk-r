@@ -63,6 +63,6 @@ fn echoes_let_in_statement() {
 
     let result = answ.accept(&mut echoer);
 
-    assert_eq!(result, "let x = (1 + 2), y = (x + 2), z = 3 in { ((1 + 2) + (3 / 4)); };");
+    assert_eq!(result, "let x = (1 + 2) in let y = (x + 2) in let z = 3 in { ((1 + 2) + (3 / 4)); };")
 
 }
