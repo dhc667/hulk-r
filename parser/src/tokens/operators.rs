@@ -11,6 +11,12 @@ pub enum BinaryOperator {
     Times(TokenPosition),
     Modulo(TokenPosition),
 
+    EqualEqual(TokenPosition),
+    Less(TokenPosition),
+    LessEqual(TokenPosition),
+    Greater(TokenPosition),
+    GreaterEqual(TokenPosition),
+
     Equal(TokenPosition),
     ColonEqual(TokenPosition),
 }
@@ -27,6 +33,12 @@ impl Display for BinaryOperator {
 
             BinaryOperator::Equal(_) => write!(f, "="),
             BinaryOperator::ColonEqual(_) => write!(f, ":="),
+
+            BinaryOperator::Less(_) => write!(f, "<"),
+            BinaryOperator::LessEqual(_) => write!(f, "<="),
+            BinaryOperator::Greater(_) => write!(f, ">"),
+            BinaryOperator::GreaterEqual(_) => write!(f, ">="),
+            BinaryOperator::EqualEqual(_) => write!(f, "=="),
         }
     }
 }

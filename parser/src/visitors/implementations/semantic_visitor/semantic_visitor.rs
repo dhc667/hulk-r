@@ -103,4 +103,8 @@ impl Visitor<()> for SemanticVisitor {
             expression.accept(self);
         }
     }
+
+    fn visit_program(&mut self, node: &mut crate::Program) -> () {
+        node.expression_list.accept(self);
+    }
 }

@@ -97,6 +97,10 @@ impl Visitor<String> for EchoVisitor {
             format!("{};", result)
         }
     }
+
+    fn visit_program(&mut self, node: &mut crate::Program) -> String {
+        node.expression_list.accept(self)
+    }
 }
 
 
