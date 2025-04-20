@@ -17,6 +17,7 @@ pub enum BinaryOperator {
     Greater(TokenPosition),
     GreaterEqual(TokenPosition),
     NotEqual(TokenPosition),
+
     Or(TokenPosition),
     And(TokenPosition),
 

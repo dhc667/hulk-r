@@ -11,6 +11,7 @@ pub use operators::UnaryOperator;
 
 pub mod literals;
 pub use literals::NumberLiteral;
+pub use literals::BooleanLiteral;
 
 pub mod identifier;
 pub use identifier::Identifier;

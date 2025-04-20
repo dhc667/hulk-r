@@ -37,7 +37,7 @@ MultipleSemicolons: u32 = {
 
 pub Expression: ast::Expression = {
     DestructiveAssignment,
-    LogicalAnd,
+    LogicalOr,
 }
 
 DestructiveAssignment: ast::Expression = {
@@ -51,29 +51,29 @@ ColonEqualOperator: tokens::BinaryOperator = {
 }
 
 pub LogicalAnd: ast::Expression = {
-    <x:LogicalAnd> <o:LogicalAndOperator> <y:LogicalOr>
-        => ast::Expression::new_binary_op(x, o, y),
-    LogicalOr
-}
-
-LogicalAndOperator: tokens::BinaryOperator = {
-    <s: @L> "&&" <e: @R>
-        => tokens::BinaryOperator::AndAnd(tokens::TokenPosition::new(s, e)),
-}
-
-pub LogicalOr: ast::Expression = {
-    <x:LogicalOr> <o:LogicalOrOperator> <y:Equation>
+    <x:LogicalAnd> <o:LogicalAndOperator> <y:Equation>
         => ast::Expression::new_binary_op(x, o, y),
     Equation
 }
 
+LogicalAndOperator: tokens::BinaryOperator = {
+    <s: @L> "&&" <e: @R>
+        => tokens::BinaryOperator::And(tokens::TokenPosition::new(s, e)),
+}
+
+pub LogicalOr: ast::Expression = {
+    <x:LogicalOr> <o:LogicalOrOperator> <y:LogicalAnd>
+        => ast::Expression::new_binary_op(x, o, y),
+    LogicalAnd
+}
+
 LogicalOrOperator: tokens::BinaryOperator = {
     <s: @L> "||" <e: @R>
-        => tokens::BinaryOperator::OrOr(tokens::TokenPosition::new(s, e)),
+        => tokens::BinaryOperator::Or(tokens::TokenPosition::new(s, e)),
 }
 
 pub Equation: ast::Expression = {
-    <x:Relational> <o:EquationOperator> <y:Relational>
+    <x:Comparison> <o:EquationOperator> <y:Comparison>
         => ast::Expression::new_binary_op(x, o, y),
     Comparison
 }
@@ -91,7 +91,7 @@ pub Comparison: ast::Expression = {
     Addition
 }
 
-ComparisonlOperator: tokens::BinaryOperator = {
+ComparisonOperator: tokens::BinaryOperator = {
     <s: @L> ">" <e: @R>
         => tokens::BinaryOperator::Greater(tokens::TokenPosition::new(s, e)),
     <s: @L> ">=" <e: @R>
@@ -275,9 +275,9 @@ NumberLiteral: tokens::NumberLiteral = {
         => tokens::NumberLiteral::new(s, e, n),
 }
 
-BooleanLiteral: tokens::Keyword = {
+BooleanLiteral: tokens::BooleanLiteral = {
     <s: @L> "true" <e: @R>
-        => tokens::Keyword::True(tokens::TokenPosition::new(s, e)),
+        => tokens::BooleanLiteral::new(s, e, true),
     <s: @L> "false" <e: @R>
-        => tokens::Keyword::False(tokens::TokenPosition::new(s, e)),
+        => tokens::BooleanLiteral::new(s, e, false),
 }
