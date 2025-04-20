@@ -11,6 +11,8 @@ pub enum Keyword {
     Print(TokenPosition),
     In(TokenPosition),
     Elif(TokenPosition),
+    True(TokenPosition),
+    False(TokenPosition),
 }
 
 impl Display for Keyword {
@@ -23,6 +25,8 @@ impl Display for Keyword {
             Keyword::Print(_) => write!(f, "print"),
             Keyword::In(_) => write!(f, "in"),
             Keyword::Elif(_) => write!(f, "elif"),
+            Keyword::True(_) => write!(f, "true"),
+            Keyword::False(_) => write!(f, "false"),
         }
     }
 }

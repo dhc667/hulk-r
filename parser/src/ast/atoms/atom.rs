@@ -15,6 +15,7 @@ pub enum Atom {
     Block(Box<Block>),
 
     NumberLiteral(NumberLiteral),
+    BooleanLiteral(BooleanLiteral),
     Variable(Identifier),
     UnaryOp(UnOp),
 }
@@ -27,6 +28,18 @@ impl Atom {
     pub fn as_number_literal(&self) -> Option<&NumberLiteral> {
         if let Atom::NumberLiteral(number_literal) = self {
             Some(number_literal)
+        } else {
+            None
+        }
+    }
+
+    pub fn new_boolean_literal(start: usize, end: usize, value: bool) -> Self {
+        Atom::BooleanLiteral(BooleanLiteral::new(start, end, value))
+    }
+
+    pub fn as_boolean_literal(&self) -> Option<&BooleanLiteral> {
+        if let Atom::BooleanLiteral(boolean_literal) = self {
+            Some(boolean_literal)
         } else {
             None
         }

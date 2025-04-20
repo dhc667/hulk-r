@@ -37,7 +37,7 @@ MultipleSemicolons: u32 = {
 
 pub Expression: ast::Expression = {
     DestructiveAssignment,
-    Addition,
+    LogicalAnd,
 }
 
 DestructiveAssignment: ast::Expression = {
@@ -48,6 +48,58 @@ DestructiveAssignment: ast::Expression = {
 ColonEqualOperator: tokens::BinaryOperator = {
     <s: @L> ":=" <e: @R>
         => tokens::BinaryOperator::ColonEqual(tokens::TokenPosition::new(s, e)),
+}
+
+pub LogicalAnd: ast::Expression = {
+    <x:LogicalAnd> <o:LogicalAndOperator> <y:LogicalOr>
+        => ast::Expression::new_binary_op(x, o, y),
+    LogicalOr
+}
+
+LogicalAndOperator: tokens::BinaryOperator = {
+    <s: @L> "&&" <e: @R>
+        => tokens::BinaryOperator::AndAnd(tokens::TokenPosition::new(s, e)),
+}
+
+pub LogicalOr: ast::Expression = {
+    <x:LogicalOr> <o:LogicalOrOperator> <y:Equation>
+        => ast::Expression::new_binary_op(x, o, y),
+    Equation
+}
+
+LogicalOrOperator: tokens::BinaryOperator = {
+    <s: @L> "||" <e: @R>
+        => tokens::BinaryOperator::OrOr(tokens::TokenPosition::new(s, e)),
+}
+
+pub Equation: ast::Expression = {
+    <x:Relational> <o:EquationOperator> <y:Relational>
+        => ast::Expression::new_binary_op(x, o, y),
+    Comparison
+}
+
+EquationOperator: tokens::BinaryOperator = {
+    <s: @L> "==" <e: @R>
+        => tokens::BinaryOperator::EqualEqual(tokens::TokenPosition::new(s, e)),
+    <s: @L> "!=" <e: @R>
+        => tokens::BinaryOperator::NotEqual(tokens::TokenPosition::new(s, e))
+}
+
+pub Comparison: ast::Expression = {
+    <x:Addition> <o:ComparisonOperator> <y:Addition>
+        => ast::Expression::new_binary_op(x, o, y),
+    Addition
+}
+
+ComparisonlOperator: tokens::BinaryOperator = {
+    <s: @L> ">" <e: @R>
+        => tokens::BinaryOperator::Greater(tokens::TokenPosition::new(s, e)),
+    <s: @L> ">=" <e: @R>
+        => tokens::BinaryOperator::GreaterEqual(tokens::TokenPosition::new(s, e)),
+    <s: @L> "<" <e: @R>
+        => tokens::BinaryOperator::Less(tokens::TokenPosition::new(s, e)),
+    <s: @L> "<=" <e: @R>
+        => tokens::BinaryOperator::LessEqual(tokens::TokenPosition::new(s, e)),
 }
 
 pub Addition: ast::Expression = {
@@ -87,6 +139,8 @@ pub Factor: ast::Expression = {
 pub Atom: ast::Atom = {
     <n:NumberLiteral> => 
         ast::Atom::NumberLiteral(n),
+    <b:BooleanLiteral> =>
+        ast::Atom::BooleanLiteral(b),
     <i:Identifier> => 
         ast::Atom::Variable(i),
     LetExpression,
@@ -219,4 +273,11 @@ Identifier: tokens::Identifier = {
 NumberLiteral: tokens::NumberLiteral = {
     <s: @L> <n:r"[0-9]+(\.[0-9]+)?"> <e: @R>
         => tokens::NumberLiteral::new(s, e, n),
+}
+
+BooleanLiteral: tokens::Keyword = {
+    <s: @L> "true" <e: @R>
+        => tokens::Keyword::True(tokens::TokenPosition::new(s, e)),
+    <s: @L> "false" <e: @R>
+        => tokens::Keyword::False(tokens::TokenPosition::new(s, e)),
 }
