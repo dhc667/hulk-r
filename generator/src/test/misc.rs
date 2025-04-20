@@ -1,4 +1,4 @@
-use crate::test::{generate_code, lli_interface::call_lli};
+use crate::test::{generate_code, lli_interface::lli_f64};
 
 #[test]
 fn fibonacci_numbers() {
@@ -9,13 +9,13 @@ fn fibonacci_numbers() {
                   a := b;
                   b := fib;
                   fib := a + b;
-                  print(fib);
                   x:= x -1 ;
               };
+              print(fib);
           };
       };",
     );
     println!("{}", llvm);
 
-    println!("{}", call_lli(&llvm).unwrap())
+    assert_eq!(lli_f64(&llvm).unwrap(), 55.0);
 }
