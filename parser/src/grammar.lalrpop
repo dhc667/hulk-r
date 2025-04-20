@@ -3,6 +3,12 @@ use crate::tokens;
 
 grammar;
 
+pub Program: ast::Program = {
+    <x:ExpressionList> => {
+        ast::Program::new(x)
+    },
+}
+
 pub ExpressionList: ast::ExpressionList = {
     <l:ExpressionList> <x:SemicolonExpression> => {
         let mut l = l.expressions;

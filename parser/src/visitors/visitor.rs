@@ -1,6 +1,7 @@
 use crate::{ast::*, tokens::{Identifier, NumberLiteral}};
 
 pub trait Visitor<R> {
+    fn visit_program(&mut self, node: &mut Program) -> R;
     fn visit_expression_list(&mut self, node: &mut ExpressionList) -> R;
     fn visit_expression(&mut self, node: &mut Expression) -> R;
 
