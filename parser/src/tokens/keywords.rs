@@ -2,6 +2,7 @@ use std::fmt::Display;
 
 use super::*;
 
+#[derive(Clone, Copy)]
 pub enum Keyword {
     Let(TokenPosition),
     If(TokenPosition),

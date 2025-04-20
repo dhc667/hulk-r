@@ -1,3 +1,4 @@
+#[derive(Copy, Clone)]
 pub struct TokenPosition {
     pub start: usize,
     pub end: usize,
