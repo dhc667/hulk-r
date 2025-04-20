@@ -43,6 +43,7 @@ impl Display for BinaryOperator {
     }
 }
 
+#[derive(Clone, Copy)]
 pub enum UnaryOperator {
     Plus(TokenPosition),
     Minus(TokenPosition),

@@ -28,14 +28,14 @@ impl HandleType {
 /// - The `handle_type` member tells if this is a literal, or a register
 pub struct LlvmHandle {
     pub handle_type: HandleType,
-    pub handle: String,
+    pub llvm_name: String,
 }
 
 impl LlvmHandle {
     pub fn new(handle_type: HandleType, handle: String) -> LlvmHandle {
         LlvmHandle {
             handle_type,
-            handle,
+            llvm_name: handle,
         }
     }
 

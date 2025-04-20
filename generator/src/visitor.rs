@@ -174,6 +174,111 @@ impl GeneratorVisitor {
 
         return llvm_name;
     }
+
+    /// # Description
+    ///
+    /// This will be used internally to create a visitor result when the 
+    /// lhs of a unary operator is double, to not fill the visit_unop
+    /// function with too much code.
+    ///
+    /// It is assumed if the lhs is double then the rhs will also be double,
+    /// this is a guarantee of SA
+    ///
+    /// # Panics
+    ///
+    /// - If the inner result handle is None or if the 
+    /// operator is not supported by double values
+    fn get_double_un_op_visitor_result(
+        &mut self,
+        op: &parser::UnaryOperator,
+        inner_result: VisitorResult,
+    ) -> VisitorResult {
+        let inner_handle = inner_result.result_handle.unwrap();
+
+        match op {
+            parser::UnaryOperator::Plus(_) => {
+                return VisitorResult {
+                    preamble: inner_result.preamble,
+                    result_handle: Some(inner_handle),
+                };
+            }
+            parser::UnaryOperator::Minus(_) => {
+                let tmp_variable = self.generate_tmp_variable();
+                let preamble = inner_result.preamble
+                    + "\n"
+                    + &format!(
+                        "{} = fsub double 0.0, {}",
+                        tmp_variable, inner_handle.llvm_name
+                    );
+
+                return VisitorResult {
+                    preamble,
+                    result_handle: Some(LlvmHandle::new_tmp_register(tmp_variable)),
+                };
+            }
+        }
+    }
+
+    /// # Description
+    ///
+    /// This will be used internally to create a visitor result when the 
+    /// operands of a binary operator are doubles, to not fill the 
+    /// visit_bin_op handler with code
+    ///
+    /// # Panics
+    ///
+    /// - If eiher of the operand handles are None or the operator is 
+    /// not supported for double values
+    fn get_double_bin_op_visitor_result(
+        &mut self,
+        op: &parser::BinaryOperator,
+        lhs: VisitorResult,
+        rhs: VisitorResult,
+    ) -> VisitorResult {
+        let rhs_handle = rhs.result_handle.unwrap();
+        let lhs_handle = lhs.result_handle.unwrap();
+
+        let preamble = lhs.preamble + &rhs.preamble;
+
+        let result_handle = self.generate_tmp_variable();
+
+        let operation = match op {
+            Plus(_) => format!(
+                "{} = fadd double {}, {}",
+                result_handle, lhs_handle.llvm_name, rhs_handle.llvm_name
+            ),
+            Minus(_) => format!(
+                "{} = fsub double {}, {}",
+                result_handle, lhs_handle.llvm_name, rhs_handle.llvm_name
+            ),
+            Times(_) => format!(
+                "{} = fmul double {}, {}",
+                result_handle, lhs_handle.llvm_name, rhs_handle.llvm_name
+            ),
+            Divide(_) => format!(
+                "{} = fdiv double {}, {}",
+                result_handle, lhs_handle.llvm_name, rhs_handle.llvm_name
+            ),
+            //  TODO: these will need some setup
+            FloorDivide(_) => todo!(),
+            Modulo(_) => todo!(),
+            Equal(_) => panic!("= found in non-assignment, parser problem"),
+
+            ColonEqual(_) => panic!(":= found in non-destructive assignment, parser problem"),
+
+            //  TODO: these are not even implemented in the parser
+            EqualEqual(_) => todo!(),
+            Less(_) => todo!(),
+            LessEqual(_) => todo!(),
+            Greater(_) => todo!(),
+            GreaterEqual(_) => todo!(),
+        } + "\n";
+
+        VisitorResult {
+            preamble: preamble + &operation,
+            result_handle: Some(LlvmHandle::new_tmp_register(result_handle)),
+        }
+    }
 }
 
 impl Visitor<VisitorResult> for GeneratorVisitor {
@@ -247,7 +352,7 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
                 preamble = preamble
                     + &format!(
                         "store double {}, double* {}, align 4\n",
-                        result_handle.handle, llvm_name
+                        result_handle.llvm_name, llvm_name
                     )
             }
         };
@@ -260,54 +365,26 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
 
     fn visit_bin_op(&mut self, node: &mut parser::BinOp) -> VisitorResult {
         let left_result = node.lhs.accept(self);
-        let left_handle = left_result
-            .result_handle
-            .expect("Expected a result handle for lhs of binary operator");
-        let right_result = node.rhs.accept(self);
-        let right_handle = right_result
-            .result_handle
-            .expect("Expected a result handle for rhs of binary operator");
-
-        let preamble = left_result.preamble + &right_result.preamble;
-
-        let result_handle = self.generate_tmp_variable();
-
-        let operation = match node.op {
-            Plus(_) => format!(
-                "{} = fadd double {}, {}",
-                result_handle, left_handle.handle, right_handle.handle
-            ),
-            Minus(_) => format!(
-                "{} = fsub double {}, {}",
-                result_handle, left_handle.handle, right_handle.handle
-            ),
-            Times(_) => format!(
-                "{} = fmul double {}, {}",
-                result_handle, left_handle.handle, right_handle.handle
-            ),
-            Divide(_) => format!(
-                "{} = fdiv double {}, {}",
-                result_handle, left_handle.handle, right_handle.handle
-            ),
-            //  TODO: these will need some setup
-            FloorDivide(_) => todo!(),
-            Modulo(_) => todo!(),
-            Equal(_) => todo!(),
-
-            ColonEqual(_) => panic!(":= found in non-destructive assignment, parser problem"),
-
-            //  TODO: these are not even implemented in the parser
-            EqualEqual(_) => todo!(),
-            Less(_) => todo!(),
-            LessEqual(_) => todo!(),
-            Greater(_) => todo!(),
-            GreaterEqual(_) => todo!(),
-        } + "\n";
-
-        VisitorResult {
-            preamble: preamble + &operation,
-            result_handle: Some(LlvmHandle::new_tmp_register(result_handle)),
+        if left_result.result_handle.is_none() {
+            panic!("Expected a result handle for lhs of binary operator");
         }
+
+        let right_result = node.rhs.accept(self);
+        if right_result.result_handle.is_none() {
+            panic!("Expected a result handle for rhs of binary operator");
+        }
+
+        // equal types for each operand is a guarantee of SA
+        match left_result.result_handle.as_ref().unwrap().handle_type {
+            HandleType::Literal(LlvmType::F64) | HandleType::Register(LlvmType::F64) => {
+                return self.get_double_bin_op_visitor_result(
+                    &node.op,
+                    left_result,
+                    right_result,
+                );
+            }
+        };
+
     }
 
     fn visit_atom(&mut self, node: &mut parser::Atom) -> VisitorResult {
@@ -344,7 +421,7 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
                     + &format!("{} = alloca double, align 4\n", llvm_name)
                     + &format!(
                         "store double {}, double* {}, align 4\n",
-                        result_handle.handle, llvm_name
+                        result_handle.llvm_name, llvm_name
                     )
             }
         };
@@ -382,7 +459,7 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
             |branch_result_handle: Option<LlvmHandle>| match branch_result_handle {
                 Some(ref name) => format!(
                     "store double {}, double* {}, align 4\n",
-                    name.handle,
+                    name.llvm_name,
                     result_variable.as_ref().unwrap()
                 ),
                 None => "".to_string(),
@@ -411,7 +488,7 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
                     + &result_alloca_statement
                     + &format!(
                         "{} = fcmp oeq double {}, 0.0\n",
-                        i1_result, condition_handle.handle
+                        i1_result, condition_handle.llvm_name
                     )
                     + &format!(
                         "br i1 {}, label %{}, label %{}\n",
@@ -457,7 +534,7 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
                 inner_result
                     .result_handle
                     .expect("Expected a result handle for operand of unary operator")
-                    .handle
+                    .llvm_name
             );
 
         VisitorResult {
@@ -486,7 +563,7 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
                 loop_setup_code = loop_setup_code
                     + &format!(
                         "{} = fcmp oeq double {}, 0.0\n",
-                        i1_result, condition_result_handle.handle
+                        i1_result, condition_result_handle.llvm_name
                     )
                     + &format!(
                         "br i1 {}, label %{}, label %{}\n",
@@ -519,29 +596,13 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
 
     fn visit_un_op(&mut self, node: &mut parser::UnOp) -> VisitorResult {
         let inner_result = node.rhs.accept(self);
+        if inner_result.result_handle.is_none() {
+            panic!("Expected a result handle for operand of unary operator");
+        }
 
-        match node.op {
-            parser::UnaryOperator::Plus(_) => VisitorResult {
-                preamble: inner_result.preamble,
-                result_handle: inner_result.result_handle,
-            },
-            parser::UnaryOperator::Minus(_) => {
-                let tmp_variable = self.generate_tmp_variable();
-                let preamble = inner_result.preamble
-                    + "\n"
-                    + &format!(
-                        "{} = fsub double 0.0, {}",
-                        tmp_variable,
-                        inner_result
-                            .result_handle
-                            .expect("Expected a result handle for operand of unary operator")
-                            .handle
-                    );
-
-                VisitorResult {
-                    preamble,
-                    result_handle: Some(LlvmHandle::new_tmp_register(tmp_variable)),
-                }
+        match inner_result.result_handle.as_ref().unwrap().handle_type {
+            HandleType::Literal(LlvmType::F64) | HandleType::Register(LlvmType::F64) => {
+                self.get_double_un_op_visitor_result(&node.op, inner_result)
             }
         }
     }
