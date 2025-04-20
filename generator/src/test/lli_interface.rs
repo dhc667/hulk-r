@@ -13,7 +13,7 @@ pub fn call_lli(program_str: &str) -> Result<String, String> {
             String::from_utf8_lossy(&output.stderr)
         ));
     }
-    let result = String::from_utf8(output.stdout).map_err(|e| e.to_string())?;
+    let result = String::from_utf8(output.stdout.trim_ascii().to_owned()).map_err(|e| e.to_string())?;
     Ok(result)
 }
 

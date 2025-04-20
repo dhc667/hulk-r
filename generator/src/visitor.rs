@@ -70,7 +70,7 @@ impl GeneratorVisitor {
     /// # Description
     ///
     /// Uses the same global tmp_variable id to create globally unique then, else, fi
-    /// labels, used for if statements
+    /// labels, used for if expressions
     ///
     /// # Examples
     ///
@@ -109,6 +109,46 @@ impl GeneratorVisitor {
 
     /// # Description
     ///
+    /// Uses the same global tmp_variable id to create globally unique loop, body,
+    /// loop_exit labels
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use generator::GeneratorVisitor;
+    /// let mut cg = GeneratorVisitor::new();
+    ///
+    /// let (l, b, le) = cg.generate_loop_labels();
+    ///
+    /// assert_eq!(l, "loop.0");
+    /// assert_eq!(b, "body.0");
+    /// assert_eq!(le, "loop_exit.0");
+    /// ```
+    ///
+    /// ```rust
+    /// use generator::GeneratorVisitor;
+    /// let mut cg = GeneratorVisitor::new();
+    ///
+    /// let a = cg.generate_tmp_variable(); // %.0
+    /// let (l, b, le) = cg.generate_loop_labels();
+    ///
+    /// assert_eq!(l, "loop.1");
+    /// assert_eq!(b, "body.1");
+    /// assert_eq!(le, "loop_exit.1");
+    /// ```
+    ///
+    pub fn generate_loop_labels(&mut self) -> (String, String, String) {
+        let l = format!("loop.{}", self.tmp_variable_id);
+        let b = format!("body.{}", self.tmp_variable_id);
+        let le = format!("loop_exit.{}", self.tmp_variable_id);
+
+        self.tmp_variable_id += 1;
+
+        (l, b, le)
+    }
+
+    /// # Description
+    ///
     /// Increases the globally unique id for this variable name, defines it
     /// using its name in the current context, and assigning to it the unique
     /// generated llvm name
@@ -138,7 +178,7 @@ impl GeneratorVisitor {
 
 impl Visitor<VisitorResult> for GeneratorVisitor {
     fn visit_program(&mut self, node: &mut parser::Program) -> VisitorResult {
-        let mut program = "@.fstr = private constant [2 x i8] c\"%f\", align 1\n".to_string()
+        let mut program = "@.fstr = private constant [3 x i8] c\"%f\\0A\", align 1\n".to_string()
             + "declare i32 @printf(i8*, ...)\n"
             + "define i32 @main() {\nentry:\n";
 
@@ -321,11 +361,10 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
         let condition_result = node.condition.accept(self);
         let condition_handle = condition_result
             .result_handle
-            .expect("Expected a result handle for condition of if statement");
+            .expect("Expected a result handle for condition of if expression");
 
         let then_result = node.then_expression.accept(self);
         let else_result = node.else_expression.accept(self);
-
 
         let (result_variable, result_register) = match then_result.result_handle {
             Some(_) => (
@@ -339,15 +378,15 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
             None => (None, None),
         };
 
-        let format_result_store = |branch_result_handle: Option<LlvmHandle>| {
-            match branch_result_handle {
+        let format_result_store =
+            |branch_result_handle: Option<LlvmHandle>| match branch_result_handle {
                 Some(ref name) => format!(
                     "store double {}, double* {}, align 4\n",
-                    name.handle, result_variable.as_ref().unwrap()
+                    name.handle,
+                    result_variable.as_ref().unwrap()
                 ),
                 None => "".to_string(),
-            }
-        };
+            };
 
         let result_alloca_statement = match result_variable {
             Some(ref name) => format!("{} = alloca double, align 4\n", name),
@@ -385,7 +424,8 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
             format!(
                 "{}:\n{}",
                 branch_name,
-                preamble + format_result_store(result_handle).as_str()
+                preamble
+                    + format_result_store(result_handle).as_str()
                     + format!("br label %{}\n", fi_label).as_str()
             )
         };
@@ -411,7 +451,7 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
 
         let preamble = inner_result.preamble
             + &format!(
-                "{} = getelementptr inbounds [2 x i8], [2 x i8]* @.fstr, i32 0, i32 0\ncall i32 (i8*, ...) @printf(i8* {}, double {})",
+                "{} = getelementptr inbounds [3 x i8], [3 x i8]* @.fstr, i32 0, i32 0\ncall i32 (i8*, ...) @printf(i8* {}, double {})",
                 element_ptr_variable,
                 element_ptr_variable,
                 inner_result
@@ -427,7 +467,46 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
     }
 
     fn visit_while(&mut self, node: &mut parser::While) -> VisitorResult {
-        todo!()
+        let condition_result = node.condition.accept(self);
+        let condition_result_handle = condition_result
+            .result_handle
+            .expect("Expected a result handle for condition of while statement");
+
+        let body_result = node.body.accept(self);
+
+        let (loop_label, body_label, loop_exit_label) = self.generate_loop_labels();
+        let i1_result = self.generate_tmp_variable();
+
+        let mut loop_setup_code = format!("br label %{}\n", loop_label)
+            + &format!("{}:\n", loop_label)
+            + &condition_result.preamble;
+
+        match condition_result_handle.handle_type {
+            HandleType::Literal(LlvmType::F64) | HandleType::Register(LlvmType::F64) => {
+                loop_setup_code = loop_setup_code
+                    + &format!(
+                        "{} = fcmp oeq double {}, 0.0\n",
+                        i1_result, condition_result_handle.handle
+                    )
+                    + &format!(
+                        "br i1 {}, label %{}, label %{}\n",
+                        i1_result, loop_exit_label, body_label
+                    );
+            }
+        };
+
+        let body_code = format!("{}:\n", body_label)
+            + &body_result.preamble
+            + &format!("br label %{}\n", loop_label);
+
+        let loop_exit_code = format!("{}:\n", loop_exit_label);
+
+        let preamble = loop_setup_code + &body_code + &loop_exit_code;
+
+        VisitorResult {
+            preamble,
+            result_handle: None,
+        }
     }
 
     fn visit_block(&mut self, node: &mut parser::Block) -> VisitorResult {

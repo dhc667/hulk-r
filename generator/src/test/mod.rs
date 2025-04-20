@@ -9,6 +9,7 @@ pub mod let_in;
 pub mod dassignment;
 pub mod block;
 pub mod if_else;
+pub mod while_loop;
 
 fn generate_code(hulk: &str) -> String{
     let p = ProgramParser::new();
@@ -17,4 +18,5 @@ fn generate_code(hulk: &str) -> String{
     let code = ast.accept(&mut visitor);
     return code.preamble;
 }
+
 

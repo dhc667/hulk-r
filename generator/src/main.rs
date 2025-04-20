@@ -5,17 +5,13 @@ use parser::{ProgramParser, Visitable};
 
 fn main() {
     let llvm = generate_code(
-        "let x = 
-            if (0) 
-                { 1; } 
-            else { 
-                let x = 2 in {
-                    x := x + 1;
-                    x := x + 1;
-                    x;
-                };
-            }
-        in print(x + 1);",
+        "let x = 10 in {
+            while(x - 1) {
+                x := x - 1;
+                print(x);
+            };
+            print(x);
+        };"
     );
     println!("{}", llvm);
 
