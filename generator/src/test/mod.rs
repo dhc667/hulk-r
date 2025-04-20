@@ -8,6 +8,7 @@ pub mod operators;
 pub mod let_in;
 pub mod dassignment;
 pub mod block;
+pub mod if_else;
 
 fn generate_code(hulk: &str) -> String{
     let p = ProgramParser::new();

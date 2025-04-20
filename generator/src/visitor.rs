@@ -6,7 +6,6 @@ use parser::{Visitor, visitors::visitable::Visitable};
 use crate::context::Context;
 use crate::llvm_types::{HandleType, LlvmHandle, LlvmType};
 
-
 pub struct VisitorResult {
     pub result_handle: Option<LlvmHandle>,
     pub preamble: String,
@@ -59,13 +58,53 @@ impl GeneratorVisitor {
         }
     }
 
-    pub fn generate_new_tmp_variable(&mut self) -> String {
+    pub fn generate_tmp_variable(&mut self) -> String {
         // we use the . after % to get around llvm's requirement that %N names
         // be sequential starting at 0 within the same context
         let tmp_variable = format!("%.{}", self.tmp_variable_id);
         self.tmp_variable_id += 1;
 
         tmp_variable
+    }
+
+    /// # Description
+    ///
+    /// Uses the same global tmp_variable id to create globally unique then, else, fi
+    /// labels, used for if statements
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use generator::GeneratorVisitor;
+    /// let mut cg = GeneratorVisitor::new();
+    ///
+    /// let (t, e, f) = cg.generate_then_else_fi_labels();
+    ///
+    /// assert_eq!(t, "then.0");
+    /// assert_eq!(e, "else.0");
+    /// assert_eq!(f, "fi.0");
+    /// ```
+    ///
+    /// ```rust
+    /// use generator::GeneratorVisitor;
+    /// let mut cg = GeneratorVisitor::new();
+    ///
+    /// let a = cg.generate_tmp_variable(); // %.0
+    /// let (t, e, f) = cg.generate_then_else_fi_labels();
+    ///
+    /// assert_eq!(t, "then.1");
+    /// assert_eq!(e, "else.1");
+    /// assert_eq!(f, "fi.1");
+    /// ```
+    ///
+    pub fn generate_then_else_fi_labels(&mut self) -> (String, String, String) {
+        let t = format!("then.{}", self.tmp_variable_id);
+        let e = format!("else.{}", self.tmp_variable_id);
+        let f = format!("fi.{}", self.tmp_variable_id);
+
+        self.tmp_variable_id += 1;
+
+        (t, e, f)
     }
 
     /// # Description
@@ -151,9 +190,16 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
             "Variable must be dassigned to non-null expression result, SA should've caught this",
         );
 
-        let llvm_name = &self.context
+        let llvm_name = &self
+            .context
             .get_value(&node.identifier.id)
-            .expect(format!("Variable {} not found, SA should have caught this", node.identifier.id).as_str())
+            .expect(
+                format!(
+                    "Variable {} not found, SA should have caught this",
+                    node.identifier.id
+                )
+                .as_str(),
+            )
             .llvm_name;
 
         match result_handle.handle_type {
@@ -184,7 +230,7 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
 
         let preamble = left_result.preamble + &right_result.preamble;
 
-        let result_handle = self.generate_new_tmp_variable();
+        let result_handle = self.generate_tmp_variable();
 
         let operation = match node.op {
             Plus(_) => format!(
@@ -270,12 +316,98 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
     }
 
     fn visit_if_else(&mut self, node: &mut parser::IfElse) -> VisitorResult {
-        todo!()
+        let (then_label, else_label, fi_label) = self.generate_then_else_fi_labels();
+
+        let condition_result = node.condition.accept(self);
+        let condition_handle = condition_result
+            .result_handle
+            .expect("Expected a result handle for condition of if statement");
+
+        let then_result = node.then_expression.accept(self);
+        let else_result = node.else_expression.accept(self);
+
+
+        let (result_variable, result_register) = match then_result.result_handle {
+            Some(_) => (
+                Some(self.generate_tmp_variable()),
+                Some(self.generate_tmp_variable()),
+            ),
+
+            // this can happen if the then block is empty, or is multiple semicolon
+            // terminated, we also assume the else block is empty in this case, SA
+            // must guarantee this
+            None => (None, None),
+        };
+
+        let format_result_store = |branch_result_handle: Option<LlvmHandle>| {
+            match branch_result_handle {
+                Some(ref name) => format!(
+                    "store double {}, double* {}, align 4\n",
+                    name.handle, result_variable.as_ref().unwrap()
+                ),
+                None => "".to_string(),
+            }
+        };
+
+        let result_alloca_statement = match result_variable {
+            Some(ref name) => format!("{} = alloca double, align 4\n", name),
+            None => "".to_string(),
+        };
+
+        let result_load_statement = match result_register {
+            Some(ref name) => format!(
+                "{} = load double, double* {}, align 4\n",
+                name,
+                result_variable.as_ref().unwrap()
+            ),
+            None => "".to_string(),
+        };
+
+        let mut branch_setup = condition_result.preamble;
+        let i1_result = self.generate_tmp_variable();
+
+        match condition_handle.handle_type {
+            HandleType::Literal(LlvmType::F64) | HandleType::Register(LlvmType::F64) => {
+                branch_setup = branch_setup
+                    + &result_alloca_statement
+                    + &format!(
+                        "{} = fcmp oeq double {}, 0.0\n",
+                        i1_result, condition_handle.handle
+                    )
+                    + &format!(
+                        "br i1 {}, label %{}, label %{}\n",
+                        i1_result, else_label, then_label
+                    )
+            }
+        };
+
+        let format_branch = |branch_name, preamble, result_handle: Option<LlvmHandle>| {
+            format!(
+                "{}:\n{}",
+                branch_name,
+                preamble + format_result_store(result_handle).as_str()
+                    + format!("br label %{}\n", fi_label).as_str()
+            )
+        };
+
+        let then_code = format_branch(then_label, then_result.preamble, then_result.result_handle);
+        let else_code = format_branch(else_label, else_result.preamble, else_result.result_handle);
+
+        let preamble = branch_setup
+            + &then_code
+            + &else_code
+            + &format!("{}:\n", fi_label)
+            + &result_load_statement;
+
+        VisitorResult {
+            preamble,
+            result_handle: result_register.map(|name| LlvmHandle::new_tmp_register(name)),
+        }
     }
 
     fn visit_print(&mut self, node: &mut parser::Print) -> VisitorResult {
         let inner_result = node.expression.accept(self);
-        let element_ptr_variable = self.generate_new_tmp_variable();
+        let element_ptr_variable = self.generate_tmp_variable();
 
         let preamble = inner_result.preamble
             + &format!(
@@ -315,7 +447,7 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
                 result_handle: inner_result.result_handle,
             },
             parser::UnaryOperator::Minus(_) => {
-                let tmp_variable = self.generate_new_tmp_variable();
+                let tmp_variable = self.generate_tmp_variable();
                 let preamble = inner_result.preamble
                     + "\n"
                     + &format!(
@@ -336,7 +468,7 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
     }
 
     fn visit_variable(&mut self, node: &mut parser::Identifier) -> VisitorResult {
-        let register_name = self.generate_new_tmp_variable();
+        let register_name = self.generate_tmp_variable();
 
         let variable = self
             .context

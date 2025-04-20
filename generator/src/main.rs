@@ -1,17 +1,28 @@
 //! This file is temporarily used to test the code generation.
 
-
 use generator::GeneratorVisitor;
 use parser::{ProgramParser, Visitable};
 
 fn main() {
-    let llvm = generate_code("let x = 3 in print(2 + 2 + 3 + 4 * 7 + x);");
+    let llvm = generate_code(
+        "let x = 
+            if (0) 
+                { 1; } 
+            else { 
+                let x = 2 in {
+                    x := x + 1;
+                    x := x + 1;
+                    x;
+                };
+            }
+        in print(x + 1);",
+    );
     println!("{}", llvm);
 
     println!("{}", call_lli(&llvm).unwrap())
 }
 
-fn generate_code(hulk: &str) -> String{
+fn generate_code(hulk: &str) -> String {
     let p = ProgramParser::new();
     let mut ast = p.parse(hulk).unwrap();
     let mut visitor = GeneratorVisitor::new();
