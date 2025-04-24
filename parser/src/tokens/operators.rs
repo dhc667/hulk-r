@@ -16,6 +16,10 @@ pub enum BinaryOperator {
     LessEqual(TokenPosition),
     Greater(TokenPosition),
     GreaterEqual(TokenPosition),
+    NotEqual(TokenPosition),
+
+    Or(TokenPosition),
+    And(TokenPosition),
 
     Equal(TokenPosition),
     ColonEqual(TokenPosition),
@@ -39,6 +43,9 @@ impl Display for BinaryOperator {
             BinaryOperator::Greater(_) => write!(f, ">"),
             BinaryOperator::GreaterEqual(_) => write!(f, ">="),
             BinaryOperator::EqualEqual(_) => write!(f, "=="),
+            BinaryOperator::NotEqual(_) => write!(f, "!="),
+            BinaryOperator::Or(_) => write!(f, "||"),
+            BinaryOperator::And(_) => write!(f, "&&"),
         }
     }
 }
