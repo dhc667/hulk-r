@@ -1,4 +1,5 @@
-use crate::{ast::Atom, grammar};
+use crate::grammar;
+use ast::Atom;
 
 #[test]
 fn parses_number_literals() {

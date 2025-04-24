@@ -1,5 +1,4 @@
-use crate::ast;
-
+use ast;
 use crate::grammar;
 
 #[test]

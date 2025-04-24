@@ -1,4 +1,4 @@
-use crate::ast::Atom;
+use ast::Atom;
 use crate::grammar;
 
 #[test]

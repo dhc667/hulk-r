@@ -1,4 +1,4 @@
-use crate::{ast::Atom, tokens::UnaryOperator};
+use ast::{Atom, tokens::UnaryOperator};
 
 use super::super::grammar;
 

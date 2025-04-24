@@ -1,4 +1,7 @@
-use crate::visitors::{visitable::Visitable, Visitor};
+use ast::visitors::{visitable::Visitable, Visitor};
+use ast;
+use ast::tokens;
+use ast::Program;
 
 pub struct EchoVisitor;
 
@@ -9,37 +12,37 @@ impl EchoVisitor {
 }
 
 impl Visitor<String> for EchoVisitor {
-    fn visit_expression(&mut self, node: &mut crate::ast::Expression) -> String {
+    fn visit_expression(&mut self, node: &mut ast::Expression) -> String {
         node.accept(self)
     }
 
-    fn visit_destructive_assignment(&mut self, node: &mut crate::ast::DestructiveAssignment) -> String {
+    fn visit_destructive_assignment(&mut self, node: &mut ast::DestructiveAssignment) -> String {
         let expression = node.expression.accept(self);
         format!("{} {} {}", node.identifier, node.op, expression)
     }
 
-    fn visit_bin_op(&mut self, node: &mut crate::ast::BinOp) -> String {
+    fn visit_bin_op(&mut self, node: &mut ast::BinOp) -> String {
         let lhs = node.lhs.accept(self);
         let rhs = node.rhs.accept(self);
         format!("({} {} {})", lhs, node.op, rhs)
     }
 
-    fn visit_atom(&mut self, node: &mut crate::ast::Atom) -> String {
+    fn visit_atom(&mut self, node: &mut ast::Atom) -> String {
         node.accept(self)
     }
 
-    fn visit_let_in(&mut self, node: &mut crate::ast::LetIn) -> String {
+    fn visit_let_in(&mut self, node: &mut ast::LetIn) -> String {
         let assignment = node.assignment.accept(self);
         let body = node.body.accept(self);
         format!("{} {} {} {}", node.let_token, assignment, node.in_token, body)
     }
 
-    fn visit_assignment(&mut self, node: &mut crate::ast::Assignment) -> String {
+    fn visit_assignment(&mut self, node: &mut ast::Assignment) -> String {
         let rhs = node.rhs.accept(self);
         format!("{} {} {}", node.identifier, node.op, rhs)
     }
 
-    fn visit_if_else(&mut self, node: &mut crate::ast::IfElse) -> String {
+    fn visit_if_else(&mut self, node: &mut ast::IfElse) -> String {
         let condition = node.condition.accept(self);
         let then_branch = node.then_expression.accept(self);
         let else_branch = node.else_expression.accept(self);
@@ -49,18 +52,18 @@ impl Visitor<String> for EchoVisitor {
         )
     }
 
-    fn visit_print(&mut self, node: &mut crate::ast::Print) -> String {
+    fn visit_print(&mut self, node: &mut ast::Print) -> String {
         let expression = node.expression.accept(self);
         format!("{}({})", node.print_token, expression)
     }
 
-    fn visit_while(&mut self, node: &mut crate::ast::While) -> String {
+    fn visit_while(&mut self, node: &mut ast::While) -> String {
         let condition = node.condition.accept(self);
         let body = node.body.accept(self);
         format!("{} ({}) {}", node.while_token, condition, body)
     }
 
-    fn visit_block(&mut self, node: &mut crate::ast::Block) -> String {
+    fn visit_block(&mut self, node: &mut ast::Block) -> String {
         let inside = node.expression_list.accept(self);
         format!(
             "{} {} {}",
@@ -68,16 +71,16 @@ impl Visitor<String> for EchoVisitor {
         )
     }
 
-    fn visit_un_op(&mut self, node: &mut crate::ast::UnOp) -> String {
+    fn visit_un_op(&mut self, node: &mut ast::UnOp) -> String {
         let expression = node.rhs.accept(self);
         format!("({} {})", node.op, expression)
     }
 
-    fn visit_variable(&mut self, node: &mut crate::tokens::Identifier) -> String {
+    fn visit_variable(&mut self, node: &mut tokens::Identifier) -> String {
         format!("{}", node)
     }
 
-    fn visit_number_literal(&mut self, node: &mut crate::tokens::NumberLiteral) -> String {
+    fn visit_number_literal(&mut self, node: &mut tokens::NumberLiteral) -> String {
         format!("{}", node)
     }
 
@@ -85,7 +88,7 @@ impl Visitor<String> for EchoVisitor {
         String::new()
     }
 
-    fn visit_expression_list(&mut self, node: &mut crate::ast::ExpressionList) -> String {
+    fn visit_expression_list(&mut self, node: &mut ast::ExpressionList) -> String {
         let expressions = node.expressions.iter_mut()
             .map(|expr| expr.accept(self))
             .collect::<Vec<String>>();
@@ -98,7 +101,7 @@ impl Visitor<String> for EchoVisitor {
         }
     }
 
-    fn visit_program(&mut self, node: &mut crate::Program) -> String {
+    fn visit_program(&mut self, node: &mut Program) -> String {
         node.expression_list.accept(self)
     }
 }

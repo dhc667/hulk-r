@@ -1,4 +1,5 @@
-use crate::{ast::Atom, grammar};
+use ast::Atom;
+use crate::grammar;
 
 #[test]
 fn parses_print_expression() {

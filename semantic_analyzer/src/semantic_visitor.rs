@@ -1,7 +1,4 @@
-use crate::{
-    Visitor,
-    visitors::{IContext, visitable::Visitable},
-};
+use ast::{visitors::visitable::Visitable, *};
 
 use super::{DefContext, def_context::Frame};
 
@@ -22,11 +19,11 @@ impl SemanticVisitor {
 }
 
 impl Visitor<()> for SemanticVisitor {
-    fn visit_expression(&mut self, node: &mut crate::Expression) {
+    fn visit_expression(&mut self, node: &mut Expression) {
         node.accept(self);
     }
 
-    fn visit_destructive_assignment(&mut self, node: &mut crate::DestructiveAssignment) {
+    fn visit_destructive_assignment(&mut self, node: &mut DestructiveAssignment) {
         node.expression.accept(self);
         if !self.definitions.is_defined(&node.identifier.id) {
             let message = format!("Variable {} is not defined", node.identifier);
@@ -34,16 +31,16 @@ impl Visitor<()> for SemanticVisitor {
         }
     }
 
-    fn visit_bin_op(&mut self, node: &mut crate::BinOp) {
+    fn visit_bin_op(&mut self, node: &mut BinOp) {
         node.lhs.accept(self);
         node.rhs.accept(self);
     }
 
-    fn visit_atom(&mut self, node: &mut crate::Atom) {
+    fn visit_atom(&mut self, node: &mut Atom) {
         node.accept(self);
     }
 
-    fn visit_let_in(&mut self, node: &mut crate::LetIn) {
+    fn visit_let_in(&mut self, node: &mut LetIn) {
         self.definitions.push_frame();
 
         node.assignment.accept(self);
@@ -52,7 +49,7 @@ impl Visitor<()> for SemanticVisitor {
         self.definitions.pop_frame();
     }
 
-    fn visit_assignment(&mut self, node: &mut crate::Assignment) {
+    fn visit_assignment(&mut self, node: &mut Assignment) {
         node.rhs.accept(self);
         if !self.definitions.define(&node.identifier.id) {
             let message = format!("Variable {} is already defined", node.identifier);
@@ -60,37 +57,37 @@ impl Visitor<()> for SemanticVisitor {
         }
     }
 
-    fn visit_if_else(&mut self, node: &mut crate::IfElse) {
+    fn visit_if_else(&mut self, node: &mut IfElse) {
         node.condition.accept(self);
         node.then_expression.accept(self);
         node.else_expression.accept(self);
     }
 
-    fn visit_print(&mut self, node: &mut crate::Print) {
+    fn visit_print(&mut self, node: &mut Print) {
         node.expression.accept(self);
     }
 
-    fn visit_while(&mut self, node: &mut crate::While) -> () {
+    fn visit_while(&mut self, node: &mut While) -> () {
         node.condition.accept(self);
         node.body.accept(self);
     }
 
-    fn visit_block(&mut self, node: &mut crate::Block) -> () {
+    fn visit_block(&mut self, node: &mut Block) -> () {
         node.expression_list.accept(self);
     }
 
-    fn visit_un_op(&mut self, node: &mut crate::UnOp) -> () {
+    fn visit_un_op(&mut self, node: &mut UnOp) -> () {
         node.rhs.accept(self);
     }
 
-    fn visit_variable(&mut self, node: &mut crate::Identifier) -> () {
+    fn visit_variable(&mut self, node: &mut Identifier) -> () {
         if !self.definitions.is_defined(&node.id) {
             let message = format!("Variable {} is not defined", node.id);
             self.errors.push(message);
         }
     }
 
-    fn visit_number_literal(&mut self, _node: &mut crate::NumberLiteral) -> () {
+    fn visit_number_literal(&mut self, _node: &mut NumberLiteral) -> () {
         // No action needed for number literals
     }
 
@@ -98,13 +95,13 @@ impl Visitor<()> for SemanticVisitor {
         // No action needed for empty expressions
     }
 
-    fn visit_expression_list(&mut self, node: &mut crate::ExpressionList) -> () {
+    fn visit_expression_list(&mut self, node: &mut ExpressionList) -> () {
         for expression in &mut node.expressions {
             expression.accept(self);
         }
     }
 
-    fn visit_program(&mut self, node: &mut crate::Program) -> () {
+    fn visit_program(&mut self, node: &mut Program) -> () {
         node.expression_list.accept(self);
     }
 }
