@@ -1,4 +1,5 @@
 use crate::grammar;
+use ast::BooleanLiteral;
 
 #[test]
 fn parses_and_or() {
@@ -82,7 +83,7 @@ fn logical_literals() {
             .unwrap()
             .as_boolean_literal()
             .unwrap(),
-        crate::BooleanLiteral::True(_)
+        BooleanLiteral::True(_)
     ));
 
     assert!(matches!(
@@ -96,6 +97,6 @@ fn logical_literals() {
             .unwrap()
             .as_boolean_literal()
             .unwrap(),
-        crate::BooleanLiteral::False(_)
+        BooleanLiteral::False(_)
     ));
 }

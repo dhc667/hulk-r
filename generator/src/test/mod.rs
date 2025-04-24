@@ -1,4 +1,5 @@
-use parser::{grammar::ProgramParser, visitors::visitable::Visitable};
+use parser::grammar::ProgramParser;
+use ast::Visitable;
 
 use crate::GeneratorVisitor;
 
@@ -11,6 +12,7 @@ pub mod let_in;
 pub mod misc;
 pub mod operators;
 pub mod while_loop;
+pub mod printer;
 
 fn generate_code(hulk: &str) -> String {
     let p = ProgramParser::new();

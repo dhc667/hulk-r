@@ -1,11 +1,10 @@
-use crate::{
-    grammar::ExpressionListParser,
-    visitors::{implementations::semantic_visitor::SemanticVisitor, visitable::Visitable},
-};
+use super::SemanticVisitor;
+use ast::Visitable;
+use parser::ProgramParser;
 
 #[test]
 fn not_defined_variable() {
-    let p = ExpressionListParser::new();
+    let p = ProgramParser::new();
 
     let mut answ = p.parse("x + 2;").unwrap();
 
@@ -20,7 +19,7 @@ fn not_defined_variable() {
 
 #[test]
 fn shadow_different_let_in() {
-    let p = ExpressionListParser::new();
+    let p = ProgramParser::new();
 
     let mut answ = p
         .parse("let x = 1 + 2 in let x = x + 2 in {x + 2;};")
@@ -33,7 +32,7 @@ fn shadow_different_let_in() {
 
 #[test]
 fn shadow_in_same_let_in() {
-    let p = ExpressionListParser::new();
+    let p = ProgramParser::new();
 
     let mut answ = p.parse("let x = 1 + 2, x = x + 2 in {x + 2;};").unwrap();
 
@@ -44,7 +43,7 @@ fn shadow_in_same_let_in() {
 
 #[test]
 fn lookup_in_let_in() {
-    let p = ExpressionListParser::new();
+    let p = ProgramParser::new();
 
     let mut answ = p.parse("let x = 1 + 2 in let y = 4 in {x + 2;};").unwrap();
 
@@ -55,7 +54,7 @@ fn lookup_in_let_in() {
 
 #[test]
 fn lookup_in_let_in_with_shadow() {
-    let p = ExpressionListParser::new();
+    let p = ProgramParser::new();
 
     let mut answ = p.parse("let x = 1 + 2 in let x = 4 in {x + 2;};").unwrap();
 
@@ -66,7 +65,7 @@ fn lookup_in_let_in_with_shadow() {
 
 #[test]
 fn not_defined_variable_different_let_in() {
-    let p = ExpressionListParser::new();
+    let p = ProgramParser::new();
 
     let mut answ = p.parse("let x=3 in {x;}; x+18;").unwrap();
 
@@ -82,7 +81,7 @@ fn not_defined_variable_different_let_in() {
 
 #[test]
 fn several_undefinitions() {
-    let p = ExpressionListParser::new();
+    let p = ProgramParser::new();
 
     let mut answ = p.parse("let x=3, y=4, z=5 in {x;}; x+y+z+18;").unwrap();
 

@@ -179,7 +179,7 @@ impl<T: Visitor<R>, R> Visitable<T, R> for Atom {
             Atom::NumberLiteral(number_literal) => visitor.visit_number_literal(number_literal),
             Atom::Variable(identifier) => visitor.visit_variable(identifier),
             Atom::UnaryOp(un_op) => un_op.accept(visitor),
-            Atom::BooleanLiteral(boolean_literal) => todo!(),
+            Atom::BooleanLiteral(_) => todo!(),
         }
     }
 }

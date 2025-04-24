@@ -1,6 +1,5 @@
 use std::collections::HashSet;
 
-use crate::visitors::IContext;
 
 pub struct DefContext {
     pub current_frame: Link,
@@ -22,8 +21,8 @@ impl Frame {
     }
 }
 
-impl IContext for DefContext {
-    fn push_frame(&mut self) {
+impl DefContext {
+    pub fn push_frame(&mut self) {
         let new_frame = Box::new(Frame {
             variables: HashSet::new(),
             parent: self.current_frame.take(),
@@ -32,13 +31,13 @@ impl IContext for DefContext {
         self.current_frame = Some(new_frame)
     }
 
-    fn pop_frame(&mut self) {
+    pub fn pop_frame(&mut self) {
         self.current_frame.take().map(|frame| {
             self.current_frame = frame.parent;
         });
     }
 
-    fn is_defined(&self, var_name: &str) -> bool {
+    pub fn is_defined(&self, var_name: &str) -> bool {
         let mut current_frame = &self.current_frame;
         while let Some(frame) = current_frame {
             if frame.variables.contains(var_name) {
@@ -49,7 +48,7 @@ impl IContext for DefContext {
         false
     }
 
-    fn define(&mut self, var_name: &str) -> bool {
+    pub fn define(&mut self, var_name: &str) -> bool {
         if let Some(frame) = &mut self.current_frame {
             return frame.variables.insert(var_name.to_string());
         }

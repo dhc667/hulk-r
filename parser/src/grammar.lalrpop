@@ -1,5 +1,5 @@
-use crate::ast;
-use crate::tokens;
+use ast;
+use ast::tokens;
 
 grammar;
 

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use parser::BinaryOperator::*;
-use parser::{Visitor, visitors::visitable::Visitable};
+use ast::BinaryOperator::*;
+use ast::{Visitor, visitors::visitable::Visitable};
 
 use crate::context::Context;
 use crate::llvm_types::{HandleType, LlvmHandle, LlvmType};
@@ -177,7 +177,7 @@ impl GeneratorVisitor {
 
     /// # Description
     ///
-    /// This will be used internally to create a visitor result when the 
+    /// This will be used internally to create a visitor result when the
     /// lhs of a unary operator is double, to not fill the visit_unop
     /// function with too much code.
     ///
@@ -186,23 +186,23 @@ impl GeneratorVisitor {
     ///
     /// # Panics
     ///
-    /// - If the inner result handle is None or if the 
+    /// - If the inner result handle is None or if the
     /// operator is not supported by double values
     fn get_double_un_op_visitor_result(
         &mut self,
-        op: &parser::UnaryOperator,
+        op: &ast::UnaryOperator,
         inner_result: VisitorResult,
     ) -> VisitorResult {
         let inner_handle = inner_result.result_handle.unwrap();
 
         match op {
-            parser::UnaryOperator::Plus(_) => {
+            ast::UnaryOperator::Plus(_) => {
                 return VisitorResult {
                     preamble: inner_result.preamble,
                     result_handle: Some(inner_handle),
                 };
             }
-            parser::UnaryOperator::Minus(_) => {
+            ast::UnaryOperator::Minus(_) => {
                 let tmp_variable = self.generate_tmp_variable();
                 let preamble = inner_result.preamble
                     + "\n"
@@ -221,17 +221,17 @@ impl GeneratorVisitor {
 
     /// # Description
     ///
-    /// This will be used internally to create a visitor result when the 
-    /// operands of a binary operator are doubles, to not fill the 
+    /// This will be used internally to create a visitor result when the
+    /// operands of a binary operator are doubles, to not fill the
     /// visit_bin_op handler with code
     ///
     /// # Panics
     ///
-    /// - If eiher of the operand handles are None or the operator is 
+    /// - If eiher of the operand handles are None or the operator is
     /// not supported for double values
     fn get_double_bin_op_visitor_result(
         &mut self,
-        op: &parser::BinaryOperator,
+        op: &ast::BinaryOperator,
         lhs: VisitorResult,
         rhs: VisitorResult,
     ) -> VisitorResult {
@@ -259,19 +259,19 @@ impl GeneratorVisitor {
                 "{} = fdiv double {}, {}",
                 result_handle, lhs_handle.llvm_name, rhs_handle.llvm_name
             ),
-            //  TODO: these will need some setup
             FloorDivide(_) => todo!(),
             Modulo(_) => todo!(),
             Equal(_) => panic!("= found in non-assignment, parser problem"),
-
             ColonEqual(_) => panic!(":= found in non-destructive assignment, parser problem"),
-
-            //  TODO: these are not even implemented in the parser
             EqualEqual(_) => todo!(),
             Less(_) => todo!(),
             LessEqual(_) => todo!(),
             Greater(_) => todo!(),
             GreaterEqual(_) => todo!(),
+
+            NotEqual(_) => todo!(),
+            Or(_) => todo!(),
+            And(_) => todo!(),
         } + "\n";
 
         VisitorResult {
@@ -282,7 +282,7 @@ impl GeneratorVisitor {
 }
 
 impl Visitor<VisitorResult> for GeneratorVisitor {
-    fn visit_program(&mut self, node: &mut parser::Program) -> VisitorResult {
+    fn visit_program(&mut self, node: &mut ast::Program) -> VisitorResult {
         let mut program = "@.fstr = private constant [3 x i8] c\"%f\\0A\", align 1\n".to_string()
             + "declare i32 @printf(i8*, ...)\n"
             + "define i32 @main() {\nentry:\n";
@@ -299,7 +299,7 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
         }
     }
 
-    fn visit_expression_list(&mut self, node: &mut parser::ExpressionList) -> VisitorResult {
+    fn visit_expression_list(&mut self, node: &mut ast::ExpressionList) -> VisitorResult {
         let mut preamble = "".to_string();
         let mut result_handle = None;
 
@@ -320,13 +320,13 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
         }
     }
 
-    fn visit_expression(&mut self, node: &mut parser::Expression) -> VisitorResult {
+    fn visit_expression(&mut self, node: &mut ast::Expression) -> VisitorResult {
         node.accept(self)
     }
 
     fn visit_destructive_assignment(
         &mut self,
-        node: &mut parser::DestructiveAssignment,
+        node: &mut ast::DestructiveAssignment,
     ) -> VisitorResult {
         let expression_result = node.expression.accept(self);
         let mut preamble = expression_result.preamble;
@@ -363,7 +363,7 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
         }
     }
 
-    fn visit_bin_op(&mut self, node: &mut parser::BinOp) -> VisitorResult {
+    fn visit_bin_op(&mut self, node: &mut ast::BinOp) -> VisitorResult {
         let left_result = node.lhs.accept(self);
         if left_result.result_handle.is_none() {
             panic!("Expected a result handle for lhs of binary operator");
@@ -377,21 +377,16 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
         // equal types for each operand is a guarantee of SA
         match left_result.result_handle.as_ref().unwrap().handle_type {
             HandleType::Literal(LlvmType::F64) | HandleType::Register(LlvmType::F64) => {
-                return self.get_double_bin_op_visitor_result(
-                    &node.op,
-                    left_result,
-                    right_result,
-                );
+                return self.get_double_bin_op_visitor_result(&node.op, left_result, right_result);
             }
         };
-
     }
 
-    fn visit_atom(&mut self, node: &mut parser::Atom) -> VisitorResult {
+    fn visit_atom(&mut self, node: &mut ast::Atom) -> VisitorResult {
         node.accept(self)
     }
 
-    fn visit_let_in(&mut self, node: &mut parser::LetIn) -> VisitorResult {
+    fn visit_let_in(&mut self, node: &mut ast::LetIn) -> VisitorResult {
         self.context.push_frame(true);
 
         let assignment_preamble = node.assignment.accept(self).preamble;
@@ -406,7 +401,7 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
         }
     }
 
-    fn visit_assignment(&mut self, node: &mut parser::Assignment) -> VisitorResult {
+    fn visit_assignment(&mut self, node: &mut ast::Assignment) -> VisitorResult {
         let expression_result = node.rhs.accept(self);
         let mut preamble = expression_result.preamble;
         let result_handle = expression_result.result_handle.expect(
@@ -432,7 +427,7 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
         }
     }
 
-    fn visit_if_else(&mut self, node: &mut parser::IfElse) -> VisitorResult {
+    fn visit_if_else(&mut self, node: &mut ast::IfElse) -> VisitorResult {
         let (then_label, else_label, fi_label) = self.generate_then_else_fi_labels();
 
         let condition_result = node.condition.accept(self);
@@ -522,7 +517,7 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
         }
     }
 
-    fn visit_print(&mut self, node: &mut parser::Print) -> VisitorResult {
+    fn visit_print(&mut self, node: &mut ast::Print) -> VisitorResult {
         let inner_result = node.expression.accept(self);
         let element_ptr_variable = self.generate_tmp_variable();
 
@@ -543,7 +538,7 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
         }
     }
 
-    fn visit_while(&mut self, node: &mut parser::While) -> VisitorResult {
+    fn visit_while(&mut self, node: &mut ast::While) -> VisitorResult {
         let condition_result = node.condition.accept(self);
         let condition_result_handle = condition_result
             .result_handle
@@ -586,7 +581,7 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
         }
     }
 
-    fn visit_block(&mut self, node: &mut parser::Block) -> VisitorResult {
+    fn visit_block(&mut self, node: &mut ast::Block) -> VisitorResult {
         self.context.push_frame(true);
         let result = node.expression_list.accept(self);
         self.context.pop_frame();
@@ -594,7 +589,7 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
         result
     }
 
-    fn visit_un_op(&mut self, node: &mut parser::UnOp) -> VisitorResult {
+    fn visit_un_op(&mut self, node: &mut ast::UnOp) -> VisitorResult {
         let inner_result = node.rhs.accept(self);
         if inner_result.result_handle.is_none() {
             panic!("Expected a result handle for operand of unary operator");
@@ -607,7 +602,7 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
         }
     }
 
-    fn visit_variable(&mut self, node: &mut parser::Identifier) -> VisitorResult {
+    fn visit_variable(&mut self, node: &mut ast::Identifier) -> VisitorResult {
         let register_name = self.generate_tmp_variable();
 
         let variable = self
@@ -630,7 +625,7 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
         }
     }
 
-    fn visit_number_literal(&mut self, node: &mut parser::NumberLiteral) -> VisitorResult {
+    fn visit_number_literal(&mut self, node: &mut ast::NumberLiteral) -> VisitorResult {
         VisitorResult {
             preamble: "".to_string(),
             result_handle: Some(LlvmHandle::new_f64_literal(node.value)),
