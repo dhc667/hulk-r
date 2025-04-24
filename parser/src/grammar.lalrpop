@@ -50,17 +50,6 @@ ColonEqualOperator: tokens::BinaryOperator = {
         => tokens::BinaryOperator::ColonEqual(tokens::TokenPosition::new(s, e)),
 }
 
-pub LogicalAnd: ast::Expression = {
-    <x:LogicalAnd> <o:LogicalAndOperator> <y:Equation>
-        => ast::Expression::new_binary_op(x, o, y),
-    Equation
-}
-
-LogicalAndOperator: tokens::BinaryOperator = {
-    <s: @L> "&&" <e: @R>
-        => tokens::BinaryOperator::And(tokens::TokenPosition::new(s, e)),
-}
-
 pub LogicalOr: ast::Expression = {
     <x:LogicalOr> <o:LogicalOrOperator> <y:LogicalAnd>
         => ast::Expression::new_binary_op(x, o, y),
@@ -70,6 +59,17 @@ pub LogicalOr: ast::Expression = {
 LogicalOrOperator: tokens::BinaryOperator = {
     <s: @L> "||" <e: @R>
         => tokens::BinaryOperator::Or(tokens::TokenPosition::new(s, e)),
+}
+
+pub LogicalAnd: ast::Expression = {
+    <x:LogicalAnd> <o:LogicalAndOperator> <y:Equation>
+        => ast::Expression::new_binary_op(x, o, y),
+    Equation
+}
+
+LogicalAndOperator: tokens::BinaryOperator = {
+    <s: @L> "&&" <e: @R>
+        => tokens::BinaryOperator::And(tokens::TokenPosition::new(s, e)),
 }
 
 pub Equation: ast::Expression = {
