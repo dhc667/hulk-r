@@ -1,7 +1,7 @@
-use ast::visitors::{visitable::Visitable, Visitor};
-use ast;
-use ast::tokens;
 use ast::Program;
+use ast::tokens;
+use ast::visitors::{Visitor, visitable::Visitable};
+use ast::{self, variable};
 
 pub struct EchoVisitor;
 
@@ -34,7 +34,10 @@ impl Visitor<String> for EchoVisitor {
     fn visit_let_in(&mut self, node: &mut ast::LetIn) -> String {
         let assignment = node.assignment.accept(self);
         let body = node.body.accept(self);
-        format!("{} {} {} {}", node.let_token, assignment, node.in_token, body)
+        format!(
+            "{} {} {} {}",
+            node.let_token, assignment, node.in_token, body
+        )
     }
 
     fn visit_assignment(&mut self, node: &mut ast::Assignment) -> String {
@@ -65,10 +68,7 @@ impl Visitor<String> for EchoVisitor {
 
     fn visit_block(&mut self, node: &mut ast::Block) -> String {
         let inside = node.expression_list.accept(self);
-        format!(
-            "{} {} {}",
-            node.open_brace, inside, node.close_brace
-        )
+        format!("{} {} {}", node.open_brace, inside, node.close_brace)
     }
 
     fn visit_un_op(&mut self, node: &mut ast::UnOp) -> String {
@@ -76,7 +76,7 @@ impl Visitor<String> for EchoVisitor {
         format!("({} {})", node.op, expression)
     }
 
-    fn visit_variable(&mut self, node: &mut tokens::Identifier) -> String {
+    fn visit_variable(&mut self, node: &mut variable::Variable) -> String {
         format!("{}", node)
     }
 
@@ -89,7 +89,9 @@ impl Visitor<String> for EchoVisitor {
     }
 
     fn visit_expression_list(&mut self, node: &mut ast::ExpressionList) -> String {
-        let expressions = node.expressions.iter_mut()
+        let expressions = node
+            .expressions
+            .iter_mut()
             .map(|expr| expr.accept(self))
             .collect::<Vec<String>>();
 
@@ -105,6 +107,3 @@ impl Visitor<String> for EchoVisitor {
         node.expression_list.accept(self)
     }
 }
-
-
-

@@ -12,8 +12,9 @@ fn parses_and_or() {
             .lhs
             .as_atom()
             .unwrap()
-            .as_identifier()
+            .as_variable()
             .unwrap()
+            .identifier
             .id,
         "a"
     );
@@ -27,8 +28,9 @@ fn parses_and_or() {
             .rhs
             .as_atom()
             .unwrap()
-            .as_identifier()
+            .as_variable()
             .unwrap()
+            .identifier
             .id,
         "c"
     )
@@ -45,8 +47,9 @@ fn parses_leq_get_eq() {
             .lhs
             .as_atom()
             .unwrap()
-            .as_identifier()
+            .as_variable()
             .unwrap()
+            .identifier
             .id,
         "a"
     );
