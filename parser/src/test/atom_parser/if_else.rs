@@ -1,5 +1,5 @@
-use ast::Atom;
 use crate::grammar;
+use ast::Atom;
 
 #[test]
 fn parses_if_else_expression() {
@@ -18,13 +18,14 @@ fn parses_if_else_expression() {
                 .lhs
                 .as_atom()
                 .unwrap()
-                .as_identifier()
+                .as_variable()
                 .unwrap()
+                .identifier
                 .id,
             "x"
         );
-        assert_eq!(then_branch.as_identifier().unwrap().id, "y");
-        assert_eq!(else_branch.as_identifier().unwrap().id, "z");
+        assert_eq!(then_branch.as_variable().unwrap().identifier.id, "y");
+        assert_eq!(else_branch.as_variable().unwrap().identifier.id, "z");
     } else {
         panic!("Expected IfElseExpression");
     }
@@ -47,12 +48,13 @@ fn parses_if_else_if_expression() {
                 .lhs
                 .as_atom()
                 .unwrap()
-                .as_identifier()
+                .as_variable()
                 .unwrap()
+                .identifier
                 .id,
             "x"
         );
-        assert_eq!(then_branch.as_identifier().unwrap().id, "y");
+        assert_eq!(then_branch.as_variable().unwrap().identifier.id, "y");
         assert_eq!(
             else_branch
                 .as_if_expression()

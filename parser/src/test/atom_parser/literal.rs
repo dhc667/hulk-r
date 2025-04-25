@@ -40,21 +40,21 @@ fn parses_identifier() {
 
     let answ1 = p.parse("abc").unwrap();
     if let Atom::Variable(identifier) = answ1 {
-        assert_eq!(identifier.id, "abc");
+        assert_eq!(identifier.identifier.id, "abc");
     } else {
         panic!("Expected Identifier");
     }
 
     let answ2 = p.parse("abc123").unwrap();
     if let Atom::Variable(identifier) = answ2 {
-        assert_eq!(identifier.id, "abc123");
+        assert_eq!(identifier.identifier.id, "abc123");
     } else {
         panic!("Expected Identifier");
     }
 
     let answ3 = p.parse("abc_123").unwrap();
     if let Atom::Variable(identifier) = answ3 {
-        assert_eq!(identifier.id, "abc_123");
+        assert_eq!(identifier.identifier.id, "abc_123");
     } else {
         panic!("Expected Identifier");
     }

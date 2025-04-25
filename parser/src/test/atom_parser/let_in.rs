@@ -1,5 +1,5 @@
-use ast::Atom;
 use crate::grammar;
+use ast::Atom;
 
 #[test]
 fn parses_let_in_expression() {
@@ -20,8 +20,9 @@ fn parses_let_in_expression() {
             .lhs
             .as_atom()
             .unwrap()
-            .as_identifier()
+            .as_variable()
             .unwrap()
+            .identifier
             .id;
 
         assert_eq!(x, "x");
@@ -42,7 +43,6 @@ fn parses_let_in_exp_with_several_assignments() {
         let second_assignment = &let_exp.body.as_let_expression().unwrap().assignment;
         assert_eq!(second_assignment.identifier.id, "y");
 
-
         let body = &let_exp.body.as_let_expression().unwrap().body;
         let x = &body
             .as_grouped_expression()
@@ -52,8 +52,9 @@ fn parses_let_in_exp_with_several_assignments() {
             .lhs
             .as_atom()
             .unwrap()
-            .as_identifier()
+            .as_variable()
             .unwrap()
+            .identifier
             .id;
 
         assert_eq!(x, "x");
@@ -72,7 +73,7 @@ fn parses_let_in_exp_with_single_variable_as_output() {
         assert_eq!(&assignment.identifier.id, "x");
 
         let body = &let_exp.body;
-        let x = &body.as_identifier().unwrap().id;
+        let x = &body.as_variable().unwrap().identifier.id;
 
         assert_eq!(x, "x");
     } else {

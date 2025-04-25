@@ -80,9 +80,9 @@ impl Visitor<()> for SemanticVisitor {
         node.rhs.accept(self);
     }
 
-    fn visit_variable(&mut self, node: &mut Identifier) -> () {
-        if !self.definitions.is_defined(&node.id) {
-            let message = format!("Variable {} is not defined", node.id);
+    fn visit_variable(&mut self, node: &mut variable::Variable) -> () {
+        if !self.definitions.is_defined(&node.identifier.id) {
+            let message = format!("Variable {} is not defined", node.identifier.id);
             self.errors.push(message);
         }
     }

@@ -602,13 +602,16 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
         }
     }
 
-    fn visit_variable(&mut self, node: &mut ast::Identifier) -> VisitorResult {
+    fn visit_variable(&mut self, node: &mut ast::variable::Variable) -> VisitorResult {
         let register_name = self.generate_tmp_variable();
 
-        let variable = self
-            .context
-            .get_value(&node.id)
-            .expect(format!("Variable {} not found, SA should have caught this", node.id).as_str());
+        let variable = self.context.get_value(&node.identifier.id).expect(
+            format!(
+                "Variable {} not found, SA should have caught this",
+                node.identifier.id
+            )
+            .as_str(),
+        );
 
         match variable.var_type {
             LlvmType::F64 => {
