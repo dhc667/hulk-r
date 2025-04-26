@@ -1,6 +1,6 @@
 use ast::{visitors::visitable::Visitable, *};
 
-use super::{DefContext, def_context::Frame};
+use super::DefContext;
 
 pub struct SemanticVisitor {
     pub definitions: DefContext,
@@ -10,9 +10,7 @@ pub struct SemanticVisitor {
 impl SemanticVisitor {
     pub fn new() -> Self {
         SemanticVisitor {
-            definitions: DefContext {
-                current_frame: Some(Box::new(Frame::new())),
-            },
+            definitions: DefContext::new(),
             errors: Vec::new(),
         }
     }

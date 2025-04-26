@@ -1,15 +1,13 @@
 use std::collections::HashSet;
 
-
 pub struct DefContext {
-    pub current_frame: Link,
+    pub frames: Vec<Box<Frame>>,
+    pub current: usize,
 }
-
-type Link = Option<Box<Frame>>;
 
 pub struct Frame {
     pub variables: HashSet<String>,
-    pub parent: Link,
+    pub parent: Option<usize>,
 }
 
 impl Frame {
@@ -22,36 +20,53 @@ impl Frame {
 }
 
 impl DefContext {
+    pub fn new() -> Self {
+        DefContext {
+            frames: vec![Box::new(Frame::new())],
+            current: 0,
+        }
+    }
+
+    fn current_frame(&self) -> &Frame {
+        &self.frames[self.current]
+    }
+
+    fn current_frame_mut(&mut self) -> &mut Frame {
+        &mut self.frames[self.current]
+    }
+
     pub fn push_frame(&mut self) {
         let new_frame = Box::new(Frame {
             variables: HashSet::new(),
-            parent: self.current_frame.take(),
+            parent: Some(self.current),
         });
 
-        self.current_frame = Some(new_frame)
+        self.current = self.frames.len();
+        self.frames.push(new_frame);
     }
 
     pub fn pop_frame(&mut self) {
-        self.current_frame.take().map(|frame| {
-            self.current_frame = frame.parent;
-        });
+        self.current = match self.current_frame().parent {
+            Some(parent) => parent,
+            None => panic!("Fatal Error: No parent frame to pop to. This should not happened."),
+        };
     }
 
     pub fn is_defined(&self, var_name: &str) -> bool {
-        let mut current_frame = &self.current_frame;
-        while let Some(frame) = current_frame {
-            if frame.variables.contains(var_name) {
+        let mut current_frame = self.current_frame();
+        while let Some(parent_index) = current_frame.parent {
+            if current_frame.variables.contains(var_name) {
                 return true;
             }
-            current_frame = &frame.parent;
+            current_frame = &self.frames[parent_index];
         }
         false
     }
 
     pub fn define(&mut self, var_name: &str) -> bool {
-        if let Some(frame) = &mut self.current_frame {
-            return frame.variables.insert(var_name.to_string());
-        }
-        false
+        return self
+            .current_frame_mut()
+            .variables
+            .insert(var_name.to_string());
     }
 }
