@@ -52,21 +52,28 @@ impl DefContext {
         };
     }
 
-    pub fn is_defined(&self, var_name: &str) -> bool {
+    pub fn get_context(&self, var_name: &str) -> Option<usize> {
         let mut current_frame = self.current_frame();
+        let mut index = self.current;
         while let Some(parent_index) = current_frame.parent {
             if current_frame.variables.contains(var_name) {
-                return true;
+                return Some(index);
             }
             current_frame = &self.frames[parent_index];
+            index = parent_index;
         }
-        false
+        None
     }
 
-    pub fn define(&mut self, var_name: &str) -> bool {
-        return self
+    pub fn define(&mut self, var_name: &str) -> Option<usize> {
+        if self
             .current_frame_mut()
             .variables
-            .insert(var_name.to_string());
+            .insert(var_name.to_string())
+        {
+            Some(self.current)
+        } else {
+            None
+        }
     }
 }

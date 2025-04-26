@@ -23,9 +23,15 @@ impl Visitor<()> for SemanticVisitor {
 
     fn visit_destructive_assignment(&mut self, node: &mut DestructiveAssignment) {
         node.expression.accept(self);
-        if !self.definitions.is_defined(&node.identifier.id) {
-            let message = format!("Variable {} is not defined", node.identifier);
-            self.errors.push(message);
+        let context = self.definitions.get_context(&node.identifier.id);
+        match context {
+            Some(index) => {
+                node.identifier.context_id = Some(index);
+            }
+            None => {
+                let message = format!("Variable {} is not defined", node.identifier);
+                self.errors.push(message);
+            }
         }
     }
 
@@ -49,9 +55,16 @@ impl Visitor<()> for SemanticVisitor {
 
     fn visit_assignment(&mut self, node: &mut Assignment) {
         node.rhs.accept(self);
-        if !self.definitions.define(&node.identifier.id) {
-            let message = format!("Variable {} is already defined", node.identifier);
-            self.errors.push(message);
+        let context = self.definitions.define(&node.identifier.id);
+        match context {
+            Some(index) => {
+                node.identifier.context_id = Some(index);
+            }
+
+            None => {
+                let message = format!("Variable {} is already defined", node.identifier);
+                self.errors.push(message);
+            }
         }
     }
 
@@ -79,9 +92,15 @@ impl Visitor<()> for SemanticVisitor {
     }
 
     fn visit_variable(&mut self, node: &mut Identifier) -> () {
-        if !self.definitions.is_defined(&node.id) {
-            let message = format!("Variable {} is not defined", node.id);
-            self.errors.push(message);
+        let context = self.definitions.get_context(&node.id);
+        match context {
+            Some(index) => {
+                node.context_id = Some(index);
+            }
+            None => {
+                let message = format!("Variable {} is not defined", node.id);
+                self.errors.push(message);
+            }
         }
     }
 

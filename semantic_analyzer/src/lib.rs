@@ -4,6 +4,11 @@ pub use semantic_visitor::SemanticVisitor;
 pub mod def_context;
 pub use def_context::DefContext;
 
-#[cfg(test)]
-pub mod test;
+pub mod hulk_type;
+pub use hulk_type::{BuiltInType, Type};
 
+#[cfg(test)]
+pub mod test {
+    mod contexts;
+    mod definitions;
+}
