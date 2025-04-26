@@ -54,8 +54,9 @@ impl Visitor<()> for SemanticVisitor {
     }
 
     fn visit_assignment(&mut self, node: &mut Assignment) {
-        node.rhs.accept(self);
-        let context = self.definitions.define(&node.identifier.id);
+        let context = self
+            .definitions
+            .define(&node.identifier.id, &node.identifier.position);
         match context {
             Some(index) => {
                 node.identifier.context_id = Some(index);
@@ -65,6 +66,11 @@ impl Visitor<()> for SemanticVisitor {
                 let message = format!("Variable {} is already defined", node.identifier);
                 self.errors.push(message);
             }
+        }
+        node.rhs.accept(self);
+        if context.is_some() {
+            self.definitions
+                .initialize(&node.identifier.id, context.unwrap());
         }
     }
 
@@ -100,7 +106,15 @@ impl Visitor<()> for SemanticVisitor {
             None => {
                 let message = format!("Variable {} is not defined", node.id);
                 self.errors.push(message);
+                return;
             }
+        }
+        if !self
+            .definitions
+            .is_initialized(&node.id, node.context_id.unwrap())
+        {
+            let message = format!("Cannot read variable {} in its own initializer", node.id);
+            self.errors.push(message);
         }
     }
 

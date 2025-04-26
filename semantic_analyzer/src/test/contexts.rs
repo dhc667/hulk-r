@@ -76,3 +76,19 @@ fn nested_context() {
     assert_eq!(y_initializer_id.context_id, Some(2));
     assert_eq!(y_call_id.context_id, Some(2));
 }
+
+#[test]
+fn uninitialized_variable() {
+    let p = ProgramParser::new();
+
+    let mut answ = p.parse("let x = x in {x + 2;};").unwrap();
+
+    let mut semantic_visitor = SemanticVisitor::new();
+
+    answ.accept(&mut semantic_visitor);
+
+    assert_eq!(
+        semantic_visitor.errors,
+        vec!["Cannot read variable x in its own initializer".to_string()]
+    );
+}
