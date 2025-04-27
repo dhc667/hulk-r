@@ -135,4 +135,8 @@ impl Visitor<()> for SemanticVisitor {
     fn visit_program(&mut self, node: &mut Program) -> () {
         node.expression_list.accept(self);
     }
+
+    fn visit_boolean_literal(&mut self, _node: &mut BooleanLiteral) -> () {
+        // No action needed for boolean literals
+    }
 }

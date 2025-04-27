@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use ast::TokenPosition;
 
-use crate::VariableInfo;
+use crate::{TypeAnnotation, VariableInfo};
 
 pub struct DefContext {
     pub frames: Vec<Box<Frame>>,
@@ -89,6 +89,29 @@ impl DefContext {
             true
         } else {
             false
+        }
+    }
+
+    pub fn get_type(&self, var_name: &str, context_id: usize) -> TypeAnnotation {
+        if context_id >= self.frames.len() {
+            panic!("Fatal Error: Context ID out of bounds. This should not happened.");
+        }
+        if let Some(var_info) = self.frames[context_id].variables.get(var_name) {
+            var_info.ty.clone()
+        } else {
+            None
+        }
+    }
+
+    pub fn set_type(&mut self, var_name: &str, context_id: usize, ty: TypeAnnotation) -> bool {
+        if context_id >= self.frames.len() {
+            panic!("Fatal Error: Context ID out of bounds. This should not happened.");
+        }
+        if let Some(var_info) = self.frames[context_id].variables.get_mut(var_name) {
+            var_info.ty = ty;
+            true
+        } else {
+            panic!("Fatal Error: Variable not found. This should not happened.");
         }
     }
 
