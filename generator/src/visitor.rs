@@ -638,4 +638,8 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
             result_handle: None,
         }
     }
+
+    fn visit_boolean_literal(&mut self, _node: &mut ast::BooleanLiteral) -> VisitorResult {
+        todo!()
+    }
 }
