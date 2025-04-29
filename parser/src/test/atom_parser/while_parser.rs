@@ -1,5 +1,5 @@
-use crate::grammar;
 use ast;
+use crate::grammar;
 
 #[test]
 pub fn parses_while_expression() {
@@ -18,24 +18,15 @@ pub fn parses_while_expression() {
                 .lhs
                 .as_atom()
                 .unwrap()
-                .as_variable()
+                .as_identifier()
                 .unwrap()
-                .identifier
                 .id,
             "x"
         );
 
-        assert_eq!(
-            body.as_block().unwrap().expression_list.expressions.len(),
-            2
-        );
+        assert_eq!(body.as_block().unwrap().expression_list.expressions.len(), 2);
 
-        assert!(
-            body.as_block()
-                .unwrap()
-                .expression_list
-                .multiple_semicolon_terminated,
-        );
+        assert!(body.as_block().unwrap().expression_list.multiple_semicolon_terminated,);
 
         assert_eq!(
             body.as_block().unwrap().expression_list.expressions[1]
@@ -44,9 +35,8 @@ pub fn parses_while_expression() {
                 .lhs
                 .as_atom()
                 .unwrap()
-                .as_variable()
+                .as_identifier()
                 .unwrap()
-                .identifier
                 .id,
             "x"
         )

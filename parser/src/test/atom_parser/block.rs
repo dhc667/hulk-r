@@ -1,5 +1,5 @@
-use crate::grammar;
 use ast;
+use crate::grammar;
 
 #[test]
 fn detects_single_semicolon_terminated_block() {
@@ -23,9 +23,8 @@ x - 4;
                 .lhs
                 .as_atom()
                 .unwrap()
-                .as_variable()
+                .as_identifier()
                 .unwrap()
-                .identifier
                 .id,
             "a"
         );
@@ -36,9 +35,8 @@ x - 4;
                 .lhs
                 .as_atom()
                 .unwrap()
-                .as_variable()
+                .as_identifier()
                 .unwrap()
-                .identifier
                 .id,
             "c"
         );
@@ -49,9 +47,8 @@ x - 4;
                 .lhs
                 .as_atom()
                 .unwrap()
-                .as_variable()
+                .as_identifier()
                 .unwrap()
-                .identifier
                 .id,
             "x"
         );
@@ -82,9 +79,8 @@ x - 4 + 6 / (2 + 3 - x);;
                 .lhs
                 .as_atom()
                 .unwrap()
-                .as_variable()
+                .as_identifier()
                 .unwrap()
-                .identifier
                 .id,
             "a"
         );
@@ -95,9 +91,8 @@ x - 4 + 6 / (2 + 3 - x);;
                 .lhs
                 .as_atom()
                 .unwrap()
-                .as_variable()
+                .as_identifier()
                 .unwrap()
-                .identifier
                 .id,
             "c"
         );
@@ -118,9 +113,8 @@ x - 4 + 6 / (2 + 3 - x);;
                 .rhs
                 .as_atom()
                 .unwrap()
-                .as_variable()
+                .as_identifier()
                 .unwrap()
-                .identifier
                 .id,
             "x"
         );

@@ -1,5 +1,5 @@
-use crate::grammar;
 use ast;
+use crate::grammar;
 
 #[test]
 fn parses_term() {
@@ -15,9 +15,8 @@ fn parses_term() {
                 .lhs
                 .as_atom()
                 .unwrap()
-                .as_variable()
+                .as_identifier()
                 .unwrap()
-                .identifier
                 .id,
             "a"
         );
@@ -48,9 +47,8 @@ fn parses_term_with_parentheses() {
             .lhs
             .as_atom()
             .unwrap()
-            .as_variable()
+            .as_identifier()
             .unwrap()
-            .identifier
             .id;
         assert_eq!(b, "b");
     } else {
@@ -77,9 +75,8 @@ fn parses_term_with_unary_operator() {
             .as_unary_op()
             .unwrap()
             .rhs
-            .as_variable()
+            .as_identifier()
             .unwrap()
-            .identifier
             .id;
         assert_eq!(left, "a");
     } else {

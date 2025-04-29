@@ -1,4 +1,4 @@
-use crate::{ast::*, tokens::NumberLiteral, variable::Variable};
+use crate::{ast::*, tokens::{Identifier, NumberLiteral}};
 
 pub trait Visitor<R> {
     fn visit_program(&mut self, node: &mut Program) -> R;
@@ -18,7 +18,7 @@ pub trait Visitor<R> {
     fn visit_block(&mut self, node: &mut Block) -> R;
     fn visit_un_op(&mut self, node: &mut UnOp) -> R;
 
-    fn visit_variable(&mut self, node: &mut Variable) -> R;
+    fn visit_variable(&mut self, node: &mut Identifier) -> R;
     fn visit_number_literal(&mut self, node: &mut NumberLiteral) -> R;
 
     fn visit_empty_expression(&mut self) -> R;
