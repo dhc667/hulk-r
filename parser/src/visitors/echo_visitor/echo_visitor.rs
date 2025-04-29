@@ -1,7 +1,7 @@
+use ast;
 use ast::Program;
 use ast::tokens;
 use ast::visitors::{Visitor, visitable::Visitable};
-use ast::{self, variable};
 
 pub struct EchoVisitor;
 
@@ -76,7 +76,7 @@ impl Visitor<String> for EchoVisitor {
         format!("({} {})", node.op, expression)
     }
 
-    fn visit_variable(&mut self, node: &mut variable::Variable) -> String {
+    fn visit_variable(&mut self, node: &mut tokens::Identifier) -> String {
         format!("{}", node)
     }
 
@@ -105,5 +105,9 @@ impl Visitor<String> for EchoVisitor {
 
     fn visit_program(&mut self, node: &mut Program) -> String {
         node.expression_list.accept(self)
+    }
+
+    fn visit_boolean_literal(&mut self, node: &mut ast::BooleanLiteral) -> String {
+        format!("{}", node)
     }
 }

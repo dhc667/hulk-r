@@ -1,5 +1,5 @@
-use crate::grammar;
 use ast;
+use crate::grammar;
 
 #[test]
 fn parses_added_terms() {
@@ -19,21 +19,11 @@ fn parses_added_terms() {
                 .unwrap()
                 .as_variable()
                 .unwrap()
-                .identifier
                 .id,
             "a"
         );
 
-        assert_eq!(
-            right
-                .as_atom()
-                .unwrap()
-                .as_variable()
-                .unwrap()
-                .identifier
-                .id,
-            "c"
-        )
+        assert_eq!(right.as_atom().unwrap().as_variable().unwrap().id, "c")
     } else {
         panic!("Expected BinOp");
     }
@@ -48,10 +38,7 @@ fn parses_added_terms_with_parentheses() {
         let left = binop.lhs;
         let right = binop.rhs;
 
-        assert_eq!(
-            left.as_atom().unwrap().as_variable().unwrap().identifier.id,
-            "a"
-        );
+        assert_eq!(left.as_atom().unwrap().as_variable().unwrap().id, "a");
 
         let right = &(*right)
             .as_atom()
@@ -65,7 +52,6 @@ fn parses_added_terms_with_parentheses() {
             .unwrap()
             .as_variable()
             .unwrap()
-            .identifier
             .id;
 
         assert_eq!(right, "b");
