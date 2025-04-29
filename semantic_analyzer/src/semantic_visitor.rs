@@ -1,111 +1,185 @@
-use ast::{visitors::visitable::Visitable, *};
+use ast::{
+    typing::{BuiltInType, Type, TypeAnnotation, to_string},
+    visitors::visitable::Visitable,
+    *,
+};
+use generator::context::Context;
 
-use super::{DefContext, def_context::Frame};
+use crate::{
+    DefinitionInfo,
+    typing_utils::{
+        get_bin_op_return_type, get_up_op_return_type, is_bin_op_admisible, is_un_op_admisible,
+    },
+};
 
 pub struct SemanticVisitor {
-    pub definitions: DefContext,
+    pub definitions: Context<DefinitionInfo>,
     pub errors: Vec<String>,
 }
 
 impl SemanticVisitor {
     pub fn new() -> Self {
         SemanticVisitor {
-            definitions: DefContext {
-                current_frame: Some(Box::new(Frame::new())),
-            },
+            definitions: Context::new_one_frame(),
             errors: Vec::new(),
         }
     }
+    fn infer(&self, left: &TypeAnnotation, right: &TypeAnnotation) -> TypeAnnotation {
+        // NOTE: this function will change when we add more types
+        if left == right { left.clone() } else { None }
+    }
 }
 
-impl Visitor<()> for SemanticVisitor {
-    fn visit_expression(&mut self, node: &mut Expression) {
-        node.accept(self);
+impl Visitor<TypeAnnotation> for SemanticVisitor {
+    fn visit_expression(&mut self, node: &mut Expression) -> TypeAnnotation {
+        node.accept(self)
     }
 
-    fn visit_destructive_assignment(&mut self, node: &mut DestructiveAssignment) {
-        node.expression.accept(self);
-        if !self.definitions.is_defined(&node.identifier.id) {
-            let message = format!("Variable {} is not defined", node.identifier);
-            self.errors.push(message);
+    fn visit_destructive_assignment(&mut self, node: &mut DestructiveAssignment) -> TypeAnnotation {
+        let expr_type = node.expression.accept(self);
+        let def_value = self.definitions.get_value(&node.identifier.id);
+        match def_value {
+            Some(def) => {
+                if def.ty != expr_type {
+                    let message = format!(
+                        "Type mismatch: {} is {} but is being reassigned with {}",
+                        node.identifier.id,
+                        to_string(&def.ty),
+                        to_string(&expr_type)
+                    );
+                    self.errors.push(message);
+                }
+                def.ty.clone()
+            }
+            None => {
+                let message = format!("Variable {} is not defined", node.identifier.id);
+                self.errors.push(message);
+                expr_type
+            }
         }
     }
 
-    fn visit_bin_op(&mut self, node: &mut BinOp) {
-        node.lhs.accept(self);
-        node.rhs.accept(self);
+    fn visit_bin_op(&mut self, node: &mut BinOp) -> TypeAnnotation {
+        let op_type = Some(get_bin_op_return_type(&node.op));
+
+        let left_type = node.lhs.accept(self);
+        let right_type = node.rhs.accept(self);
+
+        if !is_bin_op_admisible(&left_type, &node.op) || !is_bin_op_admisible(&right_type, &node.op)
+        {
+            let message = format!(
+                "Type mismatch: Cannot apply {} to operands of type {} and {}",
+                node.op,
+                to_string(&left_type),
+                to_string(&right_type)
+            );
+            self.errors.push(message)
+        }
+        op_type
     }
 
-    fn visit_atom(&mut self, node: &mut Atom) {
-        node.accept(self);
+    fn visit_atom(&mut self, node: &mut Atom) -> TypeAnnotation {
+        node.accept(self)
     }
 
-    fn visit_let_in(&mut self, node: &mut LetIn) {
-        self.definitions.push_frame();
+    fn visit_let_in(&mut self, node: &mut LetIn) -> TypeAnnotation {
+        self.definitions.push_frame(true);
 
         node.assignment.accept(self);
-        node.body.accept(self);
+        let body_type = node.body.accept(self);
 
         self.definitions.pop_frame();
+        body_type
     }
 
-    fn visit_assignment(&mut self, node: &mut Assignment) {
-        node.rhs.accept(self);
-        if !self.definitions.define(&node.identifier.id) {
-            let message = format!("Variable {} is already defined", node.identifier);
+    fn visit_assignment(&mut self, node: &mut Assignment) -> TypeAnnotation {
+        let right_type = node.rhs.accept(self);
+        self.definitions.define(
+            node.identifier.id.clone(),
+            DefinitionInfo {
+                name: node.identifier.id.clone(),
+                is_defined: true,
+                position: node.identifier.position.clone(),
+                ty: right_type.clone(),
+            },
+        );
+        node.identifier.info.ty = right_type.clone();
+        node.identifier.info.definition_pos = Some(node.identifier.position.clone());
+        None
+    }
+
+    fn visit_if_else(&mut self, node: &mut IfElse) -> TypeAnnotation {
+        node.condition.accept(self);
+        let then_type = node.then_expression.accept(self);
+        let else_type = node.else_expression.accept(self);
+        self.infer(&then_type, &else_type)
+    }
+
+    fn visit_print(&mut self, node: &mut Print) -> TypeAnnotation {
+        node.expression.accept(self)
+    }
+
+    fn visit_while(&mut self, node: &mut While) -> TypeAnnotation {
+        node.condition.accept(self);
+        node.body.accept(self)
+    }
+
+    fn visit_block(&mut self, node: &mut Block) -> TypeAnnotation {
+        node.expression_list.accept(self)
+    }
+
+    fn visit_un_op(&mut self, node: &mut UnOp) -> TypeAnnotation {
+        let op_type = Some(get_up_op_return_type(&node.op));
+
+        let operand_type = node.rhs.accept(self);
+        if !is_un_op_admisible(&operand_type, &node.op) {
+            let message = format!(
+                "Type mismatch: Cannot apply {} to operand of type {}",
+                node.op,
+                to_string(&operand_type)
+            );
             self.errors.push(message);
+        }
+        op_type
+    }
+
+    fn visit_variable(&mut self, node: &mut Identifier) -> TypeAnnotation {
+        let def_info = self.definitions.get_value(&node.id);
+        match def_info {
+            Some(def) => {
+                node.info.ty = def.ty.clone();
+                node.info.definition_pos = Some(def.position.clone());
+                def.ty.clone()
+            }
+            None => {
+                let message = format!("Variable {} is not defined", node.id);
+                self.errors.push(message);
+                None
+            }
         }
     }
 
-    fn visit_if_else(&mut self, node: &mut IfElse) {
-        node.condition.accept(self);
-        node.then_expression.accept(self);
-        node.else_expression.accept(self);
+    fn visit_number_literal(&mut self, _node: &mut NumberLiteral) -> TypeAnnotation {
+        Some(Type::BuiltIn(BuiltInType::Number))
     }
 
-    fn visit_print(&mut self, node: &mut Print) {
-        node.expression.accept(self);
+    fn visit_empty_expression(&mut self) -> TypeAnnotation {
+        None
     }
 
-    fn visit_while(&mut self, node: &mut While) -> () {
-        node.condition.accept(self);
-        node.body.accept(self);
-    }
-
-    fn visit_block(&mut self, node: &mut Block) -> () {
-        node.expression_list.accept(self);
-    }
-
-    fn visit_un_op(&mut self, node: &mut UnOp) -> () {
-        node.rhs.accept(self);
-    }
-
-    fn visit_variable(&mut self, node: &mut Identifier) -> () {
-        if !self.definitions.is_defined(&node.id) {
-            let message = format!("Variable {} is not defined", node.id);
-            self.errors.push(message);
-        }
-    }
-
-    fn visit_number_literal(&mut self, _node: &mut NumberLiteral) -> () {
-        // No action needed for number literals
-    }
-
-    fn visit_empty_expression(&mut self) -> () {
-        // No action needed for empty expressions
-    }
-
-    fn visit_expression_list(&mut self, node: &mut ExpressionList) -> () {
+    fn visit_expression_list(&mut self, node: &mut ExpressionList) -> TypeAnnotation {
+        let mut result = None;
         for expression in &mut node.expressions {
-            expression.accept(self);
+            result = expression.accept(self);
         }
+        result
     }
 
-    fn visit_program(&mut self, node: &mut Program) -> () {
-        node.expression_list.accept(self);
+    fn visit_program(&mut self, node: &mut Program) -> TypeAnnotation {
+        node.expression_list.accept(self)
     }
 
-    fn visit_boolean_literal(&mut self, node: &mut BooleanLiteral) -> () {
-        todo!()
+    fn visit_boolean_literal(&mut self, _node: &mut BooleanLiteral) -> TypeAnnotation {
+        Some(Type::BuiltIn(BuiltInType::Bool))
     }
 }

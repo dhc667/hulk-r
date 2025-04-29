@@ -1,4 +1,4 @@
-pub type TypeAnotation = Option<Type>;
+pub type TypeAnnotation = Option<Type>;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {
@@ -22,5 +22,16 @@ impl Type {
         } else {
             None
         }
+    }
+}
+
+pub fn to_string(ty: &TypeAnnotation) -> String {
+    match ty {
+        Some(Type::BuiltIn(ty)) => match ty {
+            BuiltInType::Number => "number".to_string(),
+            BuiltInType::String => "string".to_string(),
+            BuiltInType::Bool => "bool".to_string(),
+        },
+        None => "none".to_string(),
     }
 }

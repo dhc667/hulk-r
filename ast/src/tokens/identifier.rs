@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::typing::TypeAnotation;
+use crate::typing::TypeAnnotation;
 
 use super::*;
 
@@ -27,8 +27,8 @@ impl Display for Identifier {
 }
 
 pub struct IdentifierInfo {
-    ty: TypeAnotation,
-    definition_pos: Option<TokenPosition>,
+    pub ty: TypeAnnotation,
+    pub definition_pos: Option<TokenPosition>,
 }
 
 impl IdentifierInfo {

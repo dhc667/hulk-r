@@ -4,8 +4,8 @@ use super::let_in::Assignment;
 use super::*;
 use crate::literals::BooleanLiteral;
 use crate::tokens::*;
-use crate::visitors::visitable::Visitable;
 use crate::visitors::Visitor;
+use crate::visitors::visitable::Visitable;
 
 pub enum Atom {
     LetIn(LetIn),
@@ -179,8 +179,7 @@ impl<T: Visitor<R>, R> Visitable<T, R> for Atom {
             Atom::NumberLiteral(number_literal) => visitor.visit_number_literal(number_literal),
             Atom::Variable(identifier) => visitor.visit_variable(identifier),
             Atom::UnaryOp(un_op) => un_op.accept(visitor),
-            Atom::BooleanLiteral(_) => todo!(),
+            Atom::BooleanLiteral(boolean_literal) => visitor.visit_boolean_literal(boolean_literal),
         }
     }
 }
-

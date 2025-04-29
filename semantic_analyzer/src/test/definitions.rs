@@ -1,4 +1,4 @@
-use super::SemanticVisitor;
+use crate::SemanticVisitor;
 use ast::Visitable;
 use parser::ProgramParser;
 
