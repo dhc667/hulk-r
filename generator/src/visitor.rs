@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use ast::BinaryOperator::*;
 use ast::{Visitor, visitors::visitable::Visitable};
-
+use ast::BooleanLiteral::True;
 use crate::context::Context;
 use crate::llvm_types::{HandleType, LlvmHandle, LlvmType};
 
@@ -213,9 +213,36 @@ impl GeneratorVisitor {
 
                 return VisitorResult {
                     preamble,
-                    result_handle: Some(LlvmHandle::new_tmp_register(tmp_variable)),
+                    result_handle: Some(LlvmHandle::new_tmp_f64_register(tmp_variable)),
                 };
             }
+            _ => panic!("Unsupported unary operator for double"),
+        }
+    }
+
+    fn get_boolean_un_op_visitor_result(
+        &mut self,
+        op: &ast::UnaryOperator,
+        inner_result: VisitorResult,
+    ) -> VisitorResult {
+        let inner_handle = inner_result.result_handle.unwrap();
+
+        match op {
+            ast::UnaryOperator::Not(_) => {
+                let tmp_variable = self.generate_tmp_variable();
+                let preamble = inner_result.preamble
+                    + "\n"
+                    + &format!(
+                    "{} = xor i1 {}, true",
+                    tmp_variable, inner_handle.llvm_name
+                );
+
+                return VisitorResult {
+                    preamble,
+                    result_handle: Some(LlvmHandle::new_tmp_i1_register(tmp_variable)),
+                };
+            }
+            _ => panic!("Unsupported unary operator for boolean"),
         }
     }
 
@@ -263,20 +290,73 @@ impl GeneratorVisitor {
             Modulo(_) => todo!(),
             Equal(_) => panic!("= found in non-assignment, parser problem"),
             ColonEqual(_) => panic!(":= found in non-destructive assignment, parser problem"),
-            EqualEqual(_) => todo!(),
-            Less(_) => todo!(),
-            LessEqual(_) => todo!(),
-            Greater(_) => todo!(),
-            GreaterEqual(_) => todo!(),
-
-            NotEqual(_) => todo!(),
-            Or(_) => todo!(),
-            And(_) => todo!(),
+            EqualEqual(_) => format!(
+                "{} = fcmp oeq double {}, {}",
+                result_handle, lhs_handle.llvm_name, rhs_handle.llvm_name
+            ),
+            NotEqual(_) => format!(
+                "{} = fcmp one double {}, {}",
+                result_handle, lhs_handle.llvm_name, rhs_handle.llvm_name
+            ),
+            Less(_) => format!(
+                "{} = fcmp olt double {}, {}",
+                result_handle, lhs_handle.llvm_name, rhs_handle.llvm_name
+            ),
+            LessEqual(_) => format!(
+                "{} = fcmp ole double {}, {}",
+                result_handle, lhs_handle.llvm_name, rhs_handle.llvm_name
+            ),
+            Greater(_) => format!(
+                "{} = fcmp ogt double {}, {}",
+                result_handle, lhs_handle.llvm_name, rhs_handle.llvm_name
+            ),
+            GreaterEqual(_) => format!(
+                "{} = fcmp oge double {}, {}",
+                result_handle, lhs_handle.llvm_name, rhs_handle.llvm_name
+            ),
+            _ => panic!("Unsupported numeric operator"),
         } + "\n";
 
         VisitorResult {
             preamble: preamble + &operation,
-            result_handle: Some(LlvmHandle::new_tmp_register(result_handle)),
+            result_handle: Some(LlvmHandle::new_tmp_f64_register(result_handle)),
+        }
+    }
+
+    fn get_boolean_bin_op_visitor_result(
+        &mut self,
+        op: &ast::BinaryOperator,
+        lhs: VisitorResult,
+        rhs: VisitorResult,
+    ) -> VisitorResult {
+        let lhs_handle = lhs.result_handle.unwrap();
+        let rhs_handle = rhs.result_handle.unwrap();
+        let result_register = self.generate_tmp_variable();
+        
+        
+        let operation = match op {
+            And(_) => format!(
+                "{} = && i1 {}, {}\n",
+                result_register, lhs_handle.llvm_name, rhs_handle.llvm_name
+            ),
+            Or(_) => format!(
+                "{} = || i1 {}, {}\n",
+                result_register, lhs_handle.llvm_name, rhs_handle.llvm_name
+            ),
+            EqualEqual(_) => format!(
+                "{} = icmp eq i1 {}, {}\n",
+                result_register, lhs_handle.llvm_name, rhs_handle.llvm_name
+            ),
+            NotEqual(_) => format!(
+                "{} = icmp ne i1 {}, {}\n",
+                result_register, lhs_handle.llvm_name, rhs_handle.llvm_name
+            ),
+            _ => panic!("Unsupported boolean operator"),
+        } + "\n";
+        
+        VisitorResult {
+            preamble: lhs.preamble + &rhs.preamble + &operation,
+            result_handle: Some(LlvmHandle::new_tmp_i1_register(result_register)),
         }
     }
 }
@@ -355,6 +435,13 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
                         result_handle.llvm_name, llvm_name
                     )
             }
+            HandleType::Literal(LlvmType::I1) | HandleType::Register(LlvmType::I1) => {
+                preamble = preamble
+                    + &format!(
+                    "store i1 {}, i1* {}, align 1\n",
+                    result_handle.llvm_name, llvm_name
+                );
+            }
         };
 
         VisitorResult {
@@ -378,6 +465,9 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
         match left_result.result_handle.as_ref().unwrap().handle_type {
             HandleType::Literal(LlvmType::F64) | HandleType::Register(LlvmType::F64) => {
                 return self.get_double_bin_op_visitor_result(&node.op, left_result, right_result);
+            }
+            HandleType::Literal(LlvmType::I1) | HandleType::Register(LlvmType::I1) => {
+                return self.get_boolean_bin_op_visitor_result(&node.op, left_result, right_result);
             }
         };
     }
@@ -418,6 +508,14 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
                         "store double {}, double* {}, align 4\n",
                         result_handle.llvm_name, llvm_name
                     )
+            }
+            HandleType::Literal(LlvmType::I1) | HandleType::Register(LlvmType::I1) => {
+                preamble = preamble
+                    + &format!("{} = alloca i1, align 1\n", llvm_name)
+                    + &format!(
+                    "store i1 {}, i1* {}, align 1\n",
+                    result_handle.llvm_name, llvm_name
+                );
             }
         };
 
@@ -490,6 +588,13 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
                         i1_result, else_label, then_label
                     )
             }
+            HandleType::Literal(LlvmType::I1) | HandleType::Register(LlvmType::I1) => {
+                branch_setup = branch_setup
+                    + &format!(
+                    "br i1 {}, label %{}, label %{}\n",
+                    condition_handle.llvm_name, else_label, then_label
+                );
+            }
         };
 
         let format_branch = |branch_name, preamble, result_handle: Option<LlvmHandle>| {
@@ -510,10 +615,10 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
             + &else_code
             + &format!("{}:\n", fi_label)
             + &result_load_statement;
-
+        // todo add the result as boolean
         VisitorResult {
             preamble,
-            result_handle: result_register.map(|name| LlvmHandle::new_tmp_register(name)),
+            result_handle: result_register.map(|name| LlvmHandle::new_tmp_f64_register(name)),
         }
     }
 
@@ -565,6 +670,13 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
                         i1_result, loop_exit_label, body_label
                     );
             }
+            HandleType::Literal(LlvmType::I1) | HandleType::Register(LlvmType::I1) => {
+                loop_setup_code = loop_setup_code
+                    + &format!(
+                    "br i1 {}, label %{}, label %{}\n",
+                    condition_result_handle.llvm_name, loop_exit_label, body_label
+                );
+            }
         };
 
         let body_code = format!("{}:\n", body_label)
@@ -599,6 +711,9 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
             HandleType::Literal(LlvmType::F64) | HandleType::Register(LlvmType::F64) => {
                 self.get_double_un_op_visitor_result(&node.op, inner_result)
             }
+            HandleType::Literal(LlvmType::I1) | HandleType::Register(LlvmType::I1) => {
+                self.get_boolean_un_op_visitor_result(&node.op, inner_result)
+            }
         }
     }
 
@@ -619,8 +734,19 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
 
                 return VisitorResult {
                     preamble,
-                    result_handle: Some(LlvmHandle::new_tmp_register(register_name)),
+                    result_handle: Some(LlvmHandle::new_tmp_f64_register(register_name)),
                 };
+            }
+            LlvmType::I1 => {
+                let preamble = format!(
+                    "{} = load i1, i1* {}, align 1\n",
+                    register_name, variable.llvm_name
+                );
+
+                VisitorResult {
+                    preamble,
+                    result_handle: Some(LlvmHandle::new_tmp_i1_register(register_name)),
+                }
             }
         }
     }
@@ -639,7 +765,15 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
         }
     }
 
-    fn visit_boolean_literal(&mut self, _node: &mut ast::BooleanLiteral) -> VisitorResult {
-        todo!()
+    fn visit_boolean_literal(&mut self, node: &mut ast::BooleanLiteral) -> VisitorResult {
+        let bool_value = match node {
+            ast::BooleanLiteral::True(_) => true,
+            ast::BooleanLiteral::False(_) => false,
+        };
+
+        VisitorResult {
+            preamble: String::new(),
+            result_handle: Some(LlvmHandle::new_i1_literal(bool_value))
+        }
     }
 }

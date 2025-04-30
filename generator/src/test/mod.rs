@@ -13,6 +13,7 @@ pub mod misc;
 pub mod operators;
 pub mod while_loop;
 pub mod printer;
+mod booleans;
 
 fn generate_code(hulk: &str) -> String {
     let p = ProgramParser::new();

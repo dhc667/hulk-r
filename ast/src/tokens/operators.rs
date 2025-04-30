@@ -54,6 +54,7 @@ impl Display for BinaryOperator {
 pub enum UnaryOperator {
     Plus(TokenPosition),
     Minus(TokenPosition),
+    Not(TokenPosition),
 }
 
 impl Display for UnaryOperator {
@@ -61,6 +62,7 @@ impl Display for UnaryOperator {
         match self {
             UnaryOperator::Plus(_) => write!(f, "+"),
             UnaryOperator::Minus(_) => write!(f, "-"),
+            UnaryOperator::Not(_) => write!(f, "!"),
         }
     }
 }
