@@ -142,7 +142,7 @@ pub Atom: ast::Atom = {
     <b:BooleanLiteral> =>
         ast::Atom::BooleanLiteral(b),
     <i:Identifier> => 
-        ast::Atom::Variable(ast::variable::Variable::new(i, None)),
+        ast::Atom::Variable(i),
     LetExpression,
     IfExpression,
     WhileExpression,

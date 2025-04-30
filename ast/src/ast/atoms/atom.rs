@@ -1,7 +1,6 @@
 use super::super::*;
 use super::block::ExpressionList;
 use super::let_in::Assignment;
-use super::variable::Variable;
 use super::*;
 use crate::literals::BooleanLiteral;
 use crate::tokens::*;
@@ -18,7 +17,7 @@ pub enum Atom {
 
     NumberLiteral(NumberLiteral),
     BooleanLiteral(BooleanLiteral),
-    Variable(Variable),
+    Variable(Identifier),
     UnaryOp(UnOp),
 }
 
@@ -47,11 +46,11 @@ impl Atom {
         }
     }
 
-    pub fn new_variable(start: usize, end: usize, id: &str) -> Self {
-        Atom::Variable(Variable::new(Identifier::new(start, end, id), None))
+    pub fn new_identifier(start: usize, end: usize, id: &str) -> Self {
+        Atom::Variable(Identifier::new(start, end, id))
     }
 
-    pub fn as_variable(&self) -> Option<&Variable> {
+    pub fn as_variable(&self) -> Option<&Identifier> {
         if let Atom::Variable(identifier) = self {
             Some(identifier)
         } else {
@@ -178,9 +177,9 @@ impl<T: Visitor<R>, R> Visitable<T, R> for Atom {
             Atom::While(while_exp) => while_exp.accept(visitor),
             Atom::Block(block) => block.accept(visitor),
             Atom::NumberLiteral(number_literal) => visitor.visit_number_literal(number_literal),
-            Atom::Variable(variable) => visitor.visit_variable(variable),
+            Atom::Variable(identifier) => visitor.visit_variable(identifier),
             Atom::UnaryOp(un_op) => un_op.accept(visitor),
-            Atom::BooleanLiteral(_) => todo!(),
+            Atom::BooleanLiteral(boolean_literal) => visitor.visit_boolean_literal(boolean_literal),
         }
     }
 }

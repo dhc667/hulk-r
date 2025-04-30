@@ -14,7 +14,6 @@ fn parses_and_or() {
             .unwrap()
             .as_variable()
             .unwrap()
-            .identifier
             .id,
         "a"
     );
@@ -30,7 +29,6 @@ fn parses_and_or() {
             .unwrap()
             .as_variable()
             .unwrap()
-            .identifier
             .id,
         "c"
     )
@@ -49,7 +47,6 @@ fn parses_leq_get_eq() {
             .unwrap()
             .as_variable()
             .unwrap()
-            .identifier
             .id,
         "a"
     );

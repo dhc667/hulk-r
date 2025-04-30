@@ -20,12 +20,11 @@ fn parses_if_else_expression() {
                 .unwrap()
                 .as_variable()
                 .unwrap()
-                .identifier
                 .id,
             "x"
         );
-        assert_eq!(then_branch.as_variable().unwrap().identifier.id, "y");
-        assert_eq!(else_branch.as_variable().unwrap().identifier.id, "z");
+        assert_eq!(then_branch.as_variable().unwrap().id, "y");
+        assert_eq!(else_branch.as_variable().unwrap().id, "z");
     } else {
         panic!("Expected IfElseExpression");
     }
@@ -50,11 +49,10 @@ fn parses_if_else_if_expression() {
                 .unwrap()
                 .as_variable()
                 .unwrap()
-                .identifier
                 .id,
             "x"
         );
-        assert_eq!(then_branch.as_variable().unwrap().identifier.id, "y");
+        assert_eq!(then_branch.as_variable().unwrap().id, "y");
         assert_eq!(
             else_branch
                 .as_if_expression()

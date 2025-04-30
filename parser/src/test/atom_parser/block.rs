@@ -25,7 +25,6 @@ x - 4;
                 .unwrap()
                 .as_variable()
                 .unwrap()
-                .identifier
                 .id,
             "a"
         );
@@ -38,7 +37,6 @@ x - 4;
                 .unwrap()
                 .as_variable()
                 .unwrap()
-                .identifier
                 .id,
             "c"
         );
@@ -51,7 +49,6 @@ x - 4;
                 .unwrap()
                 .as_variable()
                 .unwrap()
-                .identifier
                 .id,
             "x"
         );
@@ -84,7 +81,6 @@ x - 4 + 6 / (2 + 3 - x);;
                 .unwrap()
                 .as_variable()
                 .unwrap()
-                .identifier
                 .id,
             "a"
         );
@@ -97,7 +93,6 @@ x - 4 + 6 / (2 + 3 - x);;
                 .unwrap()
                 .as_variable()
                 .unwrap()
-                .identifier
                 .id,
             "c"
         );
@@ -120,7 +115,6 @@ x - 4 + 6 / (2 + 3 - x);;
                 .unwrap()
                 .as_variable()
                 .unwrap()
-                .identifier
                 .id,
             "x"
         );

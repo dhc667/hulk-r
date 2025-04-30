@@ -20,7 +20,6 @@ pub fn parses_while_expression() {
                 .unwrap()
                 .as_variable()
                 .unwrap()
-                .identifier
                 .id,
             "x"
         );
@@ -46,7 +45,6 @@ pub fn parses_while_expression() {
                 .unwrap()
                 .as_variable()
                 .unwrap()
-                .identifier
                 .id,
             "x"
         )

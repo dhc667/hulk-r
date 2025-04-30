@@ -10,8 +10,9 @@ pub use operators::GroupingOperator;
 pub use operators::UnaryOperator;
 
 pub mod literals;
-pub use literals::NumberLiteral;
 pub use literals::BooleanLiteral;
+pub use literals::NumberLiteral;
 
 pub mod identifier;
 pub use identifier::Identifier;
+pub use identifier::IdentifierInfo;
