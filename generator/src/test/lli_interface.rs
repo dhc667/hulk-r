@@ -29,10 +29,10 @@ pub fn lli_f64(program_str: &str) -> Result<f64, String> {
 
 pub fn lli_i1(program_str: &str) -> Result<bool, String> {
     let value = call_lli(program_str)?;
-    print!("{}",value);
+    print!("{}", value);
     match value.trim() {
-        "1" => Ok(true),
-        "0" => Ok(false),
+        "true" => Ok(true),
+        "false" => Ok(false),
         _ => Err(format!("Unexpected boolean output: {}", value)),
     }
 }

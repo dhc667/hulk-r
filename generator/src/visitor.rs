@@ -1,10 +1,9 @@
-use std::arch::aarch64::{int32x2_t, int8x8_t};
 use std::collections::HashMap;
 
 use crate::context::Context;
+use crate::llvm_types;
 use crate::llvm_types::{HandleType, LlvmHandle, LlvmType};
 use ast::BinaryOperator::*;
-use ast::BooleanLiteral::True;
 use ast::{Visitor, visitors::visitable::Visitable};
 
 pub struct VisitorResult {
@@ -21,6 +20,13 @@ impl Variable {
     pub fn new_f64(llvm_name: String) -> Variable {
         Variable {
             var_type: LlvmType::F64,
+            llvm_name,
+        }
+    }
+
+    pub fn new_i1(llvm_name: String) -> Variable {
+        Variable {
+            var_type: LlvmType::I1,
             llvm_name,
         }
     }
@@ -161,7 +167,7 @@ impl GeneratorVisitor {
     /// The first generated name for a hulk variable `x` would for example be
     /// `%x.0`, the second, `%x.1`, this way, even if we enter and leave contexts,
     /// we do not need to have the concept of blocks in llvm
-    pub fn define_or_shadow(&mut self, name: String) -> String {
+    pub fn define_or_shadow(&mut self, name: String, handle_type: LlvmType) -> String {
         let id: i32;
         {
             id = *self.variable_ids.get(&name).unwrap_or(&0);
@@ -170,8 +176,16 @@ impl GeneratorVisitor {
 
         let llvm_name = format!("%{}.{}", name, id);
 
-        self.context
-            .define(name, Variable::new_f64(llvm_name.clone()));
+        match handle_type {
+            LlvmType::F64 => {
+                self.context
+                    .define(name, Variable::new_f64(llvm_name.clone()));
+            }
+            LlvmType::I1 => {
+                self.context
+                    .define(name, Variable::new_i1(llvm_name.clone()));
+            }
+        }
 
         return llvm_name;
     }
@@ -348,11 +362,11 @@ impl GeneratorVisitor {
 
         let operation = match op {
             And(_) => format!(
-                "{} = && i1 {}, {}\n",
+                "{} = and i1 {}, {}\n",
                 result_register, lhs_handle.llvm_name, rhs_handle.llvm_name
             ),
             Or(_) => format!(
-                "{} = || i1 {}, {}\n",
+                "{} = or i1 {}, {}\n",
                 result_register, lhs_handle.llvm_name, rhs_handle.llvm_name
             ),
             EqualEqual(_) => format!(
@@ -371,11 +385,50 @@ impl GeneratorVisitor {
             result_handle: Some(LlvmHandle::new_tmp_i1_register(result_register)),
         }
     }
+
+    fn print_true(&mut self) -> String {
+        let element_ptr = self.generate_tmp_variable();
+        format!(
+            "{} = getelementptr [5 x i8], [5 x i8]* @.true_str, i32 0, i32 0\n",
+            element_ptr
+        ) + &format!("call i32 (i8*, ...) @printf(i8* {})\n", element_ptr)
+    }
+
+    fn print_false(&mut self) -> String {
+        let element_ptr = self.generate_tmp_variable();
+        format!(
+            "{} = getelementptr [6 x i8], [6 x i8]* @.false_str, i32 0, i32 0\n",
+            element_ptr
+        ) + &format!("call i32 (i8*, ...) @printf(i8* {})\n", element_ptr)
+    }
+
+    fn print_boolean_register(&mut self, handle: &str) -> String {
+        let (then, else_, fi) = self.generate_then_else_fi_labels();
+        format!("br i1 {handle}, label %{then}, label %{else_}\n")
+            + &format!("{then}:\n")
+            + &self.print_true()
+            + &format!("br label %{fi}\n")
+            + &format!("{else_}:\n")
+            + &self.print_false()
+            + &format!("br label %{fi}\n")
+            + &format!("{fi}:\n")
+    }
+
+    fn print_none(&mut self) -> String {
+        let element_ptr = self.generate_tmp_variable();
+        format!(
+            "{} = getelementptr [5 x i8], [5 x i8]* @.none_str, i32 0, i32 0\n",
+            element_ptr
+        ) + &format!("call i32 (i8*, ...) @printf(i8* {})\n", element_ptr)
+    }
 }
 
 impl Visitor<VisitorResult> for GeneratorVisitor {
     fn visit_program(&mut self, node: &mut ast::Program) -> VisitorResult {
-        let mut program = "@.fstr = private constant [3 x i8] c\"%f\\0A\", align 1\n".to_string()
+        let mut program = "@.fstr = private constant [3 x i8] c\"%f\\00\", align 1\n".to_string()
+            + "@.true_str = private constant [5 x i8] c\"true\\00\", align 1\n"
+            + "@.false_str = private constant [6 x i8] c\"false\\00\", align 1\n"
+            + "@.none_str = private constant [5 x i8] c\"none\\00\", align 1\n"
             + "declare i32 @printf(i8*, ...)\n"
             + "define i32 @main() {\nentry:\n";
 
@@ -510,7 +563,10 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
             "Variable must be assigned to non-null expression result, SA should've caught this",
         );
 
-        let llvm_name = self.define_or_shadow(node.identifier.id.clone());
+        let llvm_name = self.define_or_shadow(
+            node.identifier.id.clone(),
+            result_handle.handle_type.inner_type(),
+        );
 
         match result_handle.handle_type {
             HandleType::Literal(LlvmType::F64) | HandleType::Register(LlvmType::F64) => {
@@ -558,47 +614,69 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
             // this can happen if the then block is empty, or is multiple semicolon
             // terminated, we also assume the else block is empty in this case, SA
             // must guarantee this
-            None => (None, None,None),
+            None => (None, None, None),
         };
 
-        let format_result_store = |branch_result_handle: Option<LlvmHandle>| {
-            match (branch_result_handle, &result_type) {
-                (Some(ref name), Some(HandleType::Literal(LlvmType::F64)) | Some(HandleType::Register(LlvmType::F64))) => format!(
+        let format_result_store =
+            |branch_result_handle: Option<LlvmHandle>| match (branch_result_handle, &result_type) {
+                (
+                    Some(ref name),
+                    Some(HandleType::Literal(LlvmType::F64))
+                    | Some(HandleType::Register(LlvmType::F64)),
+                ) => format!(
                     "store double {}, double* {}, align 8\n",
                     name.llvm_name,
                     result_variable.as_ref().unwrap()
                 ),
-                (Some(ref name), Some(HandleType::Literal(LlvmType::I1)) | Some(HandleType::Register(LlvmType::I1))) => format!(
+                (
+                    Some(ref name),
+                    Some(HandleType::Literal(LlvmType::I1))
+                    | Some(HandleType::Register(LlvmType::I1)),
+                ) => format!(
                     "store i1 {}, i1* {}, align 1\n",
                     name.llvm_name,
                     result_variable.as_ref().unwrap()
                 ),
                 _ => "".to_string(),
-            }
-        };
+            };
 
         let result_alloca_statement = match (&result_variable, &result_type) {
-            (Some(name), Some(HandleType::Literal(LlvmType::F64)) | Some(HandleType::Register(LlvmType::F64))) => {
+            (
+                Some(name),
+                Some(HandleType::Literal(LlvmType::F64))
+                | Some(HandleType::Register(LlvmType::F64)),
+            ) => {
                 format!("{} = alloca double, align 8\n", name)
             }
-            (Some(name), Some(HandleType::Literal(LlvmType::I1)) | Some(HandleType::Register(LlvmType::I1))) => {
+            (
+                Some(name),
+                Some(HandleType::Literal(LlvmType::I1)) | Some(HandleType::Register(LlvmType::I1)),
+            ) => {
                 format!("{} = alloca i1, align 1\n", name)
             }
             _ => "".to_string(),
         };
 
         let result_load_statement = match (&result_register, &result_variable, &result_type) {
-            (Some(reg), Some(var), Some(HandleType::Literal(LlvmType::F64)) | Some(HandleType::Register(LlvmType::F64))) => {
+            (
+                Some(reg),
+                Some(var),
+                Some(HandleType::Literal(LlvmType::F64))
+                | Some(HandleType::Register(LlvmType::F64)),
+            ) => {
                 format!("{} = load double, double* {}, align 8\n", reg, var)
             }
-            (Some(reg), Some(var), Some(HandleType::Literal(LlvmType::I1)) | Some(HandleType::Register(LlvmType::I1))) => {
+            (
+                Some(reg),
+                Some(var),
+                Some(HandleType::Literal(LlvmType::I1)) | Some(HandleType::Register(LlvmType::I1)),
+            ) => {
                 format!("{} = load i1, i1* {}, align 1\n", reg, var)
             }
             _ => "".to_string(),
         };
 
         let mut branch_setup = condition_result.preamble;
-        let i1_result = self.generate_tmp_variable();
 
         match condition_handle.handle_type {
             HandleType::Literal(LlvmType::I1) | HandleType::Register(LlvmType::I1) => {
@@ -630,7 +708,7 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
             + &else_code
             + &format!("{}:\n", fi_label)
             + &result_load_statement;
-        
+
         VisitorResult {
             preamble,
             result_handle: result_register.zip(result_type).map(|(name, ht)| match ht {
@@ -646,19 +724,32 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
 
     fn visit_print(&mut self, node: &mut ast::Print) -> VisitorResult {
         let inner_result = node.expression.accept(self);
-        let element_ptr_variable = self.generate_tmp_variable();
-        
+
         let preamble = inner_result.preamble
-            + &format!(
-                "{} = getelementptr inbounds [3 x i8], [3 x i8]* @.fstr, i32 0, i32 0\ncall i32 (i8*, ...) @printf(i8* {}, double {})",
-                element_ptr_variable,
-                element_ptr_variable,
-                inner_result
-                    .result_handle
-                    .expect("Expected a result handle for operand of unary operator")
-                    .llvm_name
-            );
-        
+            + &match inner_result.result_handle {
+                Some(handle) => match handle.handle_type {
+                    HandleType::Register(LlvmType::F64) | HandleType::Literal(LlvmType::F64) => {
+                        let element_ptr_variable = self.generate_tmp_variable();
+
+                        format!(
+                            "{} = getelementptr inbounds [3 x i8], [3 x i8]* @.fstr, i32 0, i32 0\ncall i32 (i8*, ...) @printf(i8* {}, double {})",
+                            element_ptr_variable, element_ptr_variable, handle.llvm_name
+                        )
+                    }
+                    HandleType::Literal(LlvmType::I1) => {
+                        if handle.llvm_name == llvm_types::TRUE_LITERAL_STR {
+                            self.print_true()
+                        } else {
+                            self.print_false()
+                        }
+                    }
+                    HandleType::Register(LlvmType::I1) => {
+                        self.print_boolean_register(&handle.llvm_name)
+                    }
+                },
+                None => self.print_none(),
+            };
+
         VisitorResult {
             preamble,
             result_handle: None,
@@ -684,9 +775,9 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
                 loop_setup_code = loop_setup_code
                     + &format!(
                         "br i1 {}, label %{}, label %{}\n",
-                        condition_result_handle.llvm_name, loop_exit_label, body_label
+                        condition_result_handle.llvm_name, body_label, loop_exit_label
                     );
-            },
+            }
             _ => panic!("Expected a boolean handle for condition of if expression"),
         };
 

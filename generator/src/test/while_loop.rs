@@ -6,7 +6,7 @@ use super::generate_code;
 fn simple() {
     let llvm = generate_code(
         "let x = 10 in {
-            while(x - 1) {
+            while(x != 1) {
                 x := x - 1;
             };
             print(x);

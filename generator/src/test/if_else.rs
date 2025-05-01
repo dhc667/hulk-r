@@ -4,7 +4,7 @@ use crate::test::{generate_code, lli_interface::lli_f64};
 fn test_if_else() {
     let llvm = generate_code(
         "let x = 
-            if (0) 
+            if (false) 
                 { 1; } 
             else { 
                 let x = 2 in {
@@ -25,7 +25,7 @@ fn test_if_else() {
 fn using_variable_in_definition() {
     let llvm = generate_code(
         "let x = 
-            if (0) 
+            if (false) 
                 { 1; }
             else { 
                 x := x + 1;
