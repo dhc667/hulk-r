@@ -86,11 +86,11 @@ impl LlvmHandle {
         LlvmHandle::new(HandleType::literal_i1(), llvm_value.to_string())
     }
 
-    pub fn new_tmp_f64_register(name: String) -> LlvmHandle {
+    pub fn new_f64_register(name: String) -> LlvmHandle {
         LlvmHandle::new(HandleType::register_f64(), name)
     }
 
-    pub fn new_tmp_i1_register(name: String) -> LlvmHandle {
+    pub fn new_i1_register(name: String) -> LlvmHandle {
         LlvmHandle::new(HandleType::register_i1(), name)
     }
 }
