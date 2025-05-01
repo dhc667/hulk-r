@@ -1,5 +1,8 @@
 use super::super::Expression;
-use crate::{tokens::Keyword, visitors::{visitable::Visitable, Visitor}};
+use crate::{
+    tokens::Keyword,
+    visitors::{Visitor, visitable::Visitable},
+};
 
 pub struct Print {
     pub print_token: Keyword,

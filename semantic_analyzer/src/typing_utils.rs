@@ -28,6 +28,7 @@ pub fn get_up_op_return_type(op: &UnaryOperator) -> Type {
     match op {
         UnaryOperator::Plus(_) => Type::BuiltIn(BuiltInType::Number),
         UnaryOperator::Minus(_) => Type::BuiltIn(BuiltInType::Number),
+        UnaryOperator::Not(_) => Type::BuiltIn(BuiltInType::Bool),
     }
 }
 
@@ -56,6 +57,7 @@ pub fn get_up_op_param_type(op: &UnaryOperator) -> TypeAnnotation {
     match op {
         UnaryOperator::Plus(_) => Some(Type::BuiltIn(BuiltInType::Number)),
         UnaryOperator::Minus(_) => Some(Type::BuiltIn(BuiltInType::Number)),
+        UnaryOperator::Not(_) => Some(Type::BuiltIn(BuiltInType::Bool)),
     }
 }
 

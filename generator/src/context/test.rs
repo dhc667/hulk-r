@@ -9,7 +9,6 @@ fn define_get() {
 
     assert_eq!(ctx.get_value("a"), Some(&3));
     assert_eq!(ctx.get_value("b"), Some(&2));
-
 }
 
 #[test]
@@ -32,7 +31,7 @@ fn define_in_parent_get_in_child() {
 
     assert_eq!(ctx.get_value("x"), Some(&0));
     assert_eq!(ctx.get_value("y"), None);
-    
+
     ctx.pop_frame();
     ctx.pop_frame();
 

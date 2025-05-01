@@ -1,8 +1,8 @@
 use super::super::atoms::Atom;
 use super::*;
 use crate::tokens::*;
-use crate::visitors::visitable::Visitable;
 use crate::visitors::Visitor;
+use crate::visitors::visitable::Visitable;
 
 pub enum Expression {
     DestructiveAssignment(DestructiveAssignment),

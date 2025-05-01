@@ -1,5 +1,5 @@
-use ast;
 use crate::grammar;
+use ast;
 
 #[test]
 fn parses_term() {

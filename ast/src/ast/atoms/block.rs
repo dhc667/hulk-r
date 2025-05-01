@@ -1,5 +1,8 @@
 use super::super::Expression;
-use crate::{tokens::GroupingOperator, visitors::{visitable::Visitable, Visitor}};
+use crate::{
+    tokens::GroupingOperator,
+    visitors::{Visitor, visitable::Visitable},
+};
 
 pub struct ExpressionList {
     pub expressions: Vec<Expression>,

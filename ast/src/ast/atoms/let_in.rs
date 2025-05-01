@@ -37,9 +37,11 @@ impl LetIn {
         expression: Atom,
     ) -> Self {
         let mut iter = assignments.into_iter();
-        let first = iter.next().expect("Assignment list must contain at least one assignment");
+        let first = iter
+            .next()
+            .expect("Assignment list must contain at least one assignment");
 
-        LetIn{
+        LetIn {
             let_token,
             assignment: Box::new(first),
             in_token,
@@ -47,20 +49,23 @@ impl LetIn {
         }
     }
 
-    fn build_let_in_expression(let_token: Keyword, mut assignments: vec::IntoIter<Assignment>, in_token: Keyword, expression: Atom) -> Box<Atom> {
+    fn build_let_in_expression(
+        let_token: Keyword,
+        mut assignments: vec::IntoIter<Assignment>,
+        in_token: Keyword,
+        expression: Atom,
+    ) -> Box<Atom> {
         let current_assignment = assignments.next();
 
         match current_assignment {
             None => Box::new(expression),
 
-            Some(assignment) => {
-                Box::new(Atom::LetIn(LetIn{
-                    let_token,
-                    assignment: Box::new(assignment),
-                    in_token,
-                    body: LetIn::build_let_in_expression(let_token, assignments, in_token, expression)
-                }))
-            }
+            Some(assignment) => Box::new(Atom::LetIn(LetIn {
+                let_token,
+                assignment: Box::new(assignment),
+                in_token,
+                body: LetIn::build_let_in_expression(let_token, assignments, in_token, expression),
+            })),
         }
     }
 }

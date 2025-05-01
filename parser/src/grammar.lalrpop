@@ -208,6 +208,8 @@ PlusMinusUnaryOp: tokens::UnaryOperator = {
         => tokens::UnaryOperator::Plus(tokens::TokenPosition::new(s, e)),
     <s: @L> "-" <e: @R>
         => tokens::UnaryOperator::Minus(tokens::TokenPosition::new(s, e)),
+    <s: @L> "!" <e: @R>
+            => tokens::UnaryOperator::Not(tokens::TokenPosition::new(s, e)),
 }
 
 UnaryOperation: ast::Atom = {

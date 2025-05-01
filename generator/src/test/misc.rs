@@ -5,7 +5,7 @@ fn fibonacci_numbers() {
     let llvm = generate_code(
         "let x = 10 in {
           let a = 0, b = 0, fib = 1 in {
-              while(x - 1) {
+              while(x != 1) {
                   a := b;
                   b := fib;
                   fib := a + b;

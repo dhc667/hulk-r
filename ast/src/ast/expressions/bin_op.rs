@@ -1,5 +1,8 @@
 use super::Expression;
-use crate::{tokens::*, visitors::{visitable::Visitable, Visitor}};
+use crate::{
+    tokens::*,
+    visitors::{Visitor, visitable::Visitable},
+};
 
 pub struct BinOp {
     pub lhs: Box<Expression>,

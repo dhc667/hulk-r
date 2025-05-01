@@ -1,18 +1,19 @@
-use parser::grammar::ProgramParser;
 use ast::Visitable;
+use parser::grammar::ProgramParser;
 
 use crate::GeneratorVisitor;
 
 pub mod lli_interface;
 
 pub mod block;
+mod booleans;
 pub mod dassignment;
 pub mod if_else;
 pub mod let_in;
 pub mod misc;
 pub mod operators;
-pub mod while_loop;
 pub mod printer;
+pub mod while_loop;
 
 fn generate_code(hulk: &str) -> String {
     let p = ProgramParser::new();

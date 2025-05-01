@@ -3,7 +3,7 @@ use crate::test::lli_interface::lli_f64;
 use super::generate_code;
 
 #[test]
-fn simple_dassignment () {
+fn simple_dassignment() {
     let llvm = generate_code(
         "let x = 3 in {
             x := x + 1;
@@ -19,7 +19,7 @@ fn simple_dassignment () {
 }
 
 #[test]
-fn block_resistant_dassignment () {
+fn block_resistant_dassignment() {
     let llvm = generate_code(
         "let x = 3 in {
             let y = 6 in {
