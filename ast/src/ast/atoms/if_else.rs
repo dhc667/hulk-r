@@ -1,8 +1,8 @@
 use super::super::Expression;
 use super::Atom;
 use crate::tokens::Keyword;
-use crate::visitors::visitable::Visitable;
 use crate::visitors::Visitor;
+use crate::visitors::visitable::Visitable;
 
 pub struct IfElse {
     pub if_token: Keyword,

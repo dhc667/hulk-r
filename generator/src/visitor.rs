@@ -1,10 +1,11 @@
+use std::arch::aarch64::{int32x2_t, int8x8_t};
 use std::collections::HashMap;
 
-use ast::BinaryOperator::*;
-use ast::{Visitor, visitors::visitable::Visitable};
-use ast::BooleanLiteral::True;
 use crate::context::Context;
 use crate::llvm_types::{HandleType, LlvmHandle, LlvmType};
+use ast::BinaryOperator::*;
+use ast::BooleanLiteral::True;
+use ast::{Visitor, visitors::visitable::Visitable};
 
 pub struct VisitorResult {
     pub result_handle: Option<LlvmHandle>,
@@ -232,10 +233,7 @@ impl GeneratorVisitor {
                 let tmp_variable = self.generate_tmp_variable();
                 let preamble = inner_result.preamble
                     + "\n"
-                    + &format!(
-                    "{} = xor i1 {}, true",
-                    tmp_variable, inner_handle.llvm_name
-                );
+                    + &format!("{} = xor i1 {}, true", tmp_variable, inner_handle.llvm_name);
 
                 return VisitorResult {
                     preamble,
@@ -317,9 +315,24 @@ impl GeneratorVisitor {
             _ => panic!("Unsupported numeric operator"),
         } + "\n";
 
+        let result_handle = match op {
+            EqualEqual(_) | NotEqual(_) | Less(_) | LessEqual(_) | Greater(_) | GreaterEqual(_) => {
+                Some(LlvmHandle::new_tmp_i1_register(result_handle))
+            }
+
+            Plus(_) | Minus(_) | Times(_) | Divide(_) | FloorDivide(_) | Modulo(_) => {
+                Some(LlvmHandle::new_tmp_f64_register(result_handle))
+            }
+
+            Equal(_) => panic!("= found in non-assignment, parser problem"),
+            ColonEqual(_) => panic!(":= found in non-destructive assignment, parser problem"),
+
+            _ => panic!("Unsupported numeric operator"),
+        };
+
         VisitorResult {
             preamble: preamble + &operation,
-            result_handle: Some(LlvmHandle::new_tmp_f64_register(result_handle)),
+            result_handle,
         }
     }
 
@@ -332,8 +345,7 @@ impl GeneratorVisitor {
         let lhs_handle = lhs.result_handle.unwrap();
         let rhs_handle = rhs.result_handle.unwrap();
         let result_register = self.generate_tmp_variable();
-        
-        
+
         let operation = match op {
             And(_) => format!(
                 "{} = && i1 {}, {}\n",
@@ -353,7 +365,7 @@ impl GeneratorVisitor {
             ),
             _ => panic!("Unsupported boolean operator"),
         } + "\n";
-        
+
         VisitorResult {
             preamble: lhs.preamble + &rhs.preamble + &operation,
             result_handle: Some(LlvmHandle::new_tmp_i1_register(result_register)),
@@ -431,16 +443,16 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
             HandleType::Literal(LlvmType::F64) | HandleType::Register(LlvmType::F64) => {
                 preamble = preamble
                     + &format!(
-                        "store double {}, double* {}, align 4\n",
+                        "store double {}, double* {}, align 8\n",
                         result_handle.llvm_name, llvm_name
                     )
             }
             HandleType::Literal(LlvmType::I1) | HandleType::Register(LlvmType::I1) => {
                 preamble = preamble
                     + &format!(
-                    "store i1 {}, i1* {}, align 1\n",
-                    result_handle.llvm_name, llvm_name
-                );
+                        "store i1 {}, i1* {}, align 1\n",
+                        result_handle.llvm_name, llvm_name
+                    );
             }
         };
 
@@ -503,9 +515,9 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
         match result_handle.handle_type {
             HandleType::Literal(LlvmType::F64) | HandleType::Register(LlvmType::F64) => {
                 preamble = preamble
-                    + &format!("{} = alloca double, align 4\n", llvm_name)
+                    + &format!("{} = alloca double, align 8\n", llvm_name)
                     + &format!(
-                        "store double {}, double* {}, align 4\n",
+                        "store double {}, double* {}, align 8\n",
                         result_handle.llvm_name, llvm_name
                     )
             }
@@ -513,9 +525,9 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
                 preamble = preamble
                     + &format!("{} = alloca i1, align 1\n", llvm_name)
                     + &format!(
-                    "store i1 {}, i1* {}, align 1\n",
-                    result_handle.llvm_name, llvm_name
-                );
+                        "store i1 {}, i1* {}, align 1\n",
+                        result_handle.llvm_name, llvm_name
+                    );
             }
         };
 
@@ -536,65 +548,68 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
         let then_result = node.then_expression.accept(self);
         let else_result = node.else_expression.accept(self);
 
-        let (result_variable, result_register) = match then_result.result_handle {
-            Some(_) => (
+        let (result_variable, result_register, result_type) = match then_result.result_handle {
+            Some(ref handle) => (
                 Some(self.generate_tmp_variable()),
                 Some(self.generate_tmp_variable()),
+                Some(handle.handle_type),
             ),
 
             // this can happen if the then block is empty, or is multiple semicolon
             // terminated, we also assume the else block is empty in this case, SA
             // must guarantee this
-            None => (None, None),
+            None => (None, None,None),
         };
 
-        let format_result_store =
-            |branch_result_handle: Option<LlvmHandle>| match branch_result_handle {
-                Some(ref name) => format!(
-                    "store double {}, double* {}, align 4\n",
+        let format_result_store = |branch_result_handle: Option<LlvmHandle>| {
+            match (branch_result_handle, &result_type) {
+                (Some(ref name), Some(HandleType::Literal(LlvmType::F64)) | Some(HandleType::Register(LlvmType::F64))) => format!(
+                    "store double {}, double* {}, align 8\n",
                     name.llvm_name,
                     result_variable.as_ref().unwrap()
                 ),
-                None => "".to_string(),
-            };
-
-        let result_alloca_statement = match result_variable {
-            Some(ref name) => format!("{} = alloca double, align 4\n", name),
-            None => "".to_string(),
+                (Some(ref name), Some(HandleType::Literal(LlvmType::I1)) | Some(HandleType::Register(LlvmType::I1))) => format!(
+                    "store i1 {}, i1* {}, align 1\n",
+                    name.llvm_name,
+                    result_variable.as_ref().unwrap()
+                ),
+                _ => "".to_string(),
+            }
         };
 
-        let result_load_statement = match result_register {
-            Some(ref name) => format!(
-                "{} = load double, double* {}, align 4\n",
-                name,
-                result_variable.as_ref().unwrap()
-            ),
-            None => "".to_string(),
+        let result_alloca_statement = match (&result_variable, &result_type) {
+            (Some(name), Some(HandleType::Literal(LlvmType::F64)) | Some(HandleType::Register(LlvmType::F64))) => {
+                format!("{} = alloca double, align 8\n", name)
+            }
+            (Some(name), Some(HandleType::Literal(LlvmType::I1)) | Some(HandleType::Register(LlvmType::I1))) => {
+                format!("{} = alloca i1, align 1\n", name)
+            }
+            _ => "".to_string(),
+        };
+
+        let result_load_statement = match (&result_register, &result_variable, &result_type) {
+            (Some(reg), Some(var), Some(HandleType::Literal(LlvmType::F64)) | Some(HandleType::Register(LlvmType::F64))) => {
+                format!("{} = load double, double* {}, align 8\n", reg, var)
+            }
+            (Some(reg), Some(var), Some(HandleType::Literal(LlvmType::I1)) | Some(HandleType::Register(LlvmType::I1))) => {
+                format!("{} = load i1, i1* {}, align 1\n", reg, var)
+            }
+            _ => "".to_string(),
         };
 
         let mut branch_setup = condition_result.preamble;
         let i1_result = self.generate_tmp_variable();
 
         match condition_handle.handle_type {
-            HandleType::Literal(LlvmType::F64) | HandleType::Register(LlvmType::F64) => {
+            HandleType::Literal(LlvmType::I1) | HandleType::Register(LlvmType::I1) => {
                 branch_setup = branch_setup
                     + &result_alloca_statement
                     + &format!(
-                        "{} = fcmp oeq double {}, 0.0\n",
-                        i1_result, condition_handle.llvm_name
-                    )
-                    + &format!(
                         "br i1 {}, label %{}, label %{}\n",
-                        i1_result, else_label, then_label
-                    )
+                        condition_handle.llvm_name, then_label, else_label
+                    );
             }
-            HandleType::Literal(LlvmType::I1) | HandleType::Register(LlvmType::I1) => {
-                branch_setup = branch_setup
-                    + &format!(
-                    "br i1 {}, label %{}, label %{}\n",
-                    condition_handle.llvm_name, else_label, then_label
-                );
-            }
+            _ => panic!("Expected a boolean handle for condition of if expression"),
         };
 
         let format_branch = |branch_name, preamble, result_handle: Option<LlvmHandle>| {
@@ -615,17 +630,24 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
             + &else_code
             + &format!("{}:\n", fi_label)
             + &result_load_statement;
-        // todo add the result as boolean
+        
         VisitorResult {
             preamble,
-            result_handle: result_register.map(|name| LlvmHandle::new_tmp_f64_register(name)),
+            result_handle: result_register.zip(result_type).map(|(name, ht)| match ht {
+                HandleType::Register(LlvmType::F64) | HandleType::Literal(LlvmType::F64) => {
+                    LlvmHandle::new_tmp_f64_register(name)
+                }
+                HandleType::Register(LlvmType::I1) | HandleType::Literal(LlvmType::I1) => {
+                    LlvmHandle::new_tmp_i1_register(name)
+                }
+            }),
         }
     }
 
     fn visit_print(&mut self, node: &mut ast::Print) -> VisitorResult {
         let inner_result = node.expression.accept(self);
         let element_ptr_variable = self.generate_tmp_variable();
-
+        
         let preamble = inner_result.preamble
             + &format!(
                 "{} = getelementptr inbounds [3 x i8], [3 x i8]* @.fstr, i32 0, i32 0\ncall i32 (i8*, ...) @printf(i8* {}, double {})",
@@ -636,7 +658,7 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
                     .expect("Expected a result handle for operand of unary operator")
                     .llvm_name
             );
-
+        
         VisitorResult {
             preamble,
             result_handle: None,
@@ -652,31 +674,20 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
         let body_result = node.body.accept(self);
 
         let (loop_label, body_label, loop_exit_label) = self.generate_loop_labels();
-        let i1_result = self.generate_tmp_variable();
 
         let mut loop_setup_code = format!("br label %{}\n", loop_label)
             + &format!("{}:\n", loop_label)
             + &condition_result.preamble;
 
         match condition_result_handle.handle_type {
-            HandleType::Literal(LlvmType::F64) | HandleType::Register(LlvmType::F64) => {
-                loop_setup_code = loop_setup_code
-                    + &format!(
-                        "{} = fcmp oeq double {}, 0.0\n",
-                        i1_result, condition_result_handle.llvm_name
-                    )
-                    + &format!(
-                        "br i1 {}, label %{}, label %{}\n",
-                        i1_result, loop_exit_label, body_label
-                    );
-            }
             HandleType::Literal(LlvmType::I1) | HandleType::Register(LlvmType::I1) => {
                 loop_setup_code = loop_setup_code
                     + &format!(
-                    "br i1 {}, label %{}, label %{}\n",
-                    condition_result_handle.llvm_name, loop_exit_label, body_label
-                );
-            }
+                        "br i1 {}, label %{}, label %{}\n",
+                        condition_result_handle.llvm_name, loop_exit_label, body_label
+                    );
+            },
+            _ => panic!("Expected a boolean handle for condition of if expression"),
         };
 
         let body_code = format!("{}:\n", body_label)
@@ -728,7 +739,7 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
         match variable.var_type {
             LlvmType::F64 => {
                 let preamble = format!(
-                    "{} = load double, double* {}, align 4\n",
+                    "{} = load double, double* {}, align 8\n",
                     register_name, variable.llvm_name
                 );
 
@@ -773,7 +784,7 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
 
         VisitorResult {
             preamble: String::new(),
-            result_handle: Some(LlvmHandle::new_i1_literal(bool_value))
+            result_handle: Some(LlvmHandle::new_i1_literal(bool_value)),
         }
     }
 }

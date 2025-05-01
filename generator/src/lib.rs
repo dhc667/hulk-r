@@ -6,4 +6,3 @@ pub mod llvm_types;
 
 #[cfg(test)]
 mod test;
-

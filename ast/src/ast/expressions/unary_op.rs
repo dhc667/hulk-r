@@ -1,5 +1,8 @@
 use super::super::atoms::Atom;
-use crate::{tokens::UnaryOperator, visitors::{visitable::Visitable, Visitor}};
+use crate::{
+    tokens::UnaryOperator,
+    visitors::{Visitor, visitable::Visitable},
+};
 
 pub struct UnOp {
     pub op: UnaryOperator,

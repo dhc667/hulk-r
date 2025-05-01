@@ -1,10 +1,10 @@
+#[derive(Copy,Clone)]
 pub enum LlvmType {
     F64,
     I1,
     // this is expected to grow
 }
-
-
+#[derive(Copy,Clone)]
 pub enum HandleType {
     Literal(LlvmType),
     Register(LlvmType),
@@ -17,7 +17,9 @@ impl HandleType {
     pub fn register_f64() -> HandleType {
         HandleType::Register(LlvmType::F64)
     }
-    pub fn literal_i1() -> HandleType { HandleType::Literal(LlvmType::I1) }
+    pub fn literal_i1() -> HandleType {
+        HandleType::Literal(LlvmType::I1)
+    }
 
     pub fn register_i1() -> HandleType {
         HandleType::Register(LlvmType::I1)

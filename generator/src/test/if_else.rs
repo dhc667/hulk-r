@@ -23,11 +23,10 @@ fn test_if_else() {
 #[test]
 #[should_panic(expected = "Variable x not found")]
 fn using_variable_in_definition() {
-
     let llvm = generate_code(
         "let x = 
             if (0) 
-                { 1; } 
+                { 1; }
             else { 
                 x := x + 1;
                 x := x + 1;

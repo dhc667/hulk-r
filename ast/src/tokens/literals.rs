@@ -24,7 +24,7 @@ impl Display for NumberLiteral {
 
 pub enum BooleanLiteral {
     True(TokenPosition),
-    False(TokenPosition)
+    False(TokenPosition),
 }
 
 impl BooleanLiteral {
@@ -43,7 +43,7 @@ impl Display for BooleanLiteral {
         write!(f, "{}", {
             match self {
                 Self::True(_) => "true",
-                Self::False(_) => "false"
+                Self::False(_) => "false",
             }
         })
     }

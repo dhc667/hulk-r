@@ -1,5 +1,5 @@
-use ast::Atom;
 use crate::grammar;
+use ast::Atom;
 
 #[test]
 fn parses_let_in_expression() {
@@ -41,7 +41,6 @@ fn parses_let_in_exp_with_several_assignments() {
 
         let second_assignment = &let_exp.body.as_let_expression().unwrap().assignment;
         assert_eq!(second_assignment.identifier.id, "y");
-
 
         let body = &let_exp.body.as_let_expression().unwrap().body;
         let x = &body

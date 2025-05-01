@@ -9,7 +9,7 @@ fn printer() {
                 print(x);
             };
             print(x);
-        };"
+        };",
     );
     println!("{}", llvm);
 

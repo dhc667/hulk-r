@@ -1,7 +1,6 @@
+use super::EchoVisitor;
 use crate::grammar::ExpressionListParser;
 use ast::Visitable;
-use super::EchoVisitor;
-
 
 #[test]
 fn echoes_simple_expression() {
@@ -58,12 +57,16 @@ fn echoes_if_statement() {
 fn echoes_let_in_statement() {
     let p = ExpressionListParser::new();
 
-    let mut answ = p.parse("let x = 1 + 2, y = x + 2, z = 3 in {1 + 2 + 3 / 4;};").unwrap();
+    let mut answ = p
+        .parse("let x = 1 + 2, y = x + 2, z = 3 in {1 + 2 + 3 / 4;};")
+        .unwrap();
 
     let mut echoer = EchoVisitor::new();
 
     let result = answ.accept(&mut echoer);
 
-    assert_eq!(result, "let x = (1 + 2) in let y = (x + 2) in let z = 3 in { ((1 + 2) + (3 / 4)); };")
-
+    assert_eq!(
+        result,
+        "let x = (1 + 2) in let y = (x + 2) in let z = 3 in { ((1 + 2) + (3 / 4)); };"
+    )
 }

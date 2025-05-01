@@ -10,10 +10,9 @@ fn simple() {
                 x := x - 1;
             };
             print(x);
-        };"
+        };",
     );
 
     println!("{}", llvm);
     assert_eq!(lli_f64(&llvm).unwrap(), 1.0);
 }
-
