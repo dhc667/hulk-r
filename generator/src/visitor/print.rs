@@ -4,10 +4,10 @@ use super::{GeneratorVisitor, VisitorResult};
 
 impl GeneratorVisitor {
     pub(crate) fn instantiate_global_print_helpers(&self) -> String {
-        "@.fstr = private constant [3 x i8] c\"%f\\00\", align 1\n".to_string()
-            + "@.true_str = private constant [5 x i8] c\"true\\00\", align 1\n"
-            + "@.false_str = private constant [6 x i8] c\"false\\00\", align 1\n"
-            + "@.none_str = private constant [5 x i8] c\"none\\00\", align 1\n"
+        "@.fstr = private constant [4 x i8] c\"%f\\0A\\00\", align 1\n".to_string()
+            + "@.true_str = private constant [6 x i8] c\"true\\0A\\00\", align 1\n"
+            + "@.false_str = private constant [7 x i8] c\"false\\0A\\00\", align 1\n"
+            + "@.none_str = private constant [6 x i8] c\"none\\0A\\00\", align 1\n"
             + "declare i32 @printf(i8*, ...)\n"
     }
 
@@ -41,7 +41,7 @@ impl GeneratorVisitor {
     fn print_true(&mut self) -> String {
         let element_ptr = self.generate_tmp_variable();
         format!(
-            "{} = getelementptr [5 x i8], [5 x i8]* @.true_str, i32 0, i32 0\n",
+            "{} = getelementptr [6 x i8], [6 x i8]* @.true_str, i32 0, i32 0\n",
             element_ptr
         ) + &format!("call i32 (i8*, ...) @printf(i8* {})\n", element_ptr)
     }
@@ -49,7 +49,7 @@ impl GeneratorVisitor {
     fn print_false(&mut self) -> String {
         let element_ptr = self.generate_tmp_variable();
         format!(
-            "{} = getelementptr [6 x i8], [6 x i8]* @.false_str, i32 0, i32 0\n",
+            "{} = getelementptr [7 x i8], [7 x i8]* @.false_str, i32 0, i32 0\n",
             element_ptr
         ) + &format!("call i32 (i8*, ...) @printf(i8* {})\n", element_ptr)
     }
@@ -70,7 +70,7 @@ impl GeneratorVisitor {
         let element_ptr_variable = self.generate_tmp_variable();
 
         format!(
-            "{} = getelementptr inbounds [3 x i8], [3 x i8]* @.fstr, i32 0, i32 0\ncall i32 (i8*, ...) @printf(i8* {}, double {})\n",
+            "{} = getelementptr inbounds [4 x i8], [4 x i8]* @.fstr, i32 0, i32 0\ncall i32 (i8*, ...) @printf(i8* {}, double {})\n",
             element_ptr_variable, element_ptr_variable, handle
         )
     }
@@ -78,7 +78,7 @@ impl GeneratorVisitor {
     fn print_none(&mut self) -> String {
         let element_ptr = self.generate_tmp_variable();
         format!(
-            "{} = getelementptr [5 x i8], [5 x i8]* @.none_str, i32 0, i32 0\n",
+            "{} = getelementptr [6 x i8], [6 x i8]* @.none_str, i32 0, i32 0\n",
             element_ptr
         ) + &format!("call i32 (i8*, ...) @printf(i8* {})\n", element_ptr)
     }

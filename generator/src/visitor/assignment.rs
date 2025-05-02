@@ -44,7 +44,7 @@ impl GeneratorVisitor {
     /// `%x.0`, the second, `%x.1`, this way, even if we enter and leave contexts,
     /// we do not need to have the concept of blocks in llvm
     fn define_or_shadow(&mut self, name: String, handle_type: LlvmType) -> String {
-        let id: i32;
+        let id: u32;
         {
             id = *self.variable_ids.get(&name).unwrap_or(&0);
         }

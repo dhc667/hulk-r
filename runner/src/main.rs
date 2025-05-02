@@ -1,3 +1,8 @@
+use runner;
+
 fn main() {
-    println!("Hello, world!");
+    runner::run().unwrap_or_else(|err| {
+        eprintln!("Error: {}", err);
+        std::process::exit(1);
+    });
 }
