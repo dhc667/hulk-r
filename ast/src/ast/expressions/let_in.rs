@@ -1,7 +1,6 @@
 use std::vec;
 
 use super::super::Expression;
-use super::Atom;
 use crate::tokens::*;
 use crate::visitors::Visitor;
 use crate::visitors::visitable::Visitable;
@@ -26,7 +25,7 @@ pub struct LetIn {
     pub let_token: Keyword,
     pub assignment: Box<Assignment>,
     pub in_token: Keyword,
-    pub body: Box<Atom>,
+    pub body: Box<Expression>,
 }
 
 impl LetIn {
@@ -34,7 +33,7 @@ impl LetIn {
         let_token: Keyword,
         assignments: Vec<Assignment>,
         in_token: Keyword,
-        expression: Atom,
+        expression: Expression,
     ) -> Self {
         let mut iter = assignments.into_iter();
         let first = iter
@@ -53,14 +52,14 @@ impl LetIn {
         let_token: Keyword,
         mut assignments: vec::IntoIter<Assignment>,
         in_token: Keyword,
-        expression: Atom,
-    ) -> Box<Atom> {
+        expression: Expression,
+    ) -> Box<Expression> {
         let current_assignment = assignments.next();
 
         match current_assignment {
             None => Box::new(expression),
 
-            Some(assignment) => Box::new(Atom::LetIn(LetIn {
+            Some(assignment) => Box::new(Expression::LetIn(LetIn {
                 let_token,
                 assignment: Box::new(assignment),
                 in_token,

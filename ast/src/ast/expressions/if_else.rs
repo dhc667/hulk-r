@@ -1,5 +1,4 @@
 use super::super::Expression;
-use super::Atom;
 use crate::tokens::Keyword;
 use crate::visitors::Visitor;
 use crate::visitors::visitable::Visitable;
@@ -7,18 +6,18 @@ use crate::visitors::visitable::Visitable;
 pub struct IfElse {
     pub if_token: Keyword,
     pub condition: Box<Expression>,
-    pub then_expression: Box<Atom>,
+    pub then_expression: Box<Expression>,
     pub else_token: Keyword,
-    pub else_expression: Box<Atom>,
+    pub else_expression: Box<Expression>,
 }
 
 impl IfElse {
     pub fn new(
         if_token: Keyword,
         condition: Expression,
-        then_expression: Atom,
+        then_expression: Expression,
         else_token: Keyword,
-        else_expression: Atom,
+        else_expression: Expression,
     ) -> Self {
         IfElse {
             if_token,

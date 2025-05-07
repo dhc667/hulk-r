@@ -78,10 +78,6 @@ impl Visitor<TypeAnnotation> for SemanticVisitor {
         op_type
     }
 
-    fn visit_atom(&mut self, node: &mut Atom) -> TypeAnnotation {
-        node.accept(self)
-    }
-
     fn visit_let_in(&mut self, node: &mut LetIn) -> TypeAnnotation {
         self.definitions.push_frame(true);
 

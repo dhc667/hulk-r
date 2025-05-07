@@ -10,8 +10,6 @@ fn parses_and_or() {
         ast.as_bin_op()
             .unwrap()
             .lhs
-            .as_atom()
-            .unwrap()
             .as_variable()
             .unwrap()
             .id,
@@ -25,8 +23,6 @@ fn parses_and_or() {
             .as_bin_op()
             .unwrap()
             .rhs
-            .as_atom()
-            .unwrap()
             .as_variable()
             .unwrap()
             .id,
@@ -43,8 +39,6 @@ fn parses_leq_get_eq() {
         ast.as_bin_op()
             .unwrap()
             .lhs
-            .as_atom()
-            .unwrap()
             .as_variable()
             .unwrap()
             .id,
@@ -61,8 +55,6 @@ fn parses_leq_get_eq() {
             .as_bin_op()
             .unwrap()
             .lhs
-            .as_atom()
-            .unwrap()
             .as_number_literal()
             .unwrap()
             .value,
@@ -79,8 +71,6 @@ fn logical_literals() {
         ast.as_bin_op()
             .unwrap()
             .lhs
-            .as_atom()
-            .unwrap()
             .as_boolean_literal()
             .unwrap(),
         BooleanLiteral::True(_)
@@ -93,8 +83,6 @@ fn logical_literals() {
             .as_bin_op()
             .unwrap()
             .lhs
-            .as_atom()
-            .unwrap()
             .as_boolean_literal()
             .unwrap(),
         BooleanLiteral::False(_)

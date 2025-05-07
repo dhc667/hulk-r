@@ -1,5 +1,5 @@
 use crate::grammar;
-use ast;
+use ast::{self, Expression};
 
 #[test]
 fn parses_term() {
@@ -13,14 +13,12 @@ fn parses_term() {
             left.as_bin_op()
                 .unwrap()
                 .lhs
-                .as_atom()
-                .unwrap()
                 .as_variable()
                 .unwrap()
                 .id,
             "a"
         );
-        assert!(matches!(*right, ast::Expression::Atom(_)))
+        assert!(matches!(*right, Expression::Variable(_)))
     } else {
         panic!("Expected BinOp");
     }
@@ -35,18 +33,12 @@ fn parses_term_with_parentheses() {
         let left = binop.lhs;
         let right = binop.rhs;
 
-        assert!(matches!(*left, ast::Expression::Atom(_)));
+        assert!(matches!(*left, Expression::Variable(_)));
 
         let b = &(*right)
-            .as_atom()
-            .unwrap()
-            .as_grouped_expression()
-            .unwrap()
             .as_bin_op()
             .unwrap()
             .lhs
-            .as_atom()
-            .unwrap()
             .as_variable()
             .unwrap()
             .id;
@@ -65,13 +57,11 @@ fn parses_term_with_unary_operator() {
         let left = binop.lhs;
         let right = binop.rhs;
 
-        assert!(matches!(*left, ast::Expression::Atom(_)));
-        assert!(matches!(*right, ast::Expression::Atom(_)));
+        assert!(matches!(*left, Expression::UnaryOp(_)));
+        assert!(matches!(*right, Expression::Variable(_)));
 
         let left = *left;
         let left = &left
-            .as_atom()
-            .unwrap()
             .as_unary_op()
             .unwrap()
             .rhs

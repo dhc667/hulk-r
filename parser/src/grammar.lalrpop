@@ -132,17 +132,17 @@ MultiplicationOperator: tokens::BinaryOperator = {
 
 pub Factor: ast::Expression = {
     <x:Atom>
-        => ast::Expression::new_atom(x),
+        => x,
 }
 
 
-pub Atom: ast::Atom = {
+pub Atom: ast::Expression = {
     <n:NumberLiteral> => 
-        ast::Atom::NumberLiteral(n),
+        ast::Expression::NumberLiteral(n),
     <b:BooleanLiteral> =>
-        ast::Atom::BooleanLiteral(b),
+        ast::Expression::BooleanLiteral(b),
     <i:Identifier> => 
-        ast::Atom::Variable(i),
+        ast::Expression::Variable(i),
     LetExpression,
     IfExpression,
     WhileExpression,
@@ -152,9 +152,9 @@ pub Atom: ast::Atom = {
     UnaryOperation
 }
 
-LetExpression: ast::Atom = {
+LetExpression: ast::Expression = {
     <k: LetKeyword> <a:AssignmentList> <i:InKeyword> <e:Atom>
-        => ast::Atom::new_let_expression(k, a, i, e),
+        => ast::Expression::new_let_expression(k, a, i, e),
 }
 
 Assignment: ast::Assignment = {
@@ -182,24 +182,24 @@ AssignmentList: Vec<ast::Assignment> = {
         },
 }
 
-IfExpression: ast::Atom = {
+IfExpression: ast::Expression = {
     <k:IfKeyword> "(" <c:Expression> ")" <x:Atom> <k2:ElseKeyword> <x2:Atom> 
-        => ast::Atom::new_if_expression(k, c, x, k2, x2),
+        => ast::Expression::new_if_expression(k, c, x, k2, x2),
 }
 
-WhileExpression: ast::Atom = {
+WhileExpression: ast::Expression = {
     <k:WhileKeyword> "(" <c:Expression> ")" <b:Block>
-        => ast::Atom::new_while_expression(k, c, b),
+        => ast::Expression::new_while_expression(k, c, b),
 }
 
-Block: ast::Atom = {
+Block: ast::Expression = {
     <k:OpenBrace> <e:ExpressionList> <k2:CloseBrace>
-        => ast::Atom::new_block(k, e, k2),
+        => ast::Expression::new_block(k, e, k2),
 }
 
-GroupedExpression: ast::Atom = {
+GroupedExpression: ast::Expression = {
      "(" <e: Expression> ")"
-        => ast::Atom::new_grouped_expression(e),
+        => e,
 }
 
 
@@ -212,14 +212,14 @@ PlusMinusUnaryOp: tokens::UnaryOperator = {
             => tokens::UnaryOperator::Not(tokens::TokenPosition::new(s, e)),
 }
 
-UnaryOperation: ast::Atom = {
+UnaryOperation: ast::Expression = {
      <o:PlusMinusUnaryOp> <x:Atom>
-        => ast::Atom::new_unary_op(o, x),
+        => ast::Expression::new_unary_op(o, x),
 }
 
-PrintExpression: ast::Atom = {
+PrintExpression: ast::Expression = {
     <k: PrintKeyword> "(" <e:Expression> ")"
-        => ast::Atom::new_print_expression(k, e),
+        => ast::Expression::new_print_expression(k, e),
 }
 
 OpenBrace: tokens::GroupingOperator = {

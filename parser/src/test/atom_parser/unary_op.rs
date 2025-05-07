@@ -1,20 +1,13 @@
-use ast::{Atom, tokens::UnaryOperator};
-
-use super::super::grammar;
-
-mod block;
-mod if_else;
-mod let_in;
-mod literal;
-mod print;
-mod while_parser;
+use crate::grammar::ExpressionParser;
+use ast::UnaryOperator;
+use ast::Expression;
 
 #[test]
 fn parses_unary_op() {
-    let p = grammar::AtomParser::new();
+    let p = ExpressionParser::new();
 
     let answ1 = p.parse("-123").unwrap();
-    if let Atom::UnaryOp(unop) = answ1 {
+    if let Expression::UnaryOp(unop) = answ1 {
         let op = &unop.op;
         let rhs = &unop.rhs;
 
@@ -25,7 +18,7 @@ fn parses_unary_op() {
     }
 
     let answ2 = p.parse("+123").unwrap();
-    if let Atom::UnaryOp(unop) = answ2 {
+    if let Expression::UnaryOp(unop) = answ2 {
         let op = &unop.op;
         let rhs = &unop.rhs;
 
@@ -36,7 +29,7 @@ fn parses_unary_op() {
     }
 
     let answ3 = p.parse("-+123").unwrap();
-    if let Atom::UnaryOp(unop) = answ3 {
+    if let Expression::UnaryOp(unop) = answ3 {
         let op = &unop.op;
         let rhs = &unop.rhs;
 

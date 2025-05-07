@@ -11,7 +11,6 @@ pub trait Visitor<R> {
 
     fn visit_destructive_assignment(&mut self, node: &mut DestructiveAssignment) -> R;
     fn visit_bin_op(&mut self, node: &mut BinOp) -> R;
-    fn visit_atom(&mut self, node: &mut Atom) -> R;
 
     fn visit_let_in(&mut self, node: &mut LetIn) -> R;
     fn visit_assignment(&mut self, node: &mut Assignment) -> R;

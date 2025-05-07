@@ -1,5 +1,4 @@
 use super::super::Expression;
-use super::Atom;
 use crate::tokens::Keyword;
 use crate::visitors::Visitor;
 use crate::visitors::visitable::Visitable;
@@ -7,11 +6,11 @@ use crate::visitors::visitable::Visitable;
 pub struct While {
     pub while_token: Keyword,
     pub condition: Box<Expression>,
-    pub body: Box<Atom>,
+    pub body: Box<Expression>,
 }
 
 impl While {
-    pub fn new(while_token: Keyword, condition: Expression, body: Atom) -> Self {
+    pub fn new(while_token: Keyword, condition: Expression, body: Expression) -> Self {
         While {
             while_token,
             condition: Box::new(condition),
