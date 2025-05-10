@@ -14,10 +14,10 @@ x - 4;
     );
 
     if let Ok(ast::Expression::Block(block)) = answ {
-        assert_eq!(block.body.body_items.len(), 3);
-        assert!(!block.body.multiple_semicolon_terminated);
+        assert_eq!(block.body_items.len(), 3);
+        assert!(!block.multiple_semicolon_terminated);
         assert_eq!(
-            block.body.body_items[0]
+            block.body_items[0]
                 .as_expression()
                 .unwrap()
                 .as_bin_op()
@@ -29,7 +29,7 @@ x - 4;
             "a"
         );
         assert_eq!(
-            block.body.body_items[1]
+            block.body_items[1]
                 .as_expression()
                 .unwrap()
                 .as_bin_op()
@@ -41,7 +41,7 @@ x - 4;
             "c"
         );
         assert_eq!(
-            block.body.body_items[2]
+            block.body_items[2]
                 .as_expression()
                 .unwrap()
                 .as_bin_op()
@@ -70,10 +70,10 @@ x - 4 + 6 / (2 + 3 - x);;
     );
 
     if let Ok(ast::Expression::Block(block)) = answ {
-        assert_eq!(block.body.body_items.len(), 3);
-        assert!(block.body.multiple_semicolon_terminated);
+        assert_eq!(block.body_items.len(), 3);
+        assert!(block.multiple_semicolon_terminated);
         assert_eq!(
-            block.body.body_items[0]
+            block.body_items[0]
                 .as_expression()
                 .unwrap()
                 .as_bin_op()
@@ -85,7 +85,7 @@ x - 4 + 6 / (2 + 3 - x);;
             "a"
         );
         assert_eq!(
-            block.body.body_items[1]
+            block.body_items[1]
                 .as_expression()
                 .unwrap()
                 .as_bin_op()
@@ -97,7 +97,7 @@ x - 4 + 6 / (2 + 3 - x);;
             "c"
         );
         assert_eq!(
-            block.body.body_items[2]
+            block.body_items[2]
                 .as_expression()
                 .unwrap()
                 .as_bin_op()
@@ -140,7 +140,6 @@ fn detects_return_statements() {
             .body
             .as_block()
             .unwrap()
-            .body
             .body_items[2]
             .as_expression()
             .unwrap()
@@ -149,7 +148,6 @@ fn detects_return_statements() {
             .then_expression
             .as_block()
             .unwrap()
-            .body
             .body_items[0]
             .as_return_statement()
             .unwrap()

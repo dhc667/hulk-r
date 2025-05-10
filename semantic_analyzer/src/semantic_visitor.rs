@@ -117,10 +117,6 @@ impl ExpressionVisitor<TypeAnnotation> for SemanticVisitor {
         node.body.accept(self)
     }
 
-    fn visit_block(&mut self, node: &mut Block) -> TypeAnnotation {
-        node.body.accept(self)
-    }
-
     fn visit_un_op(&mut self, node: &mut UnOp) -> TypeAnnotation {
         let op_type = Some(get_up_op_return_type(&node.op));
 
@@ -160,13 +156,6 @@ impl ExpressionVisitor<TypeAnnotation> for SemanticVisitor {
         None
     }
 
-    fn visit_block_body(&mut self, node: &mut BlockBody) -> TypeAnnotation {
-        let mut result = None;
-        for expression in &mut node.body_items {
-            result = expression.accept(self);
-        }
-        result
-    }
 
 
     fn visit_boolean_literal(&mut self, _node: &mut BooleanLiteral) -> TypeAnnotation {
@@ -206,5 +195,18 @@ impl ExpressionVisitor<TypeAnnotation> for SemanticVisitor {
 
     fn visit_return_statement(&mut self, node: &mut ReturnStatement) -> TypeAnnotation {
         todo!()
+    }
+
+    fn visit_block(&mut self, node: &mut Block) -> TypeAnnotation {
+        self.definitions.push_open_frame();
+
+        let mut result = None;
+        for expression in &mut node.body_items {
+            result = expression.accept(self);
+        }
+
+        self.definitions.pop_frame();
+
+        result
     }
 }

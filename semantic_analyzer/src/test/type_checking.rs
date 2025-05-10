@@ -28,7 +28,6 @@ pub fn simple_typing() {
         .body
         .as_block()
         .unwrap()
-        .body
         .body_items[0]
         .as_expression()
         .unwrap();
@@ -118,7 +117,7 @@ pub fn nested_inference() {
 
     let dec_id = &let_in.assignment.identifier;
 
-    let inner_let_in = let_in.body.as_block().unwrap().body.body_items[0]
+    let inner_let_in = let_in.body.as_block().unwrap().body_items[0]
         .as_expression()
         .unwrap()
         .as_let_in()

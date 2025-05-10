@@ -97,7 +97,6 @@ fn block_function_def() {
             .body
             .as_block()
             .unwrap()
-            .body
             .body_items[0]
             .as_expression()
             .unwrap()

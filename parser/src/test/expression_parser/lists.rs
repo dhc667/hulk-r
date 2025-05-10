@@ -109,7 +109,6 @@ fn complex_expresion_element() {
             .elements[1]
             .as_block()
             .unwrap()
-            .body
             .body_items[1]
             .as_expression()
             .unwrap()
@@ -170,7 +169,6 @@ fn indexing_block() {
             .list
             .as_block()
             .unwrap()
-            .body
             .body_items[1]
             .as_expression()
             .unwrap()

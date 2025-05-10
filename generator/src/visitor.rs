@@ -1,5 +1,6 @@
 mod assignment;
 mod bin_op;
+mod block;
 mod if_else;
 mod print;
 mod un_op;
@@ -9,6 +10,7 @@ mod helpers {
     pub mod control_flow;
     pub mod variables;
 }
+
 use std::collections::HashMap;
 
 use crate::context::Context;
@@ -79,30 +81,16 @@ impl GeneratorVisitor {
             variable_ids: HashMap::new(),
         }
     }
-
 }
 
 impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
+    fn visit_block(&mut self, node: &mut ast::Block) -> VisitorResult {
+        self.context.push_open_frame();
+        let result =
+            self.handle_block_items(&mut node.body_items, node.multiple_semicolon_terminated);
+        self.context.pop_frame();
 
-    fn visit_block_body(&mut self, node: &mut ast::BlockBody) -> VisitorResult {
-        let mut preamble = "".to_string();
-        let mut result_handle = None;
-
-        for exp in &mut node.body_items {
-            let result = exp.accept(self);
-            preamble = preamble + "\n" + &result.preamble;
-
-            result_handle = result.result_handle;
-        }
-
-        VisitorResult {
-            preamble,
-            result_handle: if node.multiple_semicolon_terminated {
-                None
-            } else {
-                result_handle
-            },
-        }
+        result
     }
 
     fn visit_expression(&mut self, node: &mut ast::Expression) -> VisitorResult {
@@ -192,14 +180,6 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
         todo!()
     }
 
-    fn visit_block(&mut self, node: &mut ast::Block) -> VisitorResult {
-        self.context.push_open_frame();
-        let result = node.body.accept(self);
-        self.context.pop_frame();
-
-        result
-    }
-
     fn visit_un_op(&mut self, node: &mut ast::UnOp) -> VisitorResult {
         let inner_result = node.rhs.accept(self);
 
@@ -210,7 +190,10 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
         todo!()
     }
 
-    fn visit_function_member_access(&mut self, node: &mut ast::FunctionMemberAccess) -> VisitorResult {
+    fn visit_function_member_access(
+        &mut self,
+        node: &mut ast::FunctionMemberAccess,
+    ) -> VisitorResult {
         todo!()
     }
 
@@ -285,5 +268,4 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
     fn visit_return_statement(&mut self, node: &mut ast::ReturnStatement) -> VisitorResult {
         todo!()
     }
-
 }

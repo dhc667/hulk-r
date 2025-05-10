@@ -34,21 +34,6 @@ impl EchoVisitor {
 }
 
 impl ExpressionVisitor<String> for EchoVisitor {
-    fn visit_block_body(&mut self, node: &mut ast::BlockBody) -> String {
-        let expressions = node
-            .body_items
-            .iter_mut()
-            .map(|expr| expr.accept(self))
-            .collect::<Vec<String>>();
-
-        let result = expressions.join("; ");
-        if node.multiple_semicolon_terminated {
-            format!("{};;", result)
-        } else {
-            format!("{};", result)
-        }
-    }
-
     fn visit_expression(&mut self, node: &mut ast::Expression) -> String {
         node.accept(self)
     }
@@ -106,7 +91,20 @@ impl ExpressionVisitor<String> for EchoVisitor {
     }
 
     fn visit_block(&mut self, node: &mut ast::Block) -> String {
-        let inside = node.body.accept(self);
+        let expressions = node
+            .body_items
+            .iter_mut()
+            .map(|expr| expr.accept(self))
+            .collect::<Vec<String>>();
+
+        let result = expressions.join("; ");
+
+        let inside = if node.multiple_semicolon_terminated {
+            format!("{};;", result)
+        } else {
+            format!("{};", result)
+        };
+
         format!("{} {} {}", node.open_brace, inside, node.close_brace)
     }
 

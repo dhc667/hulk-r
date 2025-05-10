@@ -3,7 +3,6 @@ use crate::{
 };
 
 pub trait ExpressionVisitor<R> {
-    fn visit_block_body(&mut self, node: &mut BlockBody) -> R;
     fn visit_expression(&mut self, node: &mut Expression) -> R;
 
     fn visit_destructive_assignment(&mut self, node: &mut DestructiveAssignment) -> R;

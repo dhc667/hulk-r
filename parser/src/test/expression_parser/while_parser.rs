@@ -16,12 +16,12 @@ pub fn parses_while_expression() {
             "x"
         );
 
-        assert_eq!(body.body.body_items.len(), 2);
+        assert_eq!(body.body_items.len(), 2);
 
-        assert!(body.body.multiple_semicolon_terminated,);
+        assert!(body.multiple_semicolon_terminated,);
 
         assert_eq!(
-            body.body.body_items[1]
+            body.body_items[1]
                 .as_expression()
                 .unwrap()
                 .as_bin_op()

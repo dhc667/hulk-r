@@ -208,28 +208,6 @@ Type: typing::Type = {
     TypeName => typing::Type::from(<>),
 }
 
-BlockBody: ast::BlockBody = {
-    <l:BlockBody> <x:BlockBodyItem> => {
-        let mut l = l.body_items;
-        l.push(x.0);
-        ast::BlockBody::new(l, x.1)
-    },
-    <x:BlockBodyItem> => {
-        let mut l = Vec::new();
-        l.push(x.0);
-        ast::BlockBody::new(l, x.1)
-    },
-}
-
-BlockBodyItem: (ast::BlockBodyItem, bool) = {
-    <x:Expression> <n: MultipleSemicolons> => {
-        (ast::BlockBodyItem::from(x), n > 1)
-    },
-    <k:ReturnKeyword> <e:Expression> <n:MultipleSemicolons> => {
-        let i = ast::ReturnStatement::new(k, e);
-        (ast::BlockBodyItem::from(i), n > 1)
-    }
-}
 
 MultipleSemicolons: u32 = {
     <h: MultipleSemicolons> ";"
@@ -397,11 +375,37 @@ ListLiteral: ast::ListLiteral = {
 }
 
 Block: ast::Block = {
-    <k:OpenBrace> <e:BlockBody> <k2:CloseBrace>
-        => ast::Block::new(k, e, k2),
+    <k:OpenBrace> <e:BlockBody> <k2:CloseBrace> => {
+        let (items, multiple_semicolons) = e;
+        ast::Block::new(k, k2, items, multiple_semicolons)
+    },
 }
 
 
+BlockBody: (Vec<ast::BlockBodyItem>, bool) = {
+    <mut l:BlockBody> <x:BlockBodyItem> => {
+        let (mut l, _) = l;
+        let (x, semicolons) = x;
+        l.push(x);
+        (l, semicolons)
+    },
+    <x:BlockBodyItem> => {
+        let mut l = Vec::new();
+        let (x, semicolons) = x;
+        l.push(x);
+        (l, semicolons)
+    },
+}
+
+BlockBodyItem: (ast::BlockBodyItem, bool) = {
+    <x:Expression> <n: MultipleSemicolons> => {
+        (ast::BlockBodyItem::from(x), n > 1)
+    },
+    <k:ReturnKeyword> <e:Expression> <n:MultipleSemicolons> => {
+        let i = ast::ReturnStatement::new(k, e);
+        (ast::BlockBodyItem::from(i), n > 1)
+    }
+}
 
 ArrowOp: tokens::ArrowOperator = {
     <s: @L> "=>" <e: @R>

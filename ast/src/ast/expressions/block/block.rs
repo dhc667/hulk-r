@@ -1,23 +1,26 @@
 use crate::{ExpressionVisitor, GroupingOperator, VisitableExpression};
 
-use super::block_body::BlockBody;
+use super::BlockBodyItem;
 
 pub struct Block {
     pub open_brace: GroupingOperator,
     pub close_brace: GroupingOperator,
-    pub body: BlockBody,
+    pub body_items: Vec<BlockBodyItem>,
+    pub multiple_semicolon_terminated: bool,
 }
 
 impl Block {
     pub fn new(
         open_brace: GroupingOperator,
-        expression_list: BlockBody,
         close_brace: GroupingOperator,
+        body_items: Vec<BlockBodyItem>,
+        multiple_semicolon_terminated: bool,
     ) -> Self {
-        Block {
+        Self {
             open_brace,
             close_brace,
-            body: expression_list,
+            body_items,
+            multiple_semicolon_terminated,
         }
     }
 }

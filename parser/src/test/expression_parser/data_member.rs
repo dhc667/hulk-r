@@ -29,7 +29,6 @@ fn complex_object_data_access() {
             .object
             .as_block()
             .unwrap()
-            .body
             .body_items[1]
             .as_expression()
             .unwrap()

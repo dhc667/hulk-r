@@ -46,7 +46,6 @@ fn complex_object_function() {
             .object
             .as_block()
             .unwrap()
-            .body
             .body_items[2]
             .as_expression()
             .unwrap()

@@ -12,7 +12,7 @@ fn simple_for() {
         "y"
     );
     assert_eq!(
-        answ.as_for().unwrap().body.body.body_items[0]
+        answ.as_for().unwrap().body.body_items[0]
             .as_expression()
             .unwrap()
             .as_function_call()
