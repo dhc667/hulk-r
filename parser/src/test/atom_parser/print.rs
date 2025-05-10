@@ -1,12 +1,12 @@
 use crate::grammar;
-use ast::Atom;
+use ast::Expression;
 
 #[test]
 fn parses_print_expression() {
-    let p = grammar::AtomParser::new();
+    let p = grammar::ExpressionParser::new();
 
     let answ = p.parse("print(1 + 2 + 3 * 4)");
-    if let Ok(Atom::Print(print_exp)) = answ {
+    if let Ok(Expression::Print(print_exp)) = answ {
         let expression = &print_exp.expression;
         assert_eq!(
             expression
@@ -16,8 +16,6 @@ fn parses_print_expression() {
                 .as_bin_op()
                 .unwrap()
                 .rhs
-                .as_atom()
-                .unwrap()
                 .as_number_literal()
                 .unwrap()
                 .value,
@@ -30,10 +28,10 @@ fn parses_print_expression() {
 
 #[test]
 fn parses_print_exp_in_then_branch() {
-    let p = grammar::AtomParser::new();
+    let p = grammar::ExpressionParser::new();
 
     let answ = p.parse("if (x + 3) print(h) else d");
-    if let Ok(Atom::IfElse(if_else_exp)) = answ {
+    if let Ok(Expression::IfElse(if_else_exp)) = answ {
         let then_branch = &if_else_exp.then_expression;
         let else_branch = &if_else_exp.else_expression;
 
@@ -42,8 +40,6 @@ fn parses_print_exp_in_then_branch() {
                 .as_print_expression()
                 .unwrap()
                 .expression
-                .as_atom()
-                .unwrap()
                 .as_variable()
                 .unwrap()
                 .id,
@@ -57,26 +53,22 @@ fn parses_print_exp_in_then_branch() {
 
 #[test]
 fn parses_print_exp_in_condition() {
-    let p = grammar::AtomParser::new();
+    let p = grammar::ExpressionParser::new();
 
     let answ = p.parse("if (print(x + 3)) print(h) else d");
-    if let Ok(Atom::IfElse(if_else_exp)) = answ {
+    if let Ok(Expression::IfElse(if_else_exp)) = answ {
         let condition = &if_else_exp.condition;
         let then_branch = &if_else_exp.then_expression;
         let else_branch = &if_else_exp.else_expression;
 
         assert_eq!(
             condition
-                .as_atom()
-                .unwrap()
                 .as_print_expression()
                 .unwrap()
                 .expression
                 .as_bin_op()
                 .unwrap()
                 .lhs
-                .as_atom()
-                .unwrap()
                 .as_variable()
                 .unwrap()
                 .id,
@@ -87,8 +79,6 @@ fn parses_print_exp_in_condition() {
                 .as_print_expression()
                 .unwrap()
                 .expression
-                .as_atom()
-                .unwrap()
                 .as_variable()
                 .unwrap()
                 .id,

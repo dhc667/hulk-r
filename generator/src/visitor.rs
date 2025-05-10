@@ -166,10 +166,6 @@ impl Visitor<VisitorResult> for GeneratorVisitor {
         self.handle_bin_op(lhs_result, rhs_result, &node.op)
     }
 
-    fn visit_atom(&mut self, node: &mut ast::Atom) -> VisitorResult {
-        node.accept(self)
-    }
-
     fn visit_let_in(&mut self, node: &mut ast::LetIn) -> VisitorResult {
         self.context.push_frame(true);
 

@@ -14,8 +14,6 @@ fn parses_simple_program() {
             .as_bin_op()
             .unwrap()
             .lhs
-            .as_atom()
-            .unwrap()
             .as_number_literal()
             .unwrap()
             .value,

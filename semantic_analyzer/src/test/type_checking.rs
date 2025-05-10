@@ -15,16 +15,12 @@ pub fn simple_typing() {
     answ.accept(&mut semantic_visitor);
 
     let dec = &answ.expression_list.expressions[0]
-        .as_atom()
-        .unwrap()
         .as_let_expression()
         .unwrap()
         .assignment
         .identifier;
 
     let expression = &answ.expression_list.expressions[0]
-        .as_atom()
-        .unwrap()
         .as_let_expression()
         .unwrap()
         .body
@@ -37,8 +33,6 @@ pub fn simple_typing() {
         .as_bin_op()
         .unwrap()
         .lhs
-        .as_atom()
-        .unwrap()
         .as_variable()
         .unwrap();
 
@@ -99,8 +93,6 @@ pub fn simple_inference_test() {
     answ.accept(&mut semantic_visitor);
 
     let dec = &answ.expression_list.expressions[0]
-        .as_atom()
-        .unwrap()
         .as_let_expression()
         .unwrap()
         .assignment
@@ -123,16 +115,12 @@ pub fn nested_inference() {
     assert_eq!(semantic_visitor.errors.len(), 0);
 
     let let_in = answ.expression_list.expressions[0]
-        .as_atom()
-        .unwrap()
         .as_let_expression()
         .unwrap();
 
     let dec_id = &let_in.assignment.identifier;
 
     let inner_let_in = let_in.body.as_block().unwrap().expression_list.expressions[0]
-        .as_atom()
-        .unwrap()
         .as_let_expression()
         .unwrap();
 

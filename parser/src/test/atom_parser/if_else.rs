@@ -1,12 +1,12 @@
 use crate::grammar;
-use ast::Atom;
+use ast::Expression;
 
 #[test]
 fn parses_if_else_expression() {
-    let p = grammar::AtomParser::new();
+    let p = grammar::ExpressionParser::new();
 
     let answ = p.parse("if (x - 5) y else z").unwrap();
-    if let Atom::IfElse(if_else_exp) = answ {
+    if let Expression::IfElse(if_else_exp) = answ {
         let condition = &if_else_exp.condition;
         let then_branch = &if_else_exp.then_expression;
         let else_branch = &if_else_exp.else_expression;
@@ -16,8 +16,6 @@ fn parses_if_else_expression() {
                 .as_bin_op()
                 .unwrap()
                 .lhs
-                .as_atom()
-                .unwrap()
                 .as_variable()
                 .unwrap()
                 .id,
@@ -32,10 +30,10 @@ fn parses_if_else_expression() {
 
 #[test]
 fn parses_if_else_if_expression() {
-    let p = grammar::AtomParser::new();
+    let p = grammar::ExpressionParser::new();
 
     let answ = p.parse("if (x - 5) y else if (y - 7) 4 else 8").unwrap();
-    if let Atom::IfElse(if_else_exp) = answ {
+    if let Expression::IfElse(if_else_exp) = answ {
         let condition = &if_else_exp.condition;
         let then_branch = &if_else_exp.then_expression;
         let else_branch = &if_else_exp.else_expression;
@@ -45,8 +43,6 @@ fn parses_if_else_if_expression() {
                 .as_bin_op()
                 .unwrap()
                 .lhs
-                .as_atom()
-                .unwrap()
                 .as_variable()
                 .unwrap()
                 .id,

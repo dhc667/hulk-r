@@ -27,10 +27,6 @@ impl Visitor<String> for EchoVisitor {
         format!("({} {} {})", lhs, node.op, rhs)
     }
 
-    fn visit_atom(&mut self, node: &mut ast::Atom) -> String {
-        node.accept(self)
-    }
-
     fn visit_let_in(&mut self, node: &mut ast::LetIn) -> String {
         let assignment = node.assignment.accept(self);
         let body = node.body.accept(self);
