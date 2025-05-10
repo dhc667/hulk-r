@@ -4,8 +4,8 @@ pub use ast::*;
 pub mod tokens;
 pub use tokens::*;
 
-pub mod visitors;
-pub use visitors::Visitable;
-pub use visitors::Visitor;
+mod visitors;
+pub use visitors::VisitableExpression;
+pub use visitors::ExpressionVisitor;
 
 pub mod typing;

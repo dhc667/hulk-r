@@ -1,4 +1,4 @@
-SRC_FILES := $(shell find . -type f -not -path './target/release/runner')
+SRC_FILES := $(shell find . -type f \( -name "*.rs" -o -name "*.lalrpop" \))
 
 ./target/release/runner: $(SRC_FILES)
 	cargo build --release --quiet
@@ -9,5 +9,5 @@ compile: ./target/release/runner
 
 .PHONY: execute
 execute: compile
-	lli main.ll
+	lli script.ll
 

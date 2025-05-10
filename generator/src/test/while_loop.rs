@@ -3,7 +3,7 @@ use crate::test::lli_interface::lli_f64;
 use super::generate_code;
 
 #[test]
-fn simple() {
+fn simple_while() {
     let llvm = generate_code(
         "let x = 10 in {
             while(x != 1) {

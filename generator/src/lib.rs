@@ -1,6 +1,9 @@
 pub mod context;
 pub mod visitor;
-pub use visitor::GeneratorVisitor;
+pub(crate) use visitor::GeneratorVisitor;
+
+pub mod generator;
+pub use generator::CodeGenerator;
 
 pub mod llvm_types;
 

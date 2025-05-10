@@ -8,9 +8,18 @@ pub enum Keyword {
     If(TokenPosition),
     Else(TokenPosition),
     While(TokenPosition),
+    For(TokenPosition),
     Print(TokenPosition),
     In(TokenPosition),
     Elif(TokenPosition),
+
+    Function(TokenPosition),
+    Type(TokenPosition),
+    Inherits(TokenPosition),
+    Constant(TokenPosition),
+    Protocol(TokenPosition),
+    Extends(TokenPosition),
+    Return(TokenPosition),
 }
 
 impl Display for Keyword {
@@ -23,6 +32,14 @@ impl Display for Keyword {
             Keyword::Print(_) => write!(f, "print"),
             Keyword::In(_) => write!(f, "in"),
             Keyword::Elif(_) => write!(f, "elif"),
+            Keyword::Function(_) => write!(f, "function"),
+            Keyword::Type(_) => write!(f, "type"),
+            Keyword::Constant(_) => write!(f, "constant"),
+            Keyword::Protocol(_) => write!(f, "protocol"),
+            Keyword::Inherits(_) => write!(f, "inherits"),
+            Keyword::Extends(_) => write!(f, "extends"),
+            Keyword::Return(_) => write!(f, "return"),
+            Keyword::For(_) => write!(f, "for"),
         }
     }
 }

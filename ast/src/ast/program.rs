@@ -1,19 +1,15 @@
-use crate::{Visitor, visitors::visitable::Visitable};
-
-use super::ExpressionList;
+use super::{Definition, Expression};
 
 pub struct Program {
-    pub expression_list: ExpressionList,
+    pub definitions: Vec<Definition>,
+    pub main_expression: Expression,
 }
 
 impl Program {
-    pub fn new(expression_list: ExpressionList) -> Self {
-        Program { expression_list }
-    }
-}
-
-impl<T: Visitor<R>, R> Visitable<T, R> for Program {
-    fn accept(&mut self, visitor: &mut T) -> R {
-        visitor.visit_program(self)
+    pub fn new(definitions: Vec<Definition>, main_expression: Expression) -> Self {
+        Self {
+            definitions,
+            main_expression,
+        }
     }
 }
