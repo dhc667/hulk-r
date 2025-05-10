@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, usize};
 
 use super::*;
 
@@ -46,5 +46,30 @@ impl Display for BooleanLiteral {
                 Self::False(_) => "false",
             }
         })
+    }
+}
+
+pub struct StringLiteral {
+    pub position: TokenPosition,
+    pub string: String,
+}
+
+impl StringLiteral {
+    pub fn new(start: usize, end: usize, string: &str) -> Self {
+        Self {
+            position: TokenPosition::new(start, end),
+            string: string
+                .strip_prefix("\"")
+                .expect("String literals must start with '\"' character: parser problem")
+                .strip_suffix("\"")
+                .expect("String literals must end with '\"' character: parser problem")
+                .replace("\\\"", "\""),
+        }
+    }
+}
+
+impl Display for StringLiteral {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "\"{}\"", self.string)
     }
 }

@@ -59,7 +59,7 @@ fn not_found_let_in() {
 #[test]
 #[should_panic(expected = "Variable x not found")]
 fn not_found_let_in_2() {
-    let llvm = generate_code("let x = 3 in { x := x + 1; }; let y = 4 in print(x + y);");
+    let llvm = generate_code("{ let x = 3 in { x := x + 1; }; let y = 4 in print(x + y); };");
 
     println!("{}", llvm);
     let result = lli_f64(&llvm).unwrap();

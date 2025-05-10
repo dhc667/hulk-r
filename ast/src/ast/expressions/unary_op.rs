@@ -1,6 +1,6 @@
 use crate::{
     tokens::UnaryOperator,
-    visitors::{Visitor, visitable::Visitable},
+    visitors::{ExpressionVisitor, visitable_expression::VisitableExpression},
 };
 
 use super::Expression;
@@ -19,7 +19,7 @@ impl UnOp {
     }
 }
 
-impl<T: Visitor<R>, R> Visitable<T, R> for UnOp {
+impl<T: ExpressionVisitor<R>, R> VisitableExpression<T, R> for UnOp {
     fn accept(&mut self, visitor: &mut T) -> R {
         visitor.visit_un_op(self)
     }

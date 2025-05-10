@@ -1,30 +1,233 @@
 use ast;
 use ast::tokens;
+use crate::parsing_helpers;
+use ast::typing;
 
 grammar;
 
 pub Program: ast::Program = {
-    <x:ExpressionList> => {
-        ast::Program::new(x)
+    <p:DefinitionList?>
+    <x:Expression> ";"
+    <s:DefinitionList?>
+        => {
+        let mut p = p.unwrap_or(vec![]);
+        let mut s = s.unwrap_or(vec![]);
+        p.append(&mut s);
+        ast::Program::new(p, x)
+    }
+}
+
+DefinitionList: Vec<ast::Definition> = {
+    <mut h:DefinitionList> <d:Definition> => {
+        h.push(d);
+        h
+    },
+    <d:Definition> => {
+        let mut h: Vec<ast::Definition> = Vec::new();
+        h.push(d);
+        h
+    }
+}
+Definition: ast::Definition = {
+    TypeDef => ast::Definition::from(<>),
+    ProtocolDef => ast::Definition::from(<>),
+    GlobalFunctionDef => ast::Definition::from(<>),
+    ConstantDef => ast::Definition::from(<>),
+}
+
+TypeDef: ast::TypeDef = {
+    <k:TypeKeyword> <n:TypeName> <p:Parameters?> <i:InheritanceIndicator?> "{" 
+        <c:TypeMemberCollection?>
+    "}" => {
+        let c = match c {
+            None => parsing_helpers::TypeMemberCollector::new(),
+            Some(c) => c,
+        };
+
+        let p = match p {
+            Some(p) => p,
+            None => Vec::new()
+        };
+
+        ast::TypeDef::new(k, n, p, i, c.data_member_defs, c.function_member_defs)
+    }
+}
+
+InheritanceIndicator: ast::InheritanceIndicator = {
+    <k:InheritsKeyword> <n:TypeName> <l:Arguments?> => {
+            ast::InheritanceIndicator::new(k, n, match l {
+                Some(l) => l,
+                None => Vec::new(),
+            })
+        }
+}
+
+Parameters: Vec<tokens::Identifier> = {
+    "(" <l:ParameterList?> ")" => {
+        match l {
+            Some(l) => l,
+            None => {
+                let v: Vec<tokens::Identifier> = Vec::new();
+                v
+            }
+        }
     },
 }
 
-pub ExpressionList: ast::ExpressionList = {
-    <l:ExpressionList> <x:SemicolonExpression> => {
-        let mut l = l.expressions;
-        l.push(x.0);
-        ast::ExpressionList::new(l, x.1)
+Arguments: Vec<ast::Expression> = {
+    "(" <l:ArgumentList?> ")" => {
+        match l{
+            Some(l) => l,
+            None => {
+                let v: Vec<ast::Expression> = Vec::new();
+                v
+            }
+        }
     },
-    <x:SemicolonExpression> => {
+}
+
+TypeMemberCollection: parsing_helpers::TypeMemberCollector = {
+    <mut h:TypeMemberCollection> <m:MemberDef> => {
+        h.add_member_def(m);
+        h
+    },
+    <m:MemberDef> => {
+        let mut h = parsing_helpers::TypeMemberCollector::new();
+        h.add_member_def(m);
+        h
+    },
+}
+
+MemberDef: parsing_helpers::MemberDef = {
+    MemberFunctionDef => parsing_helpers::MemberDef::from(<>),
+    DataMemberDef => parsing_helpers::MemberDef::from(<>),
+}
+
+MemberFunctionDef: ast::FunctionDef = {
+    <mut id:Identifier> <p:Parameters> <t:TypeAnnotation?> <a:ArrowExpression> ";" => {
+        if let Some(ty) = t {
+            id.annotate_type(ty);
+        };
+        ast::FunctionDef::new(id, p, ast::FunctionBody::from(a))
+    },
+    <mut id:Identifier> <p:Parameters> <t:TypeAnnotation> <b:Block> => {
+        id.annotate_type(t);
+        ast::FunctionDef::new(id, p, ast::FunctionBody::from(b))
+    },
+}
+
+DataMemberDef: ast::DataMemberDef = {
+    <a:Assignment> ";"
+        => ast::DataMemberDef::from(a)
+}
+
+ProtocolDef: ast::ProtocolDef = {
+    <k:ProtocolKeyword> <n:TypeName> <x:ExtensionIndicator?> "{"
+        <l:FunctionSignatureList>
+    "}" => ast::ProtocolDef::new(k, n, x, l),
+}
+
+ExtensionIndicator: ast::ExtensionIndicator = {
+    <x:ExtendsKeyword> <n:TypeName>
+        => ast::ExtensionIndicator::new(x, n),
+}
+
+FunctionSignatureList: Vec<ast::FunctionSignature> = {
+    <mut h:FunctionSignatureList> <s:FunctionSignature> ";" => {
+        h.push(s);
+        h
+    },
+    <s:FunctionSignature> ";" => {
+        let mut l = Vec::new();
+        l.push(s);
+        l
+    },
+}
+
+FunctionSignature: ast::FunctionSignature = {
+    <mut id:Identifier> <p:Parameters> <n:TypeAnnotation> => {
+        id.annotate_type(n);
+        ast::FunctionSignature::new(id, p)
+    }
+}
+
+GlobalFunctionDef: ast::GlobalFunctionDef = {
+    <k:FunctionKeyword> <s:FunctionSignature> <b:GlobalFunctionDefBody>
+        => ast::GlobalFunctionDef::from_signature_and_body(k, s, b),
+}
+
+GlobalFunctionDefBody: ast::FunctionBody = {
+    Block => ast::FunctionBody::from(<>),
+    <x:ArrowExpression> ";" => ast::FunctionBody::from(x),
+}
+
+ParameterList: Vec<ast::Identifier> = {
+    <mut h:ParameterList> "," <mut id:Identifier> <t:TypeAnnotation> => {
+        id.annotate_type(t);
+        h.push(id);
+        h
+    },
+    <mut id:Identifier> <t:TypeAnnotation> => {
+        id.annotate_type(t);
+
+        let mut h = Vec::new();
+        h.push(id);
+        h
+    },
+}
+
+ArgumentList: Vec<ast::Expression> = {
+    <mut h:ArgumentList> "," <x:Expression> => {
+        h.push(x);
+        h
+    },
+    <x:Expression> => {
+        let mut h = Vec::new();
+        h.push(x);
+        h
+    },
+}
+
+ArrowExpression: ast::ArrowExpression = {
+    <o:ArrowOp> <x:Expression> => 
+        ast::ArrowExpression::new(o, x),
+}
+
+ConstantDef: ast::ConstantDef = {
+    <k:ConstantKeyword> <id:Identifier> <t:TypeAnnotation> <o:AssignOp> <x:Expression> ";" 
+        => ast::ConstantDef::new(k, t, id, o, x),
+}
+
+TypeAnnotation: typing::Type = {
+    ":" <t:Type> => t,
+}
+
+Type: typing::Type = {
+    <t:Type> "*" => typing::Type::Iterable(Box::new(t)),
+    BuiltInType => typing::Type::from(<>),
+    TypeName => typing::Type::from(<>),
+}
+
+BlockBody: ast::BlockBody = {
+    <l:BlockBody> <x:BlockBodyItem> => {
+        let mut l = l.body_items;
+        l.push(x.0);
+        ast::BlockBody::new(l, x.1)
+    },
+    <x:BlockBodyItem> => {
         let mut l = Vec::new();
         l.push(x.0);
-        ast::ExpressionList::new(l, x.1)
+        ast::BlockBody::new(l, x.1)
     },
 }
 
-SemicolonExpression: (ast::Expression, bool) = {
+BlockBodyItem: (ast::BlockBodyItem, bool) = {
     <x:Expression> <n: MultipleSemicolons> => {
-        (x, n > 1)
+        (ast::BlockBodyItem::from(x), n > 1)
+    },
+    <k:ReturnKeyword> <e:Expression> <n:MultipleSemicolons> => {
+        let i = ast::ReturnStatement::new(k, e);
+        (ast::BlockBodyItem::from(i), n > 1)
     }
 }
 
@@ -36,35 +239,178 @@ MultipleSemicolons: u32 = {
 }
 
 pub Expression: ast::Expression = {
-    DestructiveAssignment,
-    LogicalOr,
+    DestructiveAssignment => ast::Expression::from(<>),
+    LogicalOr => ast::Expression::from(<>),
 }
 
-DestructiveAssignment: ast::Expression = {
-    <id:Identifier> <o:ColonEqualOperator> <e:Expression>
-        => ast::Expression::new_destructive_assignment(id, o, e),
+DestructiveAssignment: ast::DestructiveAssignment = {
+    <id:Identifier> <o:ColonAssignOp> <e:Expression>
+        => ast::DestructiveAssignment::new(id, o, e),
 }
 
-ColonEqualOperator: tokens::BinaryOperator = {
-    <s: @L> ":=" <e: @R>
-        => tokens::BinaryOperator::ColonEqual(tokens::TokenPosition::new(s, e)),
+
+LogicalOr: ast::Expression = {
+    <x:LogicalOr> <o:LogicalOrOperator> <y:LogicalAnd>
+        => ast::Expression::from(ast::BinOp::new(x, o, y)),
+    LogicalAnd
 }
 
-pub LogicalAnd: ast::Expression = {
+LogicalAnd: ast::Expression = {
     <x:LogicalAnd> <o:LogicalAndOperator> <y:Equation>
-        => ast::Expression::new_binary_op(x, o, y),
+        => ast::Expression::from(ast::BinOp::new(x, o, y)),
     Equation
 }
 
-LogicalAndOperator: tokens::BinaryOperator = {
-    <s: @L> "&&" <e: @R>
-        => tokens::BinaryOperator::And(tokens::TokenPosition::new(s, e)),
+Equation: ast::Expression = {
+    <x:Comparison> <o:EqIneqOp> <y:Comparison>
+        => ast::Expression::from(ast::BinOp::new(x, o, y)),
+    Comparison
 }
 
-pub LogicalOr: ast::Expression = {
-    <x:LogicalOr> <o:LogicalOrOperator> <y:LogicalAnd>
-        => ast::Expression::new_binary_op(x, o, y),
-    LogicalAnd
+
+Comparison: ast::Expression = {
+    <x:Addition> <o:ComparisonOperator> <y:Addition>
+        => ast::Expression::from(ast::BinOp::new(x, o, y)),
+    Addition
+}
+
+
+Addition: ast::Expression = {
+    <x:Addition> <o:PlusMinusBinaryOp> <y:Term>
+        => ast::Expression::from(ast::BinOp::new(x, o, y)),
+    Term
+}
+
+
+Term: ast::Expression = {
+    <x:Term> <o:MultDivRemOp> <y:Factor>
+        => ast::Expression::from(ast::BinOp::new(x, o, y)),
+    Factor
+}
+
+
+Factor: ast::Expression = {
+    UnaryOperation => ast::Expression::from(<>),
+}
+
+UnaryOperation: ast::Expression = {
+     <o:PlusMinusUnaryOp> <x:UnaryOperation>
+        => ast::Expression::from(ast::UnOp::new(o, x)),
+    CompositeExpression => ast::Expression::from(<>),
+}
+
+CompositeExpression: ast::Expression = {
+    LetExpression => ast::Expression::from(<>),
+    IfExpression => ast::Expression::from(<>),
+    WhileExpression => ast::Expression::from(<>),
+    ForExpression => ast::Expression::from(<>),
+    Atom
+}
+
+
+LetExpression: ast::LetIn = {
+    <k: LetKeyword> <a:AssignmentList> <i:InKeyword> <e:CompositeExpression>
+        => ast::LetIn::new(k, a, i, e),
+}
+
+AssignmentList: Vec<ast::Assignment> = {
+    <mut h:AssignmentList> "," <t:Assignment>
+        => {
+            h.push(t);
+            h
+        },
+    <t:Assignment>
+        => {
+            let mut v = Vec::new();
+            v.push(t);
+            v
+        },
+}
+
+Assignment: ast::Assignment = {
+    <mut id:Identifier> <t:TypeAnnotation?> <o:AssignOp> <e:Expression> => {
+        if let Some(ty) = t {
+            id.annotate_type(ty);
+        }
+
+        ast::Assignment::new(id, o, e)
+    },
+}
+
+IfExpression: ast::IfElse = {
+    <k:IfKeyword> "(" <c:Expression> ")" <x:CompositeExpression> <k2:ElseKeyword> <x2:CompositeExpression> 
+        => ast::IfElse::new(k, c, x, k2, x2),
+}
+
+WhileExpression: ast::While = {
+    <k:WhileKeyword> "(" <c:Expression> ")" <b:Block>
+        => ast::While::new(k, c, b),
+}
+
+ForExpression: ast::For = {
+    <k:ForKeyword> "(" <e:Identifier> <i:InKeyword> <x:Expression> ")" <b:Block>
+        => ast::For::new(k, e, i, x, b),
+}
+
+Atom: ast::Expression = {
+    "(" <x:Expression> ")" => x,
+    FunctionCall => ast::Expression::from(<>),
+    Block => ast::Expression::from(<>),
+
+    FunctionMemberAccess => ast::Expression::from(<>),
+    DataMemberAccess => ast::Expression::from(<>),
+    ListIndexing => ast::Expression::from(<>),
+
+    ListLiteral => ast::Expression::from(<>),
+    NumberLiteral => ast::Expression::from(<>),
+    BooleanLiteral => ast::Expression::from(<>),
+    StringLiteral => ast::Expression::from(<>),
+    Identifier => ast::Expression::from(<>),
+}
+
+FunctionCall: ast::FunctionCall = {
+    <id:Identifier> <l:Arguments>
+        => ast::FunctionCall::new(id, l),
+}
+
+FunctionMemberAccess: ast::FunctionMemberAccess = {
+    <a:Atom> <o:DotOp> <f:FunctionCall>
+        => ast::FunctionMemberAccess::new(a, o, f),
+}
+
+DataMemberAccess: ast::DataMemberAccess = {
+    <a:Atom> <o:DotOp> <id:Identifier>
+        => ast::DataMemberAccess::new(a, o, id),
+}
+
+ListIndexing: ast::ListIndexing = {
+    <a:Atom> <l:OpenBracket> <i:Expression> <r:CloseBracket>
+        => ast::ListIndexing::new(a, l, r, i),
+}
+
+ListLiteral: ast::ListLiteral = {
+    <l:OpenBracket> <e:ArgumentList?> <r:CloseBracket>
+        => ast::ListLiteral::new(l, r, match e {
+            None => Vec::new(),
+            Some(v) => v
+        })
+}
+
+Block: ast::Block = {
+    <k:OpenBrace> <e:BlockBody> <k2:CloseBrace>
+        => ast::Block::new(k, e, k2),
+}
+
+
+
+ArrowOp: tokens::ArrowOperator = {
+    <s: @L> "=>" <e: @R>
+        => tokens::ArrowOperator::new(tokens::TokenPosition::new(s, e)),
+}
+
+ColonAssignOp: tokens::BinaryOperator = {
+    <s: @L> ":=" <e: @R>
+        => tokens::BinaryOperator::ColonEqual(tokens::TokenPosition::new(s, e)),
 }
 
 LogicalOrOperator: tokens::BinaryOperator = {
@@ -72,23 +418,9 @@ LogicalOrOperator: tokens::BinaryOperator = {
         => tokens::BinaryOperator::Or(tokens::TokenPosition::new(s, e)),
 }
 
-pub Equation: ast::Expression = {
-    <x:Comparison> <o:EquationOperator> <y:Comparison>
-        => ast::Expression::new_binary_op(x, o, y),
-    Comparison
-}
-
-EquationOperator: tokens::BinaryOperator = {
-    <s: @L> "==" <e: @R>
-        => tokens::BinaryOperator::EqualEqual(tokens::TokenPosition::new(s, e)),
-    <s: @L> "!=" <e: @R>
-        => tokens::BinaryOperator::NotEqual(tokens::TokenPosition::new(s, e))
-}
-
-pub Comparison: ast::Expression = {
-    <x:Addition> <o:ComparisonOperator> <y:Addition>
-        => ast::Expression::new_binary_op(x, o, y),
-    Addition
+LogicalAndOperator: tokens::BinaryOperator = {
+    <s: @L> "&&" <e: @R>
+        => tokens::BinaryOperator::And(tokens::TokenPosition::new(s, e)),
 }
 
 ComparisonOperator: tokens::BinaryOperator = {
@@ -102,106 +434,23 @@ ComparisonOperator: tokens::BinaryOperator = {
         => tokens::BinaryOperator::LessEqual(tokens::TokenPosition::new(s, e)),
 }
 
-pub Addition: ast::Expression = {
-    <x:Addition> <o:PlusMinusBinaryOp> <y:Term>
-        => ast::Expression::new_binary_op(x, o, y),
-    Term
+AssignOp: tokens::BinaryOperator = {
+    <s: @L> "=" <e: @R>
+        => tokens::BinaryOperator::Equal(tokens::TokenPosition::new(s, e)),
 }
 
+EqIneqOp: tokens::BinaryOperator = {
+    <s: @L> "==" <e: @R>
+        => tokens::BinaryOperator::EqualEqual(tokens::TokenPosition::new(s, e)),
+    <s: @L> "!=" <e: @R>
+        => tokens::BinaryOperator::NotEqual(tokens::TokenPosition::new(s, e))
+}
 PlusMinusBinaryOp: tokens::BinaryOperator = {
     <s: @L> "+" <e: @R>
         => tokens::BinaryOperator::Plus(tokens::TokenPosition::new(s, e)),
     <s: @L> "-" <e: @R>
         => tokens::BinaryOperator::Minus(tokens::TokenPosition::new(s, e)),
 }
-
-pub Term: ast::Expression = {
-    <x:Term> <o:MultiplicationOperator> <y:Factor>
-        => ast::Expression::new_binary_op(x, o, y),
-    Factor
-}
-
-MultiplicationOperator: tokens::BinaryOperator = {
-    <s: @L> "*" <e: @R>
-        => tokens::BinaryOperator::Times(tokens::TokenPosition::new(s, e)),
-    <s: @L> "/" <e: @R>
-        => tokens::BinaryOperator::Divide(tokens::TokenPosition::new(s, e)),
-    <s: @L> "%" <e: @R>
-        => tokens::BinaryOperator::Modulo(tokens::TokenPosition::new(s, e)),
-}
-
-pub Factor: ast::Expression = {
-    <x:Atom>
-        => x,
-}
-
-
-pub Atom: ast::Expression = {
-    <n:NumberLiteral> => 
-        ast::Expression::NumberLiteral(n),
-    <b:BooleanLiteral> =>
-        ast::Expression::BooleanLiteral(b),
-    <i:Identifier> => 
-        ast::Expression::Variable(i),
-    LetExpression,
-    IfExpression,
-    WhileExpression,
-    GroupedExpression,
-    PrintExpression,
-    Block,
-    UnaryOperation
-}
-
-LetExpression: ast::Expression = {
-    <k: LetKeyword> <a:AssignmentList> <i:InKeyword> <e:Atom>
-        => ast::Expression::new_let_expression(k, a, i, e),
-}
-
-Assignment: ast::Assignment = {
-    <id:Identifier> <o:EqualOperator> <e:Expression>
-        => ast::Assignment::new(id, o, e),
-}
-
-EqualOperator: tokens::BinaryOperator = {
-    <s: @L> "=" <e: @R>
-        => tokens::BinaryOperator::Equal(tokens::TokenPosition::new(s, e)),
-}
-
-AssignmentList: Vec<ast::Assignment> = {
-    <h:AssignmentList> "," <t:Assignment>
-        => {
-            let mut h = h;
-            h.push(t);
-            h
-        },
-    <t:Assignment>
-        => {
-            let mut v = Vec::new();
-            v.push(t);
-            v
-        },
-}
-
-IfExpression: ast::Expression = {
-    <k:IfKeyword> "(" <c:Expression> ")" <x:Atom> <k2:ElseKeyword> <x2:Atom> 
-        => ast::Expression::new_if_expression(k, c, x, k2, x2),
-}
-
-WhileExpression: ast::Expression = {
-    <k:WhileKeyword> "(" <c:Expression> ")" <b:Block>
-        => ast::Expression::new_while_expression(k, c, b),
-}
-
-Block: ast::Expression = {
-    <k:OpenBrace> <e:ExpressionList> <k2:CloseBrace>
-        => ast::Expression::new_block(k, e, k2),
-}
-
-GroupedExpression: ast::Expression = {
-     "(" <e: Expression> ")"
-        => e,
-}
-
 
 PlusMinusUnaryOp: tokens::UnaryOperator = {
     <s: @L> "+" <e: @R>
@@ -212,15 +461,21 @@ PlusMinusUnaryOp: tokens::UnaryOperator = {
             => tokens::UnaryOperator::Not(tokens::TokenPosition::new(s, e)),
 }
 
-UnaryOperation: ast::Expression = {
-     <o:PlusMinusUnaryOp> <x:Atom>
-        => ast::Expression::new_unary_op(o, x),
+
+MultDivRemOp: tokens::BinaryOperator = {
+    <s: @L> "*" <e: @R>
+        => tokens::BinaryOperator::Times(tokens::TokenPosition::new(s, e)),
+    <s: @L> "/" <e: @R>
+        => tokens::BinaryOperator::Divide(tokens::TokenPosition::new(s, e)),
+    <s: @L> "%" <e: @R>
+        => tokens::BinaryOperator::Modulo(tokens::TokenPosition::new(s, e)),
 }
 
-PrintExpression: ast::Expression = {
-    <k: PrintKeyword> "(" <e:Expression> ")"
-        => ast::Expression::new_print_expression(k, e),
+DotOp: tokens::DotOperator = {
+    <s: @L> "." <e: @R>
+        => tokens::DotOperator::new(tokens::TokenPosition::new(s, e)),
 }
+
 
 OpenBrace: tokens::GroupingOperator = {
     <s: @L> "{" <e: @R>
@@ -230,6 +485,38 @@ OpenBrace: tokens::GroupingOperator = {
 CloseBrace: tokens::GroupingOperator = {
     <s: @L> "}" <e: @R>
         => tokens::GroupingOperator::CloseBrace(tokens::TokenPosition::new(s, e)),
+}
+
+OpenBracket: tokens::GroupingOperator = {
+    <s: @L> "[" <e: @R>
+        => tokens::GroupingOperator::OpenBracket(tokens::TokenPosition::new(s, e)),
+}
+
+CloseBracket: tokens::GroupingOperator = {
+    <s: @L> "]" <e: @R>
+        => tokens::GroupingOperator::CloseBracket(tokens::TokenPosition::new(s, e)),
+}
+
+BuiltInType: typing::BuiltInType = {
+    "Object" => typing::BuiltInType::Object,
+    "Number" => typing::BuiltInType::Number,
+    "String" => typing::BuiltInType::String,
+    "Bool" => typing::BuiltInType::Bool,
+}
+
+ReturnKeyword: tokens::Keyword = {
+    <s: @L> "return" <e: @R>
+        => tokens::Keyword::Return(tokens::TokenPosition::new(s, e)),
+}
+
+ExtendsKeyword: tokens::Keyword = {
+    <s: @L> "extends" <e: @R>
+        => tokens::Keyword::Extends(tokens::TokenPosition::new(s, e)),
+}
+
+InheritsKeyword: tokens::Keyword = {
+    <s: @L> "inherits" <e: @R>
+        => tokens::Keyword::Inherits(tokens::TokenPosition::new(s, e)),
 }
 
 LetKeyword: tokens::Keyword = {
@@ -262,15 +549,46 @@ WhileKeyword: tokens::Keyword = {
         => tokens::Keyword::While(tokens::TokenPosition::new(s, e)),
 }
 
-PrintKeyword: tokens::Keyword = {
-    <s: @L> "print" <e: @R>
-        => tokens::Keyword::Print(tokens::TokenPosition::new(s, e)),
+ForKeyword: tokens::Keyword = {
+    <s: @L> "for" <e: @R>
+        => tokens::Keyword::For(tokens::TokenPosition::new(s, e)),
+}
+
+TypeKeyword: tokens::Keyword = {
+    <s: @L> "type" <e: @R>
+        => tokens::Keyword::Type(tokens::TokenPosition::new(s, e)),
+}
+
+FunctionKeyword: tokens::Keyword = {
+    <s: @L> "function" <e: @R>
+        => tokens::Keyword::Function(tokens::TokenPosition::new(s, e)),
+}
+
+ProtocolKeyword: tokens::Keyword = {
+    <s: @L> "protocol" <e: @R>
+        => tokens::Keyword::Protocol(tokens::TokenPosition::new(s, e)),
+}
+
+ConstantKeyword: tokens::Keyword = {
+    <s: @L> "constant" <e: @R>
+        => tokens::Keyword::Constant(tokens::TokenPosition::new(s, e)),
 }
 
 Identifier: tokens::Identifier = {
     <s: @L> <i:r"[A-Za-z][A-Za-z_0-9]*"> <e: @R>
         => tokens::Identifier::new(s, e, i),
 }
+
+TypeName: tokens::TypeName = {
+    <s: @L> <i:r"[A-Za-z][A-Za-z_0-9]*"> <e: @R>
+        => tokens::TypeName::new(s, e, i.to_string()),
+}
+
+StringLiteral: tokens::StringLiteral = {
+    <b: @L> <s:r#""(?:[^"\\]|\\.)*""#> <e: @R>
+        => tokens::StringLiteral::new(b, e, s),
+}
+
 
 NumberLiteral: tokens::NumberLiteral = {
     <s: @L> <n:r"[0-9]+(\.[0-9]+)?"> <e: @R>

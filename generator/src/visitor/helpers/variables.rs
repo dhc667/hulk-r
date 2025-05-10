@@ -1,5 +1,5 @@
-use crate::llvm_types::LlvmHandle;
-use crate::{GeneratorVisitor, llvm_types::LlvmType};
+use crate::{llvm_types::{LlvmHandle, LlvmType}, GeneratorVisitor};
+
 
 impl GeneratorVisitor {
     pub(crate) fn generate_tmp_variable(&mut self) -> String {

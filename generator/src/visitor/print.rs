@@ -3,7 +3,7 @@ use crate::llvm_types::{self, HandleType, LlvmType};
 use super::{GeneratorVisitor, VisitorResult};
 
 impl GeneratorVisitor {
-    pub(crate) fn instantiate_global_print_helpers(&self) -> String {
+    pub fn instantiate_global_print_helpers(&self) -> String {
         "@.fstr = private constant [4 x i8] c\"%f\\0A\\00\", align 1\n".to_string()
             + "@.true_str = private constant [6 x i8] c\"true\\0A\\00\", align 1\n"
             + "@.false_str = private constant [7 x i8] c\"false\\0A\\00\", align 1\n"

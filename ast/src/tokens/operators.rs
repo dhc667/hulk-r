@@ -72,6 +72,8 @@ pub enum GroupingOperator {
     CloseParen(TokenPosition),
     OpenBrace(TokenPosition),
     CloseBrace(TokenPosition),
+    OpenBracket(TokenPosition),
+    CloseBracket(TokenPosition),
 }
 
 impl Display for GroupingOperator {
@@ -81,6 +83,34 @@ impl Display for GroupingOperator {
             GroupingOperator::CloseParen(_) => write!(f, ")"),
             GroupingOperator::OpenBrace(_) => write!(f, "{{"),
             GroupingOperator::CloseBrace(_) => write!(f, "}}"),
+            GroupingOperator::OpenBracket(_) => write!(f, "["),
+            GroupingOperator::CloseBracket(_) => write!(f, "]"),
         }
+    }
+}
+
+pub struct ArrowOperator {
+    pub position: TokenPosition,
+}
+
+impl ArrowOperator {
+    pub fn new(position: TokenPosition) -> Self {
+        Self { position }
+    }
+}
+
+pub struct DotOperator {
+    pub position: TokenPosition,
+}
+
+impl DotOperator {
+    pub fn new(position: TokenPosition) -> Self {
+        Self { position }
+    }
+}
+
+impl Display for DotOperator {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, ".")
     }
 }

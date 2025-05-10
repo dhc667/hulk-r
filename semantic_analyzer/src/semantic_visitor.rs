@@ -1,6 +1,6 @@
 use ast::{
     typing::{BuiltInType, Type, TypeAnnotation, to_string},
-    visitors::visitable::Visitable,
+    VisitableExpression,
     *,
 };
 use generator::context::Context;
@@ -30,7 +30,7 @@ impl SemanticVisitor {
     }
 }
 
-impl Visitor<TypeAnnotation> for SemanticVisitor {
+impl ExpressionVisitor<TypeAnnotation> for SemanticVisitor {
     fn visit_expression(&mut self, node: &mut Expression) -> TypeAnnotation {
         node.accept(self)
     }
@@ -79,7 +79,7 @@ impl Visitor<TypeAnnotation> for SemanticVisitor {
     }
 
     fn visit_let_in(&mut self, node: &mut LetIn) -> TypeAnnotation {
-        self.definitions.push_frame(true);
+        self.definitions.push_open_frame();
 
         node.assignment.accept(self);
         let body_type = node.body.accept(self);
@@ -111,9 +111,6 @@ impl Visitor<TypeAnnotation> for SemanticVisitor {
         self.infer(&then_type, &else_type)
     }
 
-    fn visit_print(&mut self, node: &mut Print) -> TypeAnnotation {
-        node.expression.accept(self)
-    }
 
     fn visit_while(&mut self, node: &mut While) -> TypeAnnotation {
         node.condition.accept(self);
@@ -121,7 +118,7 @@ impl Visitor<TypeAnnotation> for SemanticVisitor {
     }
 
     fn visit_block(&mut self, node: &mut Block) -> TypeAnnotation {
-        node.expression_list.accept(self)
+        node.body.accept(self)
     }
 
     fn visit_un_op(&mut self, node: &mut UnOp) -> TypeAnnotation {
@@ -163,19 +160,51 @@ impl Visitor<TypeAnnotation> for SemanticVisitor {
         None
     }
 
-    fn visit_expression_list(&mut self, node: &mut ExpressionList) -> TypeAnnotation {
+    fn visit_block_body(&mut self, node: &mut BlockBody) -> TypeAnnotation {
         let mut result = None;
-        for expression in &mut node.expressions {
+        for expression in &mut node.body_items {
             result = expression.accept(self);
         }
         result
     }
 
-    fn visit_program(&mut self, node: &mut Program) -> TypeAnnotation {
-        node.expression_list.accept(self)
-    }
 
     fn visit_boolean_literal(&mut self, _node: &mut BooleanLiteral) -> TypeAnnotation {
         Some(Type::BuiltIn(BuiltInType::Bool))
+    }
+
+    fn visit_for(&mut self, node: &mut For) -> TypeAnnotation {
+        todo!()
+    }
+
+    fn visit_data_member_access(&mut self, node: &mut DataMemberAccess) -> TypeAnnotation {
+        todo!()
+    }
+
+    fn visit_function_member_access(&mut self, node: &mut FunctionMemberAccess) -> TypeAnnotation {
+        todo!()
+    }
+
+    fn visist_list_indexing(&mut self, node: &mut ListIndexing) -> TypeAnnotation {
+        todo!()
+    }
+
+    fn visit_function_call(&mut self, node: &mut FunctionCall) -> TypeAnnotation {
+        if node.identifier.id != "print" || node.arguments.len() != 1 {
+            todo!();
+        }
+        node.arguments[0].accept(self)
+    }
+
+    fn visit_string_literal(&mut self, node: &mut StringLiteral) -> TypeAnnotation {
+        todo!()
+    }
+
+    fn visit_list_literal(&mut self, node: &mut ListLiteral) -> TypeAnnotation {
+        todo!()
+    }
+
+    fn visit_return_statement(&mut self, node: &mut ReturnStatement) -> TypeAnnotation {
+        todo!()
     }
 }
