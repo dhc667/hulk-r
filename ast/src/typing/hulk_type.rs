@@ -16,6 +16,9 @@ impl Type {
     pub fn new_builtin(ty: BuiltInType) -> Self {
         Type::BuiltIn(ty)
     }
+
+    // this is expected to not be irrefutable when we add more types
+    #[allow(irrefutable_let_patterns)] 
     pub fn as_builtin(&self) -> Option<&BuiltInType> {
         if let Type::BuiltIn(ty) = self {
             Some(ty)

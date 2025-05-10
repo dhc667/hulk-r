@@ -69,7 +69,7 @@ pub struct GeneratorVisitor {
     ///
     /// We need this in order to be able to shadow variables, or define
     /// variables with the same name in different contexts
-    variable_ids: HashMap<String, i32>,
+    variable_ids: HashMap<String, u32>,
 }
 
 impl GeneratorVisitor {
