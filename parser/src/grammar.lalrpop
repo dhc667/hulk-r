@@ -6,28 +6,26 @@ use ast::typing;
 grammar;
 
 pub Program: ast::Program = {
-    <p:DefinitionList?>
-    <x:Expression> ";"
-    <s:DefinitionList?>
-        => {
-        let mut p = p.unwrap_or(vec![]);
-        let mut s = s.unwrap_or(vec![]);
-        p.append(&mut s);
-        ast::Program::new(p, x)
+    InstructionList => parsing_helpers::program_from_instructions(<>),
+}
+
+InstructionList: Vec<parsing_helpers::Instruction> = {
+    <mut h:InstructionList> <i:Instruction> => {
+        h.push(i);
+        h
+    },
+    <i:Instruction> => {
+        let mut h: Vec<parsing_helpers::Instruction> = Vec::new();
+        h.push(i);
+        h
     }
 }
 
-DefinitionList: Vec<ast::Definition> = {
-    <mut h:DefinitionList> <d:Definition> => {
-        h.push(d);
-        h
-    },
-    <d:Definition> => {
-        let mut h: Vec<ast::Definition> = Vec::new();
-        h.push(d);
-        h
-    }
+Instruction: parsing_helpers::Instruction = {
+    Definition => parsing_helpers::Instruction::from(<>),
+    <x:Expression> ";" => parsing_helpers::Instruction::from(x),
 }
+
 Definition: ast::Definition = {
     TypeDef => ast::Definition::from(<>),
     ProtocolDef => ast::Definition::from(<>),

@@ -10,7 +10,7 @@ fn not_defined_variable() {
 
     let mut semantic_visitor = SemanticVisitor::new();
 
-    answ.main_expression.accept(&mut semantic_visitor);
+    answ.expressions[0].accept(&mut semantic_visitor);
     assert_eq!(
         semantic_visitor.errors,
         vec!["Variable x is not defined".to_string()]
@@ -27,7 +27,7 @@ fn shadow_different_let_in() {
 
     let mut semantic_visitor = SemanticVisitor::new();
 
-    answ.main_expression.accept(&mut semantic_visitor);
+    answ.expressions[0].accept(&mut semantic_visitor);
 }
 
 #[test]
@@ -38,7 +38,7 @@ fn shadow_in_same_let_in() {
 
     let mut semantic_visitor = SemanticVisitor::new();
 
-    answ.main_expression.accept(&mut semantic_visitor);
+    answ.expressions[0].accept(&mut semantic_visitor);
 }
 
 #[test]
@@ -49,7 +49,7 @@ fn lookup_in_let_in() {
 
     let mut semantic_visitor = SemanticVisitor::new();
 
-    answ.main_expression.accept(&mut semantic_visitor);
+    answ.expressions[0].accept(&mut semantic_visitor);
 }
 
 #[test]
@@ -60,7 +60,7 @@ fn lookup_in_let_in_with_shadow() {
 
     let mut semantic_visitor = SemanticVisitor::new();
 
-    answ.main_expression.accept(&mut semantic_visitor);
+    answ.expressions[0].accept(&mut semantic_visitor);
 }
 
 #[test]
@@ -71,7 +71,7 @@ fn not_defined_variable_different_let_in() {
 
     let mut semantic_visitor = SemanticVisitor::new();
 
-    answ.main_expression.accept(&mut semantic_visitor);
+    answ.expressions[0].accept(&mut semantic_visitor);
 
     assert_eq!(
         semantic_visitor.errors,
@@ -87,7 +87,7 @@ fn several_undefinitions() {
 
     let mut semantic_visitor = SemanticVisitor::new();
 
-    answ.main_expression.accept(&mut semantic_visitor);
+    answ.expressions[0].accept(&mut semantic_visitor);
 
     assert_eq!(
         semantic_visitor.errors,

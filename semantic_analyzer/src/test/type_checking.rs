@@ -12,17 +12,17 @@ pub fn simple_typing() {
     let mut answ = p.parse("let x = 1 in { x + 1 ;};").unwrap();
 
     let mut semantic_visitor = SemanticVisitor::new();
-    answ.main_expression.accept(&mut semantic_visitor);
+    answ.expressions[0].accept(&mut semantic_visitor);
 
     let dec = &answ
-        .main_expression
+        .expressions[0]
         .as_let_in()
         .unwrap()
         .assignment
         .identifier;
 
     let expression = &answ
-        .main_expression
+        .expressions[0]
         .as_let_in()
         .unwrap()
         .body
@@ -45,7 +45,7 @@ pub fn binary_op_error() {
     let mut answ = p.parse("let x = 1 in { x + true ;};").unwrap();
 
     let mut semantic_visitor = SemanticVisitor::new();
-    answ.main_expression.accept(&mut semantic_visitor);
+    answ.expressions[0].accept(&mut semantic_visitor);
     assert_eq!(
         semantic_visitor.errors,
         vec!["Type mismatch: Cannot apply + to operands of type Number and Bool".to_string()]
@@ -58,7 +58,7 @@ pub fn unary_op_error() {
     let mut answ = p.parse("let x = true in { -x ;};").unwrap();
 
     let mut semantic_visitor = SemanticVisitor::new();
-    answ.main_expression.accept(&mut semantic_visitor);
+    answ.expressions[0].accept(&mut semantic_visitor);
 
     assert_eq!(
         semantic_visitor.errors,
@@ -72,7 +72,7 @@ pub fn dassing_error() {
     let mut answ = p.parse("let x = true in { x:=3 ;};").unwrap();
 
     let mut semantic_visitor = SemanticVisitor::new();
-    answ.main_expression.accept(&mut semantic_visitor);
+    answ.expressions[0].accept(&mut semantic_visitor);
 
     assert_eq!(
         semantic_visitor.errors,
@@ -88,10 +88,10 @@ pub fn simple_inference_test() {
         .unwrap();
 
     let mut semantic_visitor = SemanticVisitor::new();
-    answ.main_expression.accept(&mut semantic_visitor);
+    answ.expressions[0].accept(&mut semantic_visitor);
 
     let dec = &answ
-        .main_expression
+        .expressions[0]
         .as_let_in()
         .unwrap()
         .assignment
@@ -109,11 +109,11 @@ pub fn nested_inference() {
         .unwrap();
 
     let mut semantic_visitor = SemanticVisitor::new();
-    let expr_type = answ.main_expression.accept(&mut semantic_visitor);
+    let expr_type = answ.expressions[0].accept(&mut semantic_visitor);
 
     assert_eq!(semantic_visitor.errors.len(), 0);
 
-    let let_in = answ.main_expression.as_let_in().unwrap();
+    let let_in = answ.expressions[0].as_let_in().unwrap();
 
     let dec_id = &let_in.assignment.identifier;
 

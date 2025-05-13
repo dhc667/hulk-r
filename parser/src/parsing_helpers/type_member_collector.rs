@@ -1,6 +1,4 @@
-use ast::{
-    DataMemberDef, FunctionDef,
-};
+use ast::{DataMemberDef, FunctionDef};
 
 pub struct TypeMemberCollector {
     pub data_member_defs: Vec<DataMemberDef>,
@@ -51,4 +49,3 @@ impl From<FunctionDef> for MemberDef {
         Self::FunctionDef(v)
     }
 }
-

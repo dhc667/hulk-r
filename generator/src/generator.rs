@@ -20,7 +20,11 @@ impl CodeGenerator {
         let mut program =
             expression_generator.instantiate_global_print_helpers() + "define i32 @main() {\nentry:\n";
 
-        let inner = node.main_expression.accept(&mut expression_generator);
+        if node.expressions.len() != 1 {
+            todo!()
+        }
+
+        let inner = node.expressions[0].accept(&mut expression_generator);
 
         program = program + &inner.preamble;
 
