@@ -1,7 +1,7 @@
 use super::Expression;
 use crate::{
     tokens::*,
-    visitors::{Visitor, visitable::Visitable},
+    visitors::{ExpressionVisitor, visitable_expression::VisitableExpression},
 };
 
 pub struct BinOp {
@@ -20,7 +20,7 @@ impl BinOp {
     }
 }
 
-impl<T: Visitor<R>, R> Visitable<T, R> for BinOp {
+impl<T: ExpressionVisitor<R>, R> VisitableExpression<T, R> for BinOp {
     fn accept(&mut self, visitor: &mut T) -> R {
         visitor.visit_bin_op(self)
     }

@@ -1,5 +1,8 @@
-pub mod expressions;
+mod expressions;
 pub use expressions::*;
 
-pub mod program;
+mod definitions;
+pub use definitions::*;
+
+mod program;
 pub use program::Program;

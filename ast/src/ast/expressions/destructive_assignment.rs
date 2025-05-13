@@ -1,7 +1,7 @@
 use super::Expression;
 use crate::{
     tokens::*,
-    visitors::{Visitor, visitable::Visitable},
+    visitors::{ExpressionVisitor, visitable_expression::VisitableExpression},
 };
 
 pub struct DestructiveAssignment {
@@ -20,7 +20,7 @@ impl DestructiveAssignment {
     }
 }
 
-impl<T: Visitor<R>, R> Visitable<T, R> for DestructiveAssignment {
+impl<T: ExpressionVisitor<R>, R> VisitableExpression<T, R> for DestructiveAssignment {
     fn accept(&mut self, visitor: &mut T) -> R {
         visitor.visit_destructive_assignment(self)
     }

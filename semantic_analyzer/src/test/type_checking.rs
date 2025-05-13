@@ -1,5 +1,5 @@
 use ast::{
-    Visitable,
+    VisitableExpression,
     typing::{BuiltInType, Type},
 };
 use parser::ProgramParser;
@@ -12,29 +12,27 @@ pub fn simple_typing() {
     let mut answ = p.parse("let x = 1 in { x + 1 ;};").unwrap();
 
     let mut semantic_visitor = SemanticVisitor::new();
-    answ.accept(&mut semantic_visitor);
+    answ.expressions[0].accept(&mut semantic_visitor);
 
-    let dec = &answ.expression_list.expressions[0]
-        .as_let_expression()
+    let dec = &answ
+        .expressions[0]
+        .as_let_in()
         .unwrap()
         .assignment
         .identifier;
 
-    let expression = &answ.expression_list.expressions[0]
-        .as_let_expression()
+    let expression = &answ
+        .expressions[0]
+        .as_let_in()
         .unwrap()
         .body
         .as_block()
         .unwrap()
-        .expression_list
-        .expressions[0];
-
-    let var = expression
-        .as_bin_op()
-        .unwrap()
-        .lhs
-        .as_variable()
+        .body_items[0]
+        .as_expression()
         .unwrap();
+
+    let var = expression.as_bin_op().unwrap().lhs.as_variable().unwrap();
 
     assert_eq!(semantic_visitor.errors.len(), 0);
     assert_eq!(dec.info.ty, Some(Type::BuiltIn(BuiltInType::Number)));
@@ -47,10 +45,10 @@ pub fn binary_op_error() {
     let mut answ = p.parse("let x = 1 in { x + true ;};").unwrap();
 
     let mut semantic_visitor = SemanticVisitor::new();
-    answ.accept(&mut semantic_visitor);
+    answ.expressions[0].accept(&mut semantic_visitor);
     assert_eq!(
         semantic_visitor.errors,
-        vec!["Type mismatch: Cannot apply + to operands of type number and bool".to_string()]
+        vec!["Type mismatch: Cannot apply + to operands of type Number and Bool".to_string()]
     );
 }
 
@@ -60,11 +58,11 @@ pub fn unary_op_error() {
     let mut answ = p.parse("let x = true in { -x ;};").unwrap();
 
     let mut semantic_visitor = SemanticVisitor::new();
-    answ.accept(&mut semantic_visitor);
+    answ.expressions[0].accept(&mut semantic_visitor);
 
     assert_eq!(
         semantic_visitor.errors,
-        vec!["Type mismatch: Cannot apply - to operand of type bool".to_string()]
+        vec!["Type mismatch: Cannot apply - to operand of type Bool".to_string()]
     );
 }
 
@@ -74,11 +72,11 @@ pub fn dassing_error() {
     let mut answ = p.parse("let x = true in { x:=3 ;};").unwrap();
 
     let mut semantic_visitor = SemanticVisitor::new();
-    answ.accept(&mut semantic_visitor);
+    answ.expressions[0].accept(&mut semantic_visitor);
 
     assert_eq!(
         semantic_visitor.errors,
-        vec!["Type mismatch: x is bool but is being reassigned with number".to_string()]
+        vec!["Type mismatch: x is Bool but is being reassigned with Number".to_string()]
     );
 }
 
@@ -90,10 +88,11 @@ pub fn simple_inference_test() {
         .unwrap();
 
     let mut semantic_visitor = SemanticVisitor::new();
-    answ.accept(&mut semantic_visitor);
+    answ.expressions[0].accept(&mut semantic_visitor);
 
-    let dec = &answ.expression_list.expressions[0]
-        .as_let_expression()
+    let dec = &answ
+        .expressions[0]
+        .as_let_in()
         .unwrap()
         .assignment
         .identifier;
@@ -110,18 +109,18 @@ pub fn nested_inference() {
         .unwrap();
 
     let mut semantic_visitor = SemanticVisitor::new();
-    let expr_type = answ.accept(&mut semantic_visitor);
+    let expr_type = answ.expressions[0].accept(&mut semantic_visitor);
 
     assert_eq!(semantic_visitor.errors.len(), 0);
 
-    let let_in = answ.expression_list.expressions[0]
-        .as_let_expression()
-        .unwrap();
+    let let_in = answ.expressions[0].as_let_in().unwrap();
 
     let dec_id = &let_in.assignment.identifier;
 
-    let inner_let_in = let_in.body.as_block().unwrap().expression_list.expressions[0]
-        .as_let_expression()
+    let inner_let_in = let_in.body.as_block().unwrap().body_items[0]
+        .as_expression()
+        .unwrap()
+        .as_let_in()
         .unwrap();
 
     let inner_dec_id = &inner_let_in.assignment.identifier;

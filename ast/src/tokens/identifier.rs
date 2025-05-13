@@ -1,6 +1,6 @@
-use std::fmt::Display;
+use std::{fmt::Display, usize};
 
-use crate::typing::TypeAnnotation;
+use crate::typing::{Type, TypeAnnotation};
 
 use super::*;
 
@@ -17,6 +17,10 @@ impl Identifier {
             id: id.to_string(),
             info: IdentifierInfo::new(),
         }
+    }
+
+    pub fn annotate_type(&mut self, ty: Type) {
+        self.info.ty = Some(ty);
     }
 }
 

@@ -3,7 +3,7 @@ use ast::{self, Expression};
 
 #[test]
 fn parses_term() {
-    let p = grammar::TermParser::new();
+    let p = grammar::ExpressionParser::new();
 
     let answ = p.parse("a * b / c").unwrap();
     if let ast::Expression::BinOp(binop) = answ {
@@ -26,7 +26,7 @@ fn parses_term() {
 
 #[test]
 fn parses_term_with_parentheses() {
-    let p = grammar::TermParser::new();
+    let p = grammar::ExpressionParser::new();
 
     let answ = p.parse("a * (b / c)").unwrap();
     if let ast::Expression::BinOp(binop) = answ {
@@ -50,7 +50,7 @@ fn parses_term_with_parentheses() {
 
 #[test]
 fn parses_term_with_unary_operator() {
-    let p = grammar::TermParser::new();
+    let p = grammar::ExpressionParser::new();
 
     let answ = p.parse("-a * b").unwrap();
     if let ast::Expression::BinOp(binop) = answ {

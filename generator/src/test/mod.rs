@@ -1,7 +1,6 @@
-use ast::Visitable;
 use parser::grammar::ProgramParser;
 
-use crate::GeneratorVisitor;
+use crate::CodeGenerator;
 
 pub mod lli_interface;
 
@@ -18,7 +17,7 @@ pub mod while_loop;
 fn generate_code(hulk: &str) -> String {
     let p = ProgramParser::new();
     let mut ast = p.parse(hulk).unwrap();
-    let mut visitor = GeneratorVisitor::new();
-    let code = ast.accept(&mut visitor);
-    return code.preamble;
+    let code_generator = CodeGenerator::new();
+
+    code_generator.generate_code_from_program_ast(&mut ast)
 }
