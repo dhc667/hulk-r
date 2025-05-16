@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-
 struct Frame<T> {
     can_access_parents: bool,
     values: HashMap<String, T>,

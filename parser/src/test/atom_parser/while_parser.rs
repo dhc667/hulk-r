@@ -1,13 +1,13 @@
-use crate::ast;
 use crate::grammar;
+use ast;
 
 #[test]
 pub fn parses_while_expression() {
-    let p = grammar::AtomParser::new();
+    let p = grammar::ExpressionParser::new();
 
     let answ = p.parse("while (x - 10) { print(x); x + 2;; }");
     assert!(answ.is_ok());
-    if let Ok(ast::Atom::While(while_exp)) = answ {
+    if let Ok(ast::Expression::While(while_exp)) = answ {
         let condition = &while_exp.condition;
         let body = &while_exp.body;
 
@@ -16,26 +16,30 @@ pub fn parses_while_expression() {
                 .as_bin_op()
                 .unwrap()
                 .lhs
-                .as_atom()
-                .unwrap()
-                .as_identifier()
+                .as_variable()
                 .unwrap()
                 .id,
             "x"
         );
 
-        assert_eq!(body.as_block().unwrap().expression_list.expressions.len(), 2);
+        assert_eq!(
+            body.as_block().unwrap().expression_list.expressions.len(),
+            2
+        );
 
-        assert!(body.as_block().unwrap().expression_list.multiple_semicolon_terminated,);
+        assert!(
+            body.as_block()
+                .unwrap()
+                .expression_list
+                .multiple_semicolon_terminated,
+        );
 
         assert_eq!(
             body.as_block().unwrap().expression_list.expressions[1]
                 .as_bin_op()
                 .unwrap()
                 .lhs
-                .as_atom()
-                .unwrap()
-                .as_identifier()
+                .as_variable()
                 .unwrap()
                 .id,
             "x"

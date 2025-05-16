@@ -24,10 +24,8 @@ fn shadow_let_in() {
 
 #[test]
 fn composite_let_in() {
-    let llvm = generate_code(
-        "let x = 3 in let y = 4 in print(x + let z = 5 in (y + z));",
-    );
-    
+    let llvm = generate_code("let x = 3 in let y = 4 in print(x + let z = 5 in (y + z));");
+
     println!("{}", llvm);
     let result = lli_f64(&llvm).unwrap();
 
@@ -37,9 +35,7 @@ fn composite_let_in() {
 
 #[test]
 fn several_let_in() {
-    let llvm = generate_code(
-        "let x = 3, y = 4, x = x + y, z = y + 5 in print(x + z);",
-    );
+    let llvm = generate_code("let x = 3, y = 4, x = x + y, z = y + 5 in print(x + z);");
 
     println!("{}", llvm);
     let result = lli_f64(&llvm).unwrap();

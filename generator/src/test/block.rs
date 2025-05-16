@@ -19,7 +19,6 @@ fn adding_blocks() {
     let expected = 3.0 + 4.0 + 4.0 + 5.0;
 
     assert_eq!(result, expected);
-
 }
 
 #[test]

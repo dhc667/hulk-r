@@ -1,9 +1,9 @@
-use crate::ast;
 use crate::grammar;
+use ast;
 
 #[test]
 fn detects_single_semicolon_terminated_block() {
-    let p = grammar::AtomParser::new();
+    let p = grammar::ExpressionParser::new();
 
     let answ = p.parse(
         "{
@@ -13,7 +13,7 @@ x - 4;
 }",
     );
 
-    if let Ok(ast::Atom::Block(block)) = answ {
+    if let Ok(ast::Expression::Block(block)) = answ {
         assert_eq!(block.expression_list.expressions.len(), 3);
         assert!(!block.expression_list.multiple_semicolon_terminated);
         assert_eq!(
@@ -21,9 +21,7 @@ x - 4;
                 .as_bin_op()
                 .unwrap()
                 .lhs
-                .as_atom()
-                .unwrap()
-                .as_identifier()
+                .as_variable()
                 .unwrap()
                 .id,
             "a"
@@ -33,9 +31,7 @@ x - 4;
                 .as_bin_op()
                 .unwrap()
                 .lhs
-                .as_atom()
-                .unwrap()
-                .as_identifier()
+                .as_variable()
                 .unwrap()
                 .id,
             "c"
@@ -45,9 +41,7 @@ x - 4;
                 .as_bin_op()
                 .unwrap()
                 .lhs
-                .as_atom()
-                .unwrap()
-                .as_identifier()
+                .as_variable()
                 .unwrap()
                 .id,
             "x"
@@ -59,7 +53,7 @@ x - 4;
 
 #[test]
 fn detects_multiple_semicolon_terminated_block() {
-    let p = grammar::AtomParser::new();
+    let p = grammar::ExpressionParser::new();
 
     let answ = p.parse(
         "{
@@ -69,7 +63,7 @@ x - 4 + 6 / (2 + 3 - x);;
 }",
     );
 
-    if let Ok(ast::Atom::Block(block)) = answ {
+    if let Ok(ast::Expression::Block(block)) = answ {
         assert_eq!(block.expression_list.expressions.len(), 3);
         assert!(block.expression_list.multiple_semicolon_terminated);
         assert_eq!(
@@ -77,9 +71,7 @@ x - 4 + 6 / (2 + 3 - x);;
                 .as_bin_op()
                 .unwrap()
                 .lhs
-                .as_atom()
-                .unwrap()
-                .as_identifier()
+                .as_variable()
                 .unwrap()
                 .id,
             "a"
@@ -89,9 +81,7 @@ x - 4 + 6 / (2 + 3 - x);;
                 .as_bin_op()
                 .unwrap()
                 .lhs
-                .as_atom()
-                .unwrap()
-                .as_identifier()
+                .as_variable()
                 .unwrap()
                 .id,
             "c"
@@ -104,16 +94,10 @@ x - 4 + 6 / (2 + 3 - x);;
                 .as_bin_op()
                 .unwrap()
                 .rhs
-                .as_atom()
-                .unwrap()
-                .as_grouped_expression()
-                .unwrap()
                 .as_bin_op()
                 .unwrap()
                 .rhs
-                .as_atom()
-                .unwrap()
-                .as_identifier()
+                .as_variable()
                 .unwrap()
                 .id,
             "x"

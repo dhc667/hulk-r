@@ -1,5 +1,7 @@
-./target/release/runner: Cargo.toml ./runner/src/main.rs ./runner/src/lib.rs ./runner/src/runner.rs
-	cargo build --release
+SRC_FILES := $(shell find . -type f -not -path './target/release/runner')
+
+./target/release/runner: $(SRC_FILES)
+	cargo build --release --quiet
 
 .PHONY: compile
 compile: ./target/release/runner
