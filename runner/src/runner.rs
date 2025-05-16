@@ -4,6 +4,7 @@ use semantic_analyzer::SemanticVisitor;
 use generator::GeneratorVisitor;
 
 
+
 fn write_output(target_file: &str, content: &str) -> Result<(), std::io::Error> {
     std::fs::write(target_file, content)?;
     Ok(())
@@ -12,6 +13,7 @@ fn write_output(target_file: &str, content: &str) -> Result<(), std::io::Error> 
 pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     let file = "script.hulk";
     let output_file = "script.ll";
+
 
     let content = std::fs::read_to_string(file)?;
 

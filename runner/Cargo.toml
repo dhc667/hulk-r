@@ -8,3 +8,4 @@ generator = { path = "../generator" }
 semantic_analyzer = { path = "../semantic_analyzer" }
 parser = { path = "../parser" }
 ast = { path = "../ast" }
+
