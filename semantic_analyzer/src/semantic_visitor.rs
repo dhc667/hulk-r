@@ -1,6 +1,6 @@
 use ast::{
-    typing::{BuiltInType, Type, TypeAnnotation, to_string},
     VisitableExpression,
+    typing::{BuiltInType, Type, TypeAnnotation, to_string},
     *,
 };
 use generator::context::Context;
@@ -111,7 +111,6 @@ impl ExpressionVisitor<TypeAnnotation> for SemanticVisitor {
         self.infer(&then_type, &else_type)
     }
 
-
     fn visit_while(&mut self, node: &mut While) -> TypeAnnotation {
         node.condition.accept(self);
         node.body.accept(self)
@@ -155,8 +154,6 @@ impl ExpressionVisitor<TypeAnnotation> for SemanticVisitor {
     fn visit_empty_expression(&mut self) -> TypeAnnotation {
         None
     }
-
-
 
     fn visit_boolean_literal(&mut self, _node: &mut BooleanLiteral) -> TypeAnnotation {
         Some(Type::BuiltIn(BuiltInType::Bool))
