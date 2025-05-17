@@ -14,15 +14,13 @@ pub fn simple_typing() {
     let mut semantic_visitor = SemanticVisitor::new();
     answ.expressions[0].accept(&mut semantic_visitor);
 
-    let dec = &answ
-        .expressions[0]
+    let dec = &answ.expressions[0]
         .as_let_in()
         .unwrap()
         .assignment
         .identifier;
 
-    let expression = &answ
-        .expressions[0]
+    let expression = &answ.expressions[0]
         .as_let_in()
         .unwrap()
         .body
@@ -90,8 +88,7 @@ pub fn simple_inference_test() {
     let mut semantic_visitor = SemanticVisitor::new();
     answ.expressions[0].accept(&mut semantic_visitor);
 
-    let dec = &answ
-        .expressions[0]
+    let dec = &answ.expressions[0]
         .as_let_in()
         .unwrap()
         .assignment
@@ -129,3 +126,26 @@ pub fn nested_inference() {
     assert_eq!(inner_dec_id.info.ty, Some(Type::BuiltIn(BuiltInType::Bool)));
     assert_eq!(expr_type, Some(Type::BuiltIn(BuiltInType::Number)));
 }
+
+#[test]
+pub fn string_typing() {
+    let p = ProgramParser::new();
+    let mut answ = p.parse("let x = \"boniato\" in { x ;};").unwrap();
+
+    let mut semantic_visitor = SemanticVisitor::new();
+    answ.expressions[0].accept(&mut semantic_visitor);
+
+    let dec = &answ.expressions[0]
+        .as_let_in()
+        .unwrap()
+        .assignment
+        .identifier;
+
+    assert_eq!(semantic_visitor.errors.len(), 0);
+    assert_eq!(dec.info.ty, Some(Type::BuiltIn(BuiltInType::String)));
+}
+
+// TODO: Add more tests for the following cases:
+// - Function calls
+// - List indexing
+// - List literals
