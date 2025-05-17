@@ -21,13 +21,13 @@ impl<'a> TypeDefinerVisitor<'a> {
             errors,
         };
         let built_ins = vec![
-            ("string".to_string(), Type::BuiltIn(BuiltInType::String)),
-            ("bool".to_string(), Type::BuiltIn(BuiltInType::Bool)),
-            ("number".to_string(), Type::BuiltIn(BuiltInType::Number)),
-            ("object".to_string(), Type::BuiltIn(BuiltInType::Object)),
+            Type::BuiltIn(BuiltInType::String),
+            Type::BuiltIn(BuiltInType::Bool),
+            Type::BuiltIn(BuiltInType::Number),
+            Type::BuiltIn(BuiltInType::Object),
         ];
-        for (name, ty) in built_ins {
-            instance.definitions.define(name, ty);
+        for ty in built_ins {
+            instance.definitions.define(ty.to_string(), ty);
         }
         return instance;
     }

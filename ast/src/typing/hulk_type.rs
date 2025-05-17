@@ -1,4 +1,5 @@
 use crate::TypeName;
+use std::fmt::{Display, Formatter, Result};
 
 pub type TypeAnnotation = Option<Type>;
 
@@ -67,18 +68,18 @@ impl Type {
     }
 }
 
-impl ToString for Type {
-    fn to_string(&self) -> String {
+impl Display for Type {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
             Type::BuiltIn(ty) => match ty {
-                BuiltInType::Number => "Number".to_string(),
-                BuiltInType::String => "String".to_string(),
-                BuiltInType::Bool => "Bool".to_string(),
-                BuiltInType::Object => "Object".to_string(),
+                BuiltInType::Number => write!(f, "Number"),
+                BuiltInType::String => write!(f, "String"),
+                BuiltInType::Bool => write!(f, "Boolean"),
+                BuiltInType::Object => write!(f, "Object"),
             },
-            Type::Defined(ty) => ty.id.to_string(),
-            Type::Functor(ty) => ty.to_string(),
-            Type::Iterable(ty) => format!("{}*", ty.to_string()),
+            Type::Defined(ty) => write!(f, "{}", ty.id),
+            Type::Functor(ty) => write!(f, "{}", ty),
+            Type::Iterable(ty) => write!(f, "{}*", ty),
         }
     }
 }
@@ -106,17 +107,14 @@ impl FunctorType {
     }
 }
 
-impl ToString for FunctorType {
-    fn to_string(&self) -> String {
-        format!(
-            "({}): {}",
-            self.parameter_types
-                .iter()
-                .map(|p| p.to_string())
-                .collect::<Vec<_>>()
-                .join(", "),
-            self.return_type.to_string()
-        )
+impl Display for FunctorType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        let params = self
+            .parameter_types
+            .iter()
+            .map(|p| p.to_string())
+            .collect::<Vec<_>>()
+            .join("->");
+        write!(f, "({}): {}", params, self.return_type)
     }
 }
-

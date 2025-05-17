@@ -1,12 +1,18 @@
-use ast::{VisitableDefinition, VisitableExpression, typing::Type};
+use std::collections::HashMap;
+
+use ast::{
+    VisitableDefinition, VisitableExpression,
+    typing::{Type, TypeAnnotation},
+};
 use generator::context::Context;
 
-use crate::{DefinitionInfo, type_definer_visitor::TypeDefinerVisitor};
+use crate::{DefinitionInfo, InheritanceVisitor, type_definer_visitor::TypeDefinerVisitor};
 
 use super::SemanticVisitor;
 
 pub struct SemanticAnalyzer {
     pub type_definitions: Context<Type>,
+    pub type_hierarchy: HashMap<String, TypeAnnotation>,
     pub var_definitions: Context<DefinitionInfo>,
     pub errors: Vec<String>,
 }
@@ -15,17 +21,29 @@ impl SemanticAnalyzer {
     pub fn new() -> Self {
         Self {
             type_definitions: Context::new_one_frame(),
+            type_hierarchy: HashMap::new(),
             var_definitions: Context::new_one_frame(),
             errors: Vec::new(),
         }
     }
 
     pub fn analyze_program_ast(&mut self, program: &mut ast::Program) -> Result<(), Vec<String>> {
+        // Define types in the global context
         let mut type_definer_visitor =
             TypeDefinerVisitor::new(&mut self.type_definitions, &mut self.errors);
 
         for definition in &mut program.definitions {
             definition.accept(&mut type_definer_visitor);
+        }
+
+        // Define inheritance relationships
+        let mut inheritance_visitor = InheritanceVisitor::new(
+            &mut self.type_hierarchy,
+            &mut self.type_definitions,
+            &mut self.errors,
+        );
+        for definition in &mut program.definitions {
+            definition.accept(&mut inheritance_visitor);
         }
 
         let mut semantic_visitor =

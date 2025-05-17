@@ -509,7 +509,7 @@ BuiltInType: typing::BuiltInType = {
     "Object" => typing::BuiltInType::Object,
     "Number" => typing::BuiltInType::Number,
     "String" => typing::BuiltInType::String,
-    "Bool" => typing::BuiltInType::Bool,
+    "Boolean" => typing::BuiltInType::Bool,
 }
 
 NewKeyword: tokens::Keyword = {

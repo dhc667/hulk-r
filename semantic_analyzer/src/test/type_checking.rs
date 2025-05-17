@@ -53,7 +53,7 @@ pub fn binary_op_error() {
     answ.expressions[0].accept(&mut semantic_visitor);
     assert_eq!(
         errors,
-        vec!["Type mismatch: Cannot apply + to operands of type Number and Bool".to_string()]
+        vec!["Type mismatch: Cannot apply + to operands of type Number and Boolean".to_string()]
     );
 }
 
@@ -70,7 +70,7 @@ pub fn unary_op_error() {
 
     assert_eq!(
         errors,
-        vec!["Type mismatch: Cannot apply - to operand of type Bool".to_string()]
+        vec!["Type mismatch: Cannot apply - to operand of type Boolean".to_string()]
     );
 }
 
@@ -87,7 +87,7 @@ pub fn dassing_error() {
 
     assert_eq!(
         errors,
-        vec!["Type mismatch: x is Bool but is being reassigned with Number".to_string()]
+        vec!["Type mismatch: x is Boolean but is being reassigned with Number".to_string()]
     );
 }
 
