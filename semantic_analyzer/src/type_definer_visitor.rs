@@ -4,21 +4,21 @@ use ast::{
 };
 use generator::context::Context;
 
-pub struct TypeDefinerVisitor {
+pub struct TypeDefinerVisitor<'a> {
     /// # Description
     ///
     /// This is a visitor that defines types in the global context. It only looks at the names of the types. Setting the inheritance relationships
     /// between types and vitisiting fields and functions of the types is left for another visitor. This aims to solve the problem of recursive types,
     /// allowing the use of the type before it is defined, types that reference each other in a recursive manner, etc.
-    pub definitions: Context<Type>,
-    pub errors: Vec<String>,
+    pub definitions: &'a mut Context<Type>,
+    pub errors: &'a mut Vec<String>,
 }
 
-impl TypeDefinerVisitor {
-    pub fn new() -> Self {
-        let mut instance = TypeDefinerVisitor {
-            definitions: Context::new_one_frame(),
-            errors: Vec::new(),
+impl<'a> TypeDefinerVisitor<'a> {
+    pub fn new(definitions: &'a mut Context<Type>, errors: &'a mut Vec<String>) -> Self {
+        let instance = TypeDefinerVisitor {
+            definitions,
+            errors,
         };
         let built_ins = vec![
             ("string".to_string(), Type::BuiltIn(BuiltInType::String)),
@@ -33,7 +33,7 @@ impl TypeDefinerVisitor {
     }
 }
 
-impl DefinitionVisitor<()> for TypeDefinerVisitor {
+impl<'a> DefinitionVisitor<()> for TypeDefinerVisitor<'a> {
     fn visit_definition(&mut self, node: &mut ast::Definition) -> () {
         node.accept(self);
     }

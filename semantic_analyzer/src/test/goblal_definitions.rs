@@ -12,13 +12,7 @@ fn test_define_type() {
 
     let result = semantic_analyzer.analyze_program_ast(&mut answ);
 
-    assert_eq!(
-        semantic_analyzer
-            .type_definer_visitor
-            .definitions
-            .is_defined("Point"),
-        true
-    );
+    assert_eq!(semantic_analyzer.type_definitions.is_defined("Point"), true);
     assert!(result.is_ok(), "Errors: {:?}", result.err());
 }
 
@@ -34,13 +28,7 @@ fn test_define_type_twice() {
 
     let result = semantic_analyzer.analyze_program_ast(&mut answ);
 
-    assert_eq!(
-        semantic_analyzer
-            .type_definer_visitor
-            .definitions
-            .is_defined("Point"),
-        true
-    );
+    assert_eq!(semantic_analyzer.type_definitions.is_defined("Point"), true);
     assert_eq!(
         result.err().unwrap(),
         vec!["Type Point is already defined".to_string()]
@@ -64,34 +52,19 @@ fn test_define_several_types() {
 
     let result = semantic_analyzer.analyze_program_ast(&mut answ);
 
+    assert_eq!(semantic_analyzer.type_definitions.is_defined("Point"), true);
     assert_eq!(
-        semantic_analyzer
-            .type_definer_visitor
-            .definitions
-            .is_defined("Point"),
-        true
-    );
-    assert_eq!(
-        semantic_analyzer
-            .type_definer_visitor
-            .definitions
-            .is_defined("Point2"),
+        semantic_analyzer.type_definitions.is_defined("Point2"),
         true
     );
 
     assert_eq!(
-        semantic_analyzer
-            .type_definer_visitor
-            .definitions
-            .is_defined("Point3"),
+        semantic_analyzer.type_definitions.is_defined("Point3"),
         true
     );
 
     assert_eq!(
-        semantic_analyzer
-            .type_definer_visitor
-            .definitions
-            .is_defined("Point4"),
+        semantic_analyzer.type_definitions.is_defined("Point4"),
         true
     );
 
@@ -116,33 +89,18 @@ fn test_define_built_in_types() {
     let result = semantic_analyzer.analyze_program_ast(&mut answ);
 
     assert_eq!(
-        semantic_analyzer
-            .type_definer_visitor
-            .definitions
-            .is_defined("string"),
+        semantic_analyzer.type_definitions.is_defined("string"),
         true
     );
+    assert_eq!(semantic_analyzer.type_definitions.is_defined("bool"), true);
+
     assert_eq!(
-        semantic_analyzer
-            .type_definer_visitor
-            .definitions
-            .is_defined("bool"),
+        semantic_analyzer.type_definitions.is_defined("number"),
         true
     );
 
     assert_eq!(
-        semantic_analyzer
-            .type_definer_visitor
-            .definitions
-            .is_defined("number"),
-        true
-    );
-
-    assert_eq!(
-        semantic_analyzer
-            .type_definer_visitor
-            .definitions
-            .is_defined("object"),
+        semantic_analyzer.type_definitions.is_defined("object"),
         true
     );
 

@@ -2,16 +2,20 @@ use ast::{
     VisitableExpression,
     typing::{BuiltInType, Type},
 };
+use generator::context::Context;
 use parser::ProgramParser;
 
-use crate::SemanticVisitor;
+use crate::{DefinitionInfo, SemanticVisitor};
 
 #[test]
 pub fn simple_typing() {
     let p = ProgramParser::new();
     let mut answ = p.parse("let x = 1 in { x + 1 ;};").unwrap();
 
-    let mut semantic_visitor = SemanticVisitor::new();
+    let mut definitions: Context<DefinitionInfo> = Context::new_one_frame();
+    let mut errors: Vec<String> = Vec::new();
+
+    let mut semantic_visitor = SemanticVisitor::new(&mut definitions, &mut errors);
     answ.expressions[0].accept(&mut semantic_visitor);
 
     let dec = &answ.expressions[0]
@@ -42,10 +46,13 @@ pub fn binary_op_error() {
     let p = ProgramParser::new();
     let mut answ = p.parse("let x = 1 in { x + true ;};").unwrap();
 
-    let mut semantic_visitor = SemanticVisitor::new();
+    let mut definitions: Context<DefinitionInfo> = Context::new_one_frame();
+    let mut errors: Vec<String> = Vec::new();
+
+    let mut semantic_visitor = SemanticVisitor::new(&mut definitions, &mut errors);
     answ.expressions[0].accept(&mut semantic_visitor);
     assert_eq!(
-        semantic_visitor.errors,
+        errors,
         vec!["Type mismatch: Cannot apply + to operands of type Number and Bool".to_string()]
     );
 }
@@ -55,11 +62,14 @@ pub fn unary_op_error() {
     let p = ProgramParser::new();
     let mut answ = p.parse("let x = true in { -x ;};").unwrap();
 
-    let mut semantic_visitor = SemanticVisitor::new();
+    let mut definitions: Context<DefinitionInfo> = Context::new_one_frame();
+    let mut errors: Vec<String> = Vec::new();
+
+    let mut semantic_visitor = SemanticVisitor::new(&mut definitions, &mut errors);
     answ.expressions[0].accept(&mut semantic_visitor);
 
     assert_eq!(
-        semantic_visitor.errors,
+        errors,
         vec!["Type mismatch: Cannot apply - to operand of type Bool".to_string()]
     );
 }
@@ -69,11 +79,14 @@ pub fn dassing_error() {
     let p = ProgramParser::new();
     let mut answ = p.parse("let x = true in { x:=3 ;};").unwrap();
 
-    let mut semantic_visitor = SemanticVisitor::new();
+    let mut definitions: Context<DefinitionInfo> = Context::new_one_frame();
+    let mut errors: Vec<String> = Vec::new();
+
+    let mut semantic_visitor = SemanticVisitor::new(&mut definitions, &mut errors);
     answ.expressions[0].accept(&mut semantic_visitor);
 
     assert_eq!(
-        semantic_visitor.errors,
+        errors,
         vec!["Type mismatch: x is Bool but is being reassigned with Number".to_string()]
     );
 }
@@ -85,7 +98,10 @@ pub fn simple_inference_test() {
         .parse("let x = if (true) true else 3 in { x + 1 ;};")
         .unwrap();
 
-    let mut semantic_visitor = SemanticVisitor::new();
+    let mut definitions: Context<DefinitionInfo> = Context::new_one_frame();
+    let mut errors: Vec<String> = Vec::new();
+
+    let mut semantic_visitor = SemanticVisitor::new(&mut definitions, &mut errors);
     answ.expressions[0].accept(&mut semantic_visitor);
 
     let dec = &answ.expressions[0]
@@ -105,7 +121,10 @@ pub fn nested_inference() {
         .parse("let x = 1 in { let y = 1 > 0 in { if (y == true) x else 0; } ;};")
         .unwrap();
 
-    let mut semantic_visitor = SemanticVisitor::new();
+    let mut definitions: Context<DefinitionInfo> = Context::new_one_frame();
+    let mut errors: Vec<String> = Vec::new();
+
+    let mut semantic_visitor = SemanticVisitor::new(&mut definitions, &mut errors);
     let expr_type = answ.expressions[0].accept(&mut semantic_visitor);
 
     assert_eq!(semantic_visitor.errors.len(), 0);
@@ -132,7 +151,10 @@ pub fn string_typing() {
     let p = ProgramParser::new();
     let mut answ = p.parse("let x = \"boniato\" in { x ;};").unwrap();
 
-    let mut semantic_visitor = SemanticVisitor::new();
+    let mut definitions: Context<DefinitionInfo> = Context::new_one_frame();
+    let mut errors: Vec<String> = Vec::new();
+
+    let mut semantic_visitor = SemanticVisitor::new(&mut definitions, &mut errors);
     answ.expressions[0].accept(&mut semantic_visitor);
 
     let dec = &answ.expressions[0]

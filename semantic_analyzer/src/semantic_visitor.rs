@@ -12,16 +12,16 @@ use crate::{
     },
 };
 
-pub struct SemanticVisitor {
-    pub definitions: Context<DefinitionInfo>,
-    pub errors: Vec<String>,
+pub struct SemanticVisitor<'a> {
+    pub definitions: &'a mut Context<DefinitionInfo>,
+    pub errors: &'a mut Vec<String>,
 }
 
-impl SemanticVisitor {
-    pub fn new() -> Self {
+impl<'a> SemanticVisitor<'a> {
+    pub fn new(definitions: &'a mut Context<DefinitionInfo>, errors: &'a mut Vec<String>) -> Self {
         SemanticVisitor {
-            definitions: Context::new_one_frame(),
-            errors: Vec::new(),
+            definitions,
+            errors,
         }
     }
     fn infer(&self, left: &TypeAnnotation, right: &TypeAnnotation) -> TypeAnnotation {
@@ -30,7 +30,7 @@ impl SemanticVisitor {
     }
 }
 
-impl ExpressionVisitor<TypeAnnotation> for SemanticVisitor {
+impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
     fn visit_expression(&mut self, node: &mut Expression) -> TypeAnnotation {
         node.accept(self)
     }
