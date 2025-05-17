@@ -160,7 +160,27 @@ impl ExpressionVisitor<TypeAnnotation> for SemanticVisitor {
     }
 
     fn visit_for(&mut self, node: &mut For) -> TypeAnnotation {
-        todo!()
+        self.definitions.push_open_frame();
+
+        let iterable_type = node.iterable.accept(self);
+        let identifier_type = match &iterable_type {
+            Some(Type::Iterable(inner_type)) => Some(*inner_type.clone()),
+            _ => None,
+        };
+
+        self.definitions.define(
+            node.element.id.clone(),
+            DefinitionInfo {
+                name: node.element.id.clone(),
+                is_defined: true,
+                position: node.element.position.clone(),
+                ty: identifier_type,
+            },
+        );
+        let result = node.body.accept(self);
+
+        self.definitions.pop_frame();
+        result
     }
 
     fn visit_data_member_access(&mut self, node: &mut DataMemberAccess) -> TypeAnnotation {
@@ -172,7 +192,21 @@ impl ExpressionVisitor<TypeAnnotation> for SemanticVisitor {
     }
 
     fn visist_list_indexing(&mut self, node: &mut ListIndexing) -> TypeAnnotation {
-        todo!()
+        let iterable_type = node.list.accept(self);
+        let member_type = match &iterable_type {
+            Some(Type::Iterable(inner_type)) => Some(*inner_type.clone()),
+            _ => None,
+        };
+
+        let index_type = node.index.accept(self);
+        if index_type != Some(Type::BuiltIn(BuiltInType::Number)) {
+            let message = format!(
+                "Type mismatch: Cannot use index of type {} to access iterable",
+                to_string(&index_type)
+            );
+            self.errors.push(message);
+        };
+        return member_type;
     }
 
     fn visit_function_call(&mut self, node: &mut FunctionCall) -> TypeAnnotation {
@@ -182,16 +216,25 @@ impl ExpressionVisitor<TypeAnnotation> for SemanticVisitor {
         node.arguments[0].accept(self)
     }
 
-    fn visit_string_literal(&mut self, node: &mut StringLiteral) -> TypeAnnotation {
-        todo!()
+    fn visit_string_literal(&mut self, _node: &mut StringLiteral) -> TypeAnnotation {
+        Some(Type::BuiltIn(BuiltInType::String))
     }
 
     fn visit_list_literal(&mut self, node: &mut ListLiteral) -> TypeAnnotation {
-        todo!()
+        let mut result = None;
+        let element_types: Vec<_> = node
+            .elements
+            .iter_mut()
+            .map(|item| item.accept(self))
+            .collect();
+        for elem_type in element_types {
+            result = self.infer(&result, &elem_type);
+        }
+        result
     }
 
     fn visit_return_statement(&mut self, node: &mut ReturnStatement) -> TypeAnnotation {
-        todo!()
+        node.expression.accept(self)
     }
 
     fn visit_block(&mut self, node: &mut Block) -> TypeAnnotation {
