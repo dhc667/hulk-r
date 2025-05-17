@@ -1,4 +1,7 @@
-use ast::{DefinitionVisitor, VisitableDefinition, typing::Type};
+use ast::{
+    DefinitionVisitor, VisitableDefinition,
+    typing::{BuiltInType, Type},
+};
 use generator::context::Context;
 
 pub struct TypeDefinerVisitor {
@@ -13,10 +16,20 @@ pub struct TypeDefinerVisitor {
 
 impl TypeDefinerVisitor {
     pub fn new() -> Self {
-        TypeDefinerVisitor {
+        let mut instance = TypeDefinerVisitor {
             definitions: Context::new_one_frame(),
             errors: Vec::new(),
+        };
+        let built_ins = vec![
+            ("string".to_string(), Type::BuiltIn(BuiltInType::String)),
+            ("bool".to_string(), Type::BuiltIn(BuiltInType::Bool)),
+            ("number".to_string(), Type::BuiltIn(BuiltInType::Number)),
+            ("object".to_string(), Type::BuiltIn(BuiltInType::Object)),
+        ];
+        for (name, ty) in built_ins {
+            instance.definitions.define(name, ty);
         }
+        return instance;
     }
 }
 

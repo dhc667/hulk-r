@@ -1,6 +1,6 @@
 use ast::{VisitableDefinition, VisitableExpression};
 
-use crate::type_definer_visitor::{self, TypeDefinerVisitor};
+use crate::type_definer_visitor::TypeDefinerVisitor;
 
 use super::SemanticVisitor;
 
