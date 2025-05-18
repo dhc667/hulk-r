@@ -6,7 +6,9 @@ use ast::{
 };
 use generator::context::Context;
 
-use crate::{DefinitionInfo, InheritanceVisitor, type_definer_visitor::TypeDefinerVisitor};
+use crate::{
+    DefinitionInfo, InheritanceVisitor, TypeChecker, type_definer_visitor::TypeDefinerVisitor,
+};
 
 use super::SemanticVisitor;
 
@@ -55,8 +57,10 @@ impl SemanticAnalyzer {
             return Err(self.errors.clone());
         }
 
+        let type_checker = TypeChecker::new(&self.type_hierarchy, &self.type_definitions);
+
         let mut semantic_visitor =
-            SemanticVisitor::new(&mut self.var_definitions, &mut self.errors);
+            SemanticVisitor::new(&mut self.var_definitions, &type_checker, &mut self.errors);
         for expression in &mut program.expressions {
             expression.accept(&mut semantic_visitor);
         }

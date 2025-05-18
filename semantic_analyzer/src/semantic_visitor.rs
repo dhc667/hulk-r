@@ -6,7 +6,7 @@ use ast::{
 use generator::context::Context;
 
 use crate::{
-    DefinitionInfo,
+    DefinitionInfo, TypeChecker,
     typing_utils::{
         get_bin_op_return_type, get_up_op_return_type, is_bin_op_admisible, is_un_op_admisible,
     },
@@ -14,19 +14,21 @@ use crate::{
 
 pub struct SemanticVisitor<'a> {
     pub definitions: &'a mut Context<DefinitionInfo>,
+    pub type_checker: &'a TypeChecker<'a>,
     pub errors: &'a mut Vec<String>,
 }
 
 impl<'a> SemanticVisitor<'a> {
-    pub fn new(definitions: &'a mut Context<DefinitionInfo>, errors: &'a mut Vec<String>) -> Self {
+    pub fn new(
+        definitions: &'a mut Context<DefinitionInfo>,
+        type_checker: &'a TypeChecker,
+        errors: &'a mut Vec<String>,
+    ) -> Self {
         SemanticVisitor {
             definitions,
+            type_checker,
             errors,
         }
-    }
-    fn infer(&self, left: &TypeAnnotation, right: &TypeAnnotation) -> TypeAnnotation {
-        // NOTE: this function will change when we add more types
-        if left == right { left.clone() } else { None }
     }
 }
 
@@ -108,7 +110,8 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
         node.condition.accept(self);
         let then_type = node.then_expression.accept(self);
         let else_type = node.else_expression.accept(self);
-        self.infer(&then_type, &else_type)
+        self.type_checker
+            .get_common_supertype(&then_type, &else_type)
     }
 
     fn visit_while(&mut self, node: &mut While) -> TypeAnnotation {
@@ -221,16 +224,17 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
     }
 
     fn visit_list_literal(&mut self, node: &mut ListLiteral) -> TypeAnnotation {
-        let mut result = None;
-        let element_types: Vec<_> = node
-            .elements
-            .iter_mut()
-            .map(|item| item.accept(self))
-            .collect();
-        for elem_type in element_types {
-            result = self.infer(&result, &elem_type);
+        let mut result_type = None;
+        for item in &mut node.elements {
+            let item_type = item.accept(self);
+            result_type = self
+                .type_checker
+                .get_common_supertype(&result_type, &item_type)
         }
-        result
+        match result_type {
+            Some(result_type) => Some(Type::Iterable(Box::new(result_type))),
+            None => todo!("We need a way to handle unknown list types"),
+        }
     }
 
     fn visit_return_statement(&mut self, node: &mut ReturnStatement) -> TypeAnnotation {

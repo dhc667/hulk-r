@@ -13,6 +13,12 @@ pub use type_definer_visitor::TypeDefinerVisitor;
 
 pub mod inheritance_visitor;
 pub use inheritance_visitor::InheritanceVisitor;
+
+pub mod type_checker;
+pub use type_checker::TypeChecker;
+
+pub mod lca;
+
 #[cfg(test)]
 pub mod test {
     pub mod definitions;

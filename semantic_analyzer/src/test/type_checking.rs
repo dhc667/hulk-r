@@ -1,22 +1,15 @@
-use ast::{
-    VisitableExpression,
-    typing::{BuiltInType, Type},
-};
-use generator::context::Context;
+use ast::typing::{BuiltInType, Type};
 use parser::ProgramParser;
 
-use crate::{DefinitionInfo, SemanticVisitor};
+use crate::semantic_analyzer::SemanticAnalyzer;
 
 #[test]
 pub fn simple_typing() {
     let p = ProgramParser::new();
     let mut answ = p.parse("let x = 1 in { x + 1 ;};").unwrap();
 
-    let mut definitions: Context<DefinitionInfo> = Context::new_one_frame();
-    let mut errors: Vec<String> = Vec::new();
-
-    let mut semantic_visitor = SemanticVisitor::new(&mut definitions, &mut errors);
-    answ.expressions[0].accept(&mut semantic_visitor);
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    semantic_analyzer.analyze_program_ast(&mut answ).unwrap();
 
     let dec = &answ.expressions[0]
         .as_let_in()
@@ -36,7 +29,7 @@ pub fn simple_typing() {
 
     let var = expression.as_bin_op().unwrap().lhs.as_variable().unwrap();
 
-    assert_eq!(semantic_visitor.errors.len(), 0);
+    assert_eq!(semantic_analyzer.errors.len(), 0);
     assert_eq!(dec.info.ty, Some(Type::BuiltIn(BuiltInType::Number)));
     assert_eq!(var.info.ty, Some(Type::BuiltIn(BuiltInType::Number)))
 }
@@ -46,13 +39,13 @@ pub fn binary_op_error() {
     let p = ProgramParser::new();
     let mut answ = p.parse("let x = 1 in { x + true ;};").unwrap();
 
-    let mut definitions: Context<DefinitionInfo> = Context::new_one_frame();
-    let mut errors: Vec<String> = Vec::new();
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
 
-    let mut semantic_visitor = SemanticVisitor::new(&mut definitions, &mut errors);
-    answ.expressions[0].accept(&mut semantic_visitor);
     assert_eq!(
-        errors,
+        semantic_analyzer.errors,
         vec!["Type mismatch: Cannot apply + to operands of type Number and Boolean".to_string()]
     );
 }
@@ -62,14 +55,13 @@ pub fn unary_op_error() {
     let p = ProgramParser::new();
     let mut answ = p.parse("let x = true in { -x ;};").unwrap();
 
-    let mut definitions: Context<DefinitionInfo> = Context::new_one_frame();
-    let mut errors: Vec<String> = Vec::new();
-
-    let mut semantic_visitor = SemanticVisitor::new(&mut definitions, &mut errors);
-    answ.expressions[0].accept(&mut semantic_visitor);
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
 
     assert_eq!(
-        errors,
+        semantic_analyzer.errors,
         vec!["Type mismatch: Cannot apply - to operand of type Boolean".to_string()]
     );
 }
@@ -79,14 +71,13 @@ pub fn dassing_error() {
     let p = ProgramParser::new();
     let mut answ = p.parse("let x = true in { x:=3 ;};").unwrap();
 
-    let mut definitions: Context<DefinitionInfo> = Context::new_one_frame();
-    let mut errors: Vec<String> = Vec::new();
-
-    let mut semantic_visitor = SemanticVisitor::new(&mut definitions, &mut errors);
-    answ.expressions[0].accept(&mut semantic_visitor);
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
 
     assert_eq!(
-        errors,
+        semantic_analyzer.errors,
         vec!["Type mismatch: x is Boolean but is being reassigned with Number".to_string()]
     );
 }
@@ -98,11 +89,10 @@ pub fn simple_inference_test() {
         .parse("let x = if (true) true else 3 in { x + 1 ;};")
         .unwrap();
 
-    let mut definitions: Context<DefinitionInfo> = Context::new_one_frame();
-    let mut errors: Vec<String> = Vec::new();
-
-    let mut semantic_visitor = SemanticVisitor::new(&mut definitions, &mut errors);
-    answ.expressions[0].accept(&mut semantic_visitor);
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
 
     let dec = &answ.expressions[0]
         .as_let_in()
@@ -110,26 +100,39 @@ pub fn simple_inference_test() {
         .assignment
         .identifier;
 
-    assert_eq!(semantic_visitor.errors.len(), 0);
-    assert_eq!(dec.info.ty, None)
+    assert_eq!(
+        semantic_analyzer.errors,
+        vec!["Type mismatch: Cannot apply + to operands of type Object and Number".to_string()]
+    );
+    assert_eq!(dec.info.ty, Some(Type::BuiltIn(BuiltInType::Object)));
 }
 
 #[test]
 pub fn nested_inference() {
     let p = ProgramParser::new();
     let mut answ = p
-        .parse("let x = 1 in { let y = 1 > 0 in { if (y == true) x else 0; } ;};")
+        .parse(
+            "
+        let result = 
+            let x = 1 in { 
+                let y = 1 > 0 in { 
+                    if (y == true) x else 0; 
+                } ;
+            } 
+            in {result;};",
+        )
         .unwrap();
 
-    let mut definitions: Context<DefinitionInfo> = Context::new_one_frame();
-    let mut errors: Vec<String> = Vec::new();
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    semantic_analyzer.analyze_program_ast(&mut answ).unwrap();
 
-    let mut semantic_visitor = SemanticVisitor::new(&mut definitions, &mut errors);
-    let expr_type = answ.expressions[0].accept(&mut semantic_visitor);
+    assert_eq!(semantic_analyzer.errors.len(), 0);
 
-    assert_eq!(semantic_visitor.errors.len(), 0);
+    let outer_let_in = answ.expressions[0].as_let_in().unwrap();
 
-    let let_in = answ.expressions[0].as_let_in().unwrap();
+    let expr_type = outer_let_in.assignment.identifier.info.ty.clone();
+
+    let let_in = outer_let_in.assignment.rhs.as_let_in().unwrap();
 
     let dec_id = &let_in.assignment.identifier;
 
@@ -151,11 +154,8 @@ pub fn string_typing() {
     let p = ProgramParser::new();
     let mut answ = p.parse("let x = \"boniato\" in { x ;};").unwrap();
 
-    let mut definitions: Context<DefinitionInfo> = Context::new_one_frame();
-    let mut errors: Vec<String> = Vec::new();
-
-    let mut semantic_visitor = SemanticVisitor::new(&mut definitions, &mut errors);
-    answ.expressions[0].accept(&mut semantic_visitor);
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    semantic_analyzer.analyze_program_ast(&mut answ).unwrap();
 
     let dec = &answ.expressions[0]
         .as_let_in()
@@ -163,11 +163,121 @@ pub fn string_typing() {
         .assignment
         .identifier;
 
-    assert_eq!(semantic_visitor.errors.len(), 0);
+    assert_eq!(semantic_analyzer.errors.len(), 0);
     assert_eq!(dec.info.ty, Some(Type::BuiltIn(BuiltInType::String)));
 }
 
+#[test]
+pub fn list_typing() {
+    let p = ProgramParser::new();
+    let mut answ = p.parse("let x = [1, 2, 3] in { x ;};").unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    semantic_analyzer.analyze_program_ast(&mut answ).unwrap();
+
+    let dec = &answ.expressions[0]
+        .as_let_in()
+        .unwrap()
+        .assignment
+        .identifier;
+
+    assert_eq!(semantic_analyzer.errors.len(), 0);
+    assert_eq!(
+        dec.info.ty,
+        Some(Type::Iterable(Box::new(Type::BuiltIn(BuiltInType::Number))))
+    );
+}
+
+#[test]
+pub fn list_typing_with_different_types() {
+    let p = ProgramParser::new();
+    let mut answ = p.parse("let x = [1, 2, \"3\"] in { x ;};").unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    semantic_analyzer.analyze_program_ast(&mut answ).unwrap();
+
+    let dec = &answ.expressions[0]
+        .as_let_in()
+        .unwrap()
+        .assignment
+        .identifier;
+
+    assert_eq!(semantic_analyzer.errors.len(), 0);
+    assert_eq!(
+        dec.info.ty,
+        Some(Type::Iterable(Box::new(Type::BuiltIn(BuiltInType::Object))))
+    );
+}
+
+#[test]
+pub fn list_indexing_typing() {
+    let p = ProgramParser::new();
+    let mut answ = p
+        .parse(
+            "
+        let result = let x = [1, 2, 3] in x[0] in {
+            result;
+        };",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    semantic_analyzer.analyze_program_ast(&mut answ).unwrap();
+
+    let dec = &answ.expressions[0]
+        .as_let_in()
+        .unwrap()
+        .assignment
+        .identifier;
+
+    assert_eq!(semantic_analyzer.errors.len(), 0);
+    assert_eq!(dec.info.ty, Some(Type::BuiltIn(BuiltInType::Number)));
+}
+
+#[test]
+pub fn list_indexing_typing_error() {
+    let p = ProgramParser::new();
+    let mut answ = p
+        .parse(
+            "
+        let result = let x = [1, 2, 3] in x[true] in {
+            result;
+        };",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+
+    assert_eq!(
+        semantic_analyzer.errors,
+        vec!["Type mismatch: Cannot use index of type Boolean to access iterable".to_string()]
+    );
+}
+
+#[test]
+pub fn list_indexing_typing_error_2() {
+    let p = ProgramParser::new();
+    let mut answ = p
+        .parse(
+            "
+        let result = let x = [1, 2, 3] in let y = true in x[true] in {
+            result;
+        };",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+
+    assert_eq!(
+        semantic_analyzer.errors,
+        vec!["Type mismatch: Cannot use index of type Boolean to access iterable".to_string()]
+    );
+}
 // TODO: Add more tests for the following cases:
 // - Function calls
-// - List indexing
-// - List literals
