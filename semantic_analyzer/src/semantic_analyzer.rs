@@ -46,6 +46,15 @@ impl SemanticAnalyzer {
             definition.accept(&mut inheritance_visitor);
         }
 
+        // Check for cycles in the inheritance graph
+        if let Some(cycle) = inheritance_visitor.has_cycles() {
+            self.errors.push(format!(
+                "Inheritance cycle detected: {:?}",
+                cycle.join(" -> ")
+            ));
+            return Err(self.errors.clone());
+        }
+
         let mut semantic_visitor =
             SemanticVisitor::new(&mut self.var_definitions, &mut self.errors);
         for expression in &mut program.expressions {

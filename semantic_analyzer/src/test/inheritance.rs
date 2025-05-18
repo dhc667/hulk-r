@@ -200,3 +200,88 @@ fn nested_inheritance() {
 
     assert!(result.is_ok(), "Errors: {:?}", result.err());
 }
+
+#[test]
+fn inheritance_cycle() {
+    let p = ProgramParser::new();
+
+    let mut answ = p
+        .parse(
+            "
+          type B inherits A {}
+          type A inherits B {} 
+          ",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    assert_eq!(semantic_analyzer.type_definitions.is_defined("A"), true);
+
+    assert_eq!(
+        semantic_analyzer
+            .type_hierarchy
+            .get("A")
+            .unwrap()
+            .clone()
+            .unwrap()
+            .to_string(),
+        "B".to_string(),
+    );
+
+    assert_eq!(semantic_analyzer.type_definitions.is_defined("B"), true);
+    assert_eq!(
+        semantic_analyzer
+            .type_hierarchy
+            .get("B")
+            .unwrap()
+            .clone()
+            .unwrap()
+            .to_string(),
+        "A".to_string(),
+    );
+
+    println!("{:?}", semantic_analyzer.errors);
+
+    assert!(result.is_err(), "Errors: {:?}", result.err());
+}
+
+#[test]
+fn complicated_inheritance_cycle() {
+    let p = ProgramParser::new();
+
+    let mut answ = p
+        .parse(
+            "
+          type A inherits B {}
+          type B inherits C {}
+          type C inherits D {}
+          type D inherits E {}
+          type E inherits F {}
+          type F inherits G {}
+          type G inherits H {}
+          type H inherits I {}
+          type I inherits J {}
+          type J inherits K {}
+          type K inherits L {}
+          type L inherits M {}
+          type M inherits N {}
+          type N inherits A {}
+          type P inherits Q {}
+          type W inherits O {}
+          type O inherits Y {}
+          type Q inherits W {}
+          type Z inherits W {}
+          type Y { message = \"boniato\";}
+          ",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    println!("{:?}", semantic_analyzer.errors);
+
+    assert!(result.is_err(), "Errors: {:?}", result.err());
+}
