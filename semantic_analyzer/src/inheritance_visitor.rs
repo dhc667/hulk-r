@@ -6,16 +6,18 @@ use ast::{
 };
 use generator::context::Context;
 
+use crate::TypeInfo;
+
 pub struct InheritanceVisitor<'a> {
     pub type_hierarchy: &'a mut HashMap<String, TypeAnnotation>,
-    pub type_definitions: &'a mut Context<Type>,
+    pub type_definitions: &'a mut Context<TypeInfo>,
     pub errors: &'a mut Vec<String>,
 }
 
 impl<'a> InheritanceVisitor<'a> {
     pub fn new(
         type_hierarchy: &'a mut HashMap<String, TypeAnnotation>,
-        type_definitions: &'a mut Context<Type>,
+        type_definitions: &'a mut Context<TypeInfo>,
         errors: &'a mut Vec<String>,
     ) -> Self {
         let instance = InheritanceVisitor {
@@ -114,21 +116,15 @@ impl<'a> DefinitionVisitor<()> for InheritanceVisitor<'a> {
 
                 match self.type_definitions.get_value(&parent_name) {
                     Some(parent_type) => match parent_type {
-                        Type::BuiltIn(_) => {
+                        TypeInfo::BuiltIn(_) => {
                             self.errors.push(format!(
                                 "Type {} is a built-in type and cannot be inherited from",
                                 parent_name
                             ));
                         }
-                        Type::Defined(_) => {
+                        TypeInfo::Defined(parent_def) => {
                             self.type_hierarchy
-                                .insert(class_name, Some(parent_type.clone()));
-                        }
-                        _ => {
-                            self.errors.push(format!(
-                                "Type {} is not a valid type for inheritance",
-                                parent_name
-                            ));
+                                .insert(class_name, Some(Type::Defined(parent_def.name.clone())));
                         }
                     },
                     None => {

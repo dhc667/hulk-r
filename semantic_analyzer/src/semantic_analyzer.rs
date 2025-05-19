@@ -1,19 +1,17 @@
 use std::collections::HashMap;
 
-use ast::{
-    VisitableDefinition, VisitableExpression,
-    typing::{Type, TypeAnnotation},
-};
+use ast::{VisitableDefinition, VisitableExpression, typing::TypeAnnotation};
 use generator::context::Context;
 
 use crate::{
     DefinitionInfo, InheritanceVisitor, TypeChecker, type_definer_visitor::TypeDefinerVisitor,
+    type_info::TypeInfo,
 };
 
 use super::SemanticVisitor;
 
 pub struct SemanticAnalyzer {
-    pub type_definitions: Context<Type>,
+    pub type_definitions: Context<TypeInfo>,
     pub type_hierarchy: HashMap<String, TypeAnnotation>,
     pub var_definitions: Context<DefinitionInfo>,
     pub errors: Vec<String>,

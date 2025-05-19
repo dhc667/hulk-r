@@ -3,19 +3,19 @@ use std::collections::HashMap;
 use ast::typing::{Type, TypeAnnotation};
 use generator::context::Context;
 
-use crate::lca::LCA;
+use crate::{TypeInfo, lca::LCA};
 
 pub struct TypeChecker<'a> {
     type_ids: HashMap<String, usize>,
     type_names: Vec<String>,
-    type_definitions: &'a Context<Type>,
+    type_definitions: &'a Context<TypeInfo>,
     lca: LCA,
 }
 
 impl<'a> TypeChecker<'a> {
     pub fn new(
         type_hierarchy: &HashMap<String, TypeAnnotation>,
-        type_definitions: &'a Context<Type>,
+        type_definitions: &'a Context<TypeInfo>,
     ) -> Self {
         let mut type_ids = HashMap::new();
         let mut type_names = Vec::new();
@@ -90,7 +90,10 @@ impl<'a> TypeChecker<'a> {
                 let common_name = self.type_names.get(common);
                 if let Some(common_name) = common_name {
                     if let Some(common_type) = self.type_definitions.get_value(common_name) {
-                        return Some(common_type.clone());
+                        return match common_type {
+                            TypeInfo::Defined(ty) => Some(Type::Defined(ty.name.clone())),
+                            TypeInfo::BuiltIn(ty) => Some(Type::BuiltIn(ty.clone())),
+                        };
                     }
                 }
                 None

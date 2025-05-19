@@ -71,12 +71,7 @@ impl Type {
 impl Display for Type {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
-            Type::BuiltIn(ty) => match ty {
-                BuiltInType::Number => write!(f, "Number"),
-                BuiltInType::String => write!(f, "String"),
-                BuiltInType::Bool => write!(f, "Boolean"),
-                BuiltInType::Object => write!(f, "Object"),
-            },
+            Type::BuiltIn(ty) => write!(f, "{}", ty),
             Type::Defined(ty) => write!(f, "{}", ty.id),
             Type::Functor(ty) => write!(f, "{}", ty),
             Type::Iterable(ty) => write!(f, "{}*", ty),
@@ -90,6 +85,17 @@ pub enum BuiltInType {
     String,
     Bool,
     Object,
+}
+
+impl Display for BuiltInType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        match self {
+            BuiltInType::Number => write!(f, "Number"),
+            BuiltInType::String => write!(f, "String"),
+            BuiltInType::Bool => write!(f, "Boolean"),
+            BuiltInType::Object => write!(f, "Object"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

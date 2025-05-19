@@ -94,12 +94,7 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
         let right_type = node.rhs.accept(self);
         self.definitions.define(
             node.identifier.id.clone(),
-            DefinitionInfo {
-                name: node.identifier.id.clone(),
-                is_defined: true,
-                position: node.identifier.position.clone(),
-                ty: right_type.clone(),
-            },
+            DefinitionInfo::new_from_identifier(&node.identifier, true, right_type.clone()),
         );
         node.identifier.info.ty = right_type.clone();
         node.identifier.info.definition_pos = Some(node.identifier.position.clone());
@@ -173,12 +168,7 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
 
         self.definitions.define(
             node.element.id.clone(),
-            DefinitionInfo {
-                name: node.element.id.clone(),
-                is_defined: true,
-                position: node.element.position.clone(),
-                ty: identifier_type,
-            },
+            DefinitionInfo::new_from_identifier(&node.element, true, identifier_type),
         );
         let result = node.body.accept(self);
 

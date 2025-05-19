@@ -19,6 +19,10 @@ pub use type_checker::TypeChecker;
 
 pub mod lca;
 
+pub mod type_info;
+pub use type_info::DefinedTypeInfo;
+pub use type_info::TypeInfo;
+
 #[cfg(test)]
 pub mod test {
     pub mod definitions;
