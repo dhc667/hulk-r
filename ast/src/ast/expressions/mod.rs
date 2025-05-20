@@ -1,6 +1,10 @@
 mod expression;
 pub use expression::Expression;
 
+mod new_expr;
+pub use new_expr::NewExpr;
+
+
 mod bin_op;
 pub use bin_op::BinOp;
 

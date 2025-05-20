@@ -268,4 +268,8 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
     fn visit_return_statement(&mut self, node: &mut ast::ReturnStatement) -> VisitorResult {
         todo!()
     }
+
+    fn visit_new_expr(&mut self, node: &mut ast::NewExpr) -> VisitorResult {
+        todo!()
+    }
 }

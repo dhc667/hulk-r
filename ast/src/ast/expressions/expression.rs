@@ -17,6 +17,7 @@ pub enum Expression {
     BooleanLiteral(BooleanLiteral),
     StringLiteral(StringLiteral),
     ListLiteral(ListLiteral),
+    NewExpression(NewExpr),
 
     FunctionCall(FunctionCall),
     DataMemberAccess(DataMemberAccess),
@@ -25,6 +26,12 @@ pub enum Expression {
 
     Variable(Identifier),
     UnaryOp(UnOp),
+}
+
+impl From<NewExpr> for Expression {
+    fn from(v: NewExpr) -> Self {
+        Self::NewExpression(v)
+    }
 }
 
 impl From<StringLiteral> for Expression {
@@ -265,6 +272,14 @@ impl Expression {
             None
         }
     }
+
+    pub fn as_new_expression(&self) -> Option<&NewExpr> {
+        if let Self::NewExpression(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
 }
 
 impl<T: ExpressionVisitor<R>, R> VisitableExpression<T, R> for Expression {
@@ -275,26 +290,27 @@ impl<T: ExpressionVisitor<R>, R> VisitableExpression<T, R> for Expression {
             Expression::While(while_exp) => while_exp.accept(visitor),
             Expression::Block(block) => block.accept(visitor),
             Expression::NumberLiteral(number_literal) => {
-                visitor.visit_number_literal(number_literal)
-            }
+                        visitor.visit_number_literal(number_literal)
+                    }
             Expression::Variable(identifier) => visitor.visit_variable(identifier),
             Expression::UnaryOp(un_op) => un_op.accept(visitor),
             Expression::BooleanLiteral(boolean_literal) => {
-                visitor.visit_boolean_literal(boolean_literal)
-            }
+                        visitor.visit_boolean_literal(boolean_literal)
+                    }
             Expression::DestructiveAssignment(assignment) => assignment.accept(visitor),
             Expression::BinOp(bin_op) => bin_op.accept(visitor),
             Expression::ListLiteral(list_literal) => list_literal.accept(visitor),
             Expression::FunctionCall(function_call) => function_call.accept(visitor),
             Expression::DataMemberAccess(data_member_access) => data_member_access.accept(visitor),
             Expression::FunctionMemberAccess(function_member_access) => {
-                function_member_access.accept(visitor)
-            }
+                        function_member_access.accept(visitor)
+                    }
             Expression::ListIndexing(list_indexing) => list_indexing.accept(visitor),
             Expression::For(for_exp) => for_exp.accept(visitor),
             Expression::StringLiteral(string_literal) => {
-                visitor.visit_string_literal(string_literal)
-            }
+                        visitor.visit_string_literal(string_literal)
+                    }
+            Expression::NewExpression(new_expr) => visitor.visit_new_expr(new_expr),
         }
     }
 }

@@ -7,7 +7,7 @@ fn expr_first() {
         .parse(
             "
 
-let a = BullDog() in {a.sound();};
+let a = new BullDog() in {a.sound();};
 
 constant PI: Number = 3.14;
 
@@ -58,7 +58,7 @@ type Dog {
     sound(): String => \"woof!\";
 }
 
-let a = BullDog() in {a.sound();};
+let a = new BullDog() in {a.sound();};
 
 type BullDog inherits Dog {
     sound(): String => \"(bull) woof!\";
@@ -108,7 +108,7 @@ type Cat {
     sound(): String => \"meow\";
 }
 
-let a = BullDog() in {a.sound();};
+let a = new BullDog() in {a.sound();};
 ",
         )
         .unwrap();
@@ -136,13 +136,13 @@ protocol Animal {
     sound(): String; 
 }
 
-let a = Dog() in {a.sound();};
+let a = new Dog() in {a.sound();};
 
 type Dog {
     sound(): String => \"woof!\";
 }
 
-let a = Cat() in {a.sound();};
+let a = new Cat() in {a.sound();};
 
 type BullDog inherits Dog {
     sound(): String => \"(bull) woof!\";
@@ -152,13 +152,13 @@ type Cat {
     sound(): String => \"meow\";
 }
 
-let a = BullDog() in {a.sound();};
+let a = new BullDog() in {a.sound();};
 ",
         )
         .unwrap();
 
     assert_eq!(answ.expressions.len(), 3);
-    assert_eq!(answ.expressions[0].as_let_in().unwrap().assignment.rhs.as_function_call().unwrap().identifier.id, "Dog");
-    assert_eq!(answ.expressions[1].as_let_in().unwrap().assignment.rhs.as_function_call().unwrap().identifier.id, "Cat");
-    assert_eq!(answ.expressions[2].as_let_in().unwrap().assignment.rhs.as_function_call().unwrap().identifier.id, "BullDog");
+    assert_eq!(answ.expressions[0].as_let_in().unwrap().assignment.rhs.as_new_expression().unwrap().type_name, "Dog");
+    assert_eq!(answ.expressions[1].as_let_in().unwrap().assignment.rhs.as_new_expression().unwrap().type_name, "Cat");
+    assert_eq!(answ.expressions[2].as_let_in().unwrap().assignment.rhs.as_new_expression().unwrap().type_name, "BullDog");
 }

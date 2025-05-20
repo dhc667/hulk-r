@@ -9,3 +9,5 @@ mod protocol_def_errors;
 mod constant_def;
 
 mod program_ordering;
+
+mod type_instantiation;
