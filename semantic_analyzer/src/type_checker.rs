@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
-use ast::typing::{Type, TypeAnnotation};
+use ast::typing::{Type, TypeAnnotation, to_string};
 use generator::context::Context;
 
-use crate::{TypeInfo, lca::LCA};
+use crate::{DefinedTypeInfo, FuncInfo, TypeInfo, lca::LCA};
 
 pub struct TypeChecker<'a> {
     type_ids: HashMap<String, usize>,
@@ -66,7 +66,7 @@ impl<'a> TypeChecker<'a> {
     pub fn is_subtype(&self, a: &TypeAnnotation, b: &TypeAnnotation) -> bool {
         match (a, b) {
             (None, _) => return true,
-            (_, None) => return false,
+            (_, None) => return true,
             (Some(a), Some(b)) => {
                 let a_id = self.type_to_id(a);
                 let b_id = self.type_to_id(b);
@@ -98,6 +98,84 @@ impl<'a> TypeChecker<'a> {
                 }
                 None
             }
+        }
+    }
+
+    pub fn check_functor_call(
+        &self,
+        fn_info: &FuncInfo,
+        parameters: &Vec<TypeAnnotation>,
+    ) -> Result<(), Vec<String>> {
+        let mut errors = Vec::new();
+        let functor = &fn_info.functor_type;
+        if functor.parameter_types.len() != parameters.len() {
+            errors.push(format!(
+                "Function {} {} has {} parameters, but {} were provided",
+                fn_info.name,
+                functor,
+                functor.parameter_types.len(),
+                parameters.len()
+            ));
+            return Err(errors);
+        }
+        for (i, (expected, provided)) in functor
+            .parameter_types
+            .iter()
+            .zip(parameters.iter())
+            .enumerate()
+        {
+            if !self.is_subtype(expected, provided) {
+                errors.push(format!(
+                    "Function {} expects parameter {} of type {}, but got {}",
+                    fn_info.name,
+                    i,
+                    to_string(expected),
+                    to_string(provided)
+                ));
+            }
+        }
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors)
+        }
+    }
+
+    pub fn check_type_constructor(
+        &self,
+        type_definition: &DefinedTypeInfo,
+        parameters: &Vec<TypeAnnotation>,
+    ) -> Result<(), Vec<String>> {
+        let mut errors = Vec::new();
+        if type_definition.arguments_types.len() != parameters.len() {
+            errors.push(format!(
+                "Type {} has {} parameters, but {} were provided",
+                type_definition.name.id,
+                type_definition.arguments_types.len(),
+                parameters.len()
+            ));
+            return Err(errors);
+        }
+        for (i, (expected, provided)) in type_definition
+            .arguments_types
+            .iter()
+            .zip(parameters.iter())
+            .enumerate()
+        {
+            if !self.is_subtype(expected, provided) {
+                errors.push(format!(
+                    "Type {} expects parameter {} of type {}, but got {}",
+                    type_definition.name.id,
+                    i,
+                    to_string(expected),
+                    to_string(provided)
+                ));
+            }
+        }
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors)
         }
     }
 }

@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use ast::{
     VisitableExpression,
     typing::{BuiltInType, Type, TypeAnnotation, to_string},
@@ -6,29 +8,71 @@ use ast::{
 use generator::context::Context;
 
 use crate::{
-    DefinitionInfo, TypeChecker,
+    DefinitionInfo, FuncInfo, GlobalDefinitionInfo, TypeChecker, TypeInfo,
     typing_utils::{
         get_bin_op_return_type, get_up_op_return_type, is_bin_op_admisible, is_un_op_admisible,
     },
 };
 
 pub struct SemanticVisitor<'a> {
+    pub type_definitions: &'a Context<TypeInfo>,
+    pub type_hierarchy: &'a HashMap<String, TypeAnnotation>,
     pub var_definitions: &'a mut Context<DefinitionInfo>,
+    pub func_definitions: &'a mut Context<FuncInfo>,
     pub type_checker: &'a TypeChecker<'a>,
     pub errors: &'a mut Vec<String>,
 }
 
 impl<'a> SemanticVisitor<'a> {
     pub fn new(
+        type_definitions: &'a Context<TypeInfo>,
+        type_hierarchy: &'a HashMap<String, TypeAnnotation>,
         var_definitions: &'a mut Context<DefinitionInfo>,
+        func_definitions: &'a mut Context<FuncInfo>,
         type_checker: &'a TypeChecker,
         errors: &'a mut Vec<String>,
     ) -> Self {
         SemanticVisitor {
+            type_definitions,
+            type_hierarchy,
             var_definitions,
+            func_definitions,
             type_checker,
             errors,
         }
+    }
+
+    fn find_member_info(
+        &self,
+        member_name: String,
+        ty: &TypeAnnotation,
+    ) -> Option<&GlobalDefinitionInfo> {
+        let mut current_type = ty.clone();
+        loop {
+            let Some(ty) = &current_type else { break };
+
+            let type_name = ty.to_string();
+            let type_def = self.type_definitions.get_value(&type_name);
+
+            if let Some(type_def) = type_def.and_then(|d| d.as_defined()) {
+                if let Some(info) = type_def.members.get(&member_name) {
+                    return Some(info);
+                }
+                // Try parent type
+                let parent_type = self.type_hierarchy.get(&type_name).cloned();
+                if let Some(parent) = parent_type {
+                    current_type = parent;
+                    continue;
+                }
+                // Is not defined in inheritance tree
+                panic!(
+                    "Type name {} is not found in type tree, this should not happen in semantic visitor",
+                    type_name
+                );
+            }
+            current_type = None;
+        }
+        None
     }
 }
 
@@ -92,6 +136,20 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
 
     fn visit_assignment(&mut self, node: &mut Assignment) -> TypeAnnotation {
         let right_type = node.rhs.accept(self);
+
+        let is_asignable = self
+            .type_checker
+            .is_subtype(&right_type, &node.identifier.info.ty);
+
+        if !is_asignable {
+            let message = format!(
+                "Type mismatch: Cannot assign {} to {}",
+                to_string(&right_type),
+                to_string(&node.identifier.info.ty)
+            );
+            self.errors.push(message);
+        }
+
         self.var_definitions.define(
             node.identifier.id.clone(),
             DefinitionInfo::new_from_identifier(&node.identifier, true, right_type.clone()),
@@ -166,6 +224,20 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
             _ => None,
         };
 
+        let is_assignable = self
+            .type_checker
+            .is_subtype(&identifier_type, &node.element.info.ty);
+
+        if !is_assignable {
+            let message = format!(
+                "Type mismatch: {} is {} but is being assigned {}",
+                node.element.id,
+                to_string(&identifier_type),
+                to_string(&node.element.info.ty)
+            );
+            self.errors.push(message);
+        }
+
         self.var_definitions.define(
             node.element.id.clone(),
             DefinitionInfo::new_from_identifier(&node.element, true, identifier_type),
@@ -177,11 +249,47 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
     }
 
     fn visit_data_member_access(&mut self, node: &mut DataMemberAccess) -> TypeAnnotation {
-        todo!()
+        let member_name = node.member.id.clone();
+        let ty = node.object.accept(self);
+
+        let member_info = self.find_member_info(member_name.clone(), &ty);
+        if let Some(member_info) = member_info.and_then(|d| d.as_var()) {
+            return member_info.ty.clone();
+        }
+
+        self.errors
+            .push(format!("Could not find data member {}", member_name));
+        None
     }
 
     fn visit_function_member_access(&mut self, node: &mut FunctionMemberAccess) -> TypeAnnotation {
-        todo!()
+        let func_name = node.member.identifier.id.clone();
+        let ty = node.object.accept(self);
+
+        let func_info = self.find_member_info(func_name.clone(), &ty);
+        if let Some(member_info) = func_info.and_then(|d| d.as_func()) {
+            let member_info = member_info.clone();
+            let parameter_types: Vec<TypeAnnotation> = node
+                .member
+                .arguments
+                .iter_mut()
+                .map(|arg| arg.accept(self))
+                .collect();
+            let fn_check_result = self
+                .type_checker
+                .check_functor_call(&member_info, &parameter_types);
+
+            if let Err(errors) = fn_check_result {
+                for error in errors {
+                    self.errors.push(error);
+                }
+            }
+            return *member_info.functor_type.return_type.clone();
+        }
+
+        self.errors
+            .push(format!("Could not find method {}", func_name));
+        None
     }
 
     fn visist_list_indexing(&mut self, node: &mut ListIndexing) -> TypeAnnotation {
@@ -203,10 +311,60 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
     }
 
     fn visit_function_call(&mut self, node: &mut FunctionCall) -> TypeAnnotation {
-        if node.identifier.id != "print" || node.arguments.len() != 1 {
-            todo!();
+        if node.identifier.id == "print" {
+            if node.arguments.len() != 1 {
+                let message = format!(
+                    "Type mismatch: print function expects 1 argument, but {} were provided",
+                    node.arguments.len()
+                );
+                self.errors.push(message);
+                return None;
+            }
+            let arg_type = node.arguments[0].accept(self);
+            if !vec![
+                Some(Type::BuiltIn(BuiltInType::String)),
+                Some(Type::BuiltIn(BuiltInType::Number)),
+                Some(Type::BuiltIn(BuiltInType::Bool)),
+            ]
+            .contains(&arg_type)
+            {
+                let message = format!(
+                    "Type mismatch: print function expects argument of type String, but {} was provided",
+                    to_string(&arg_type)
+                );
+                self.errors.push(message);
+                return None;
+            }
+            return arg_type;
         }
-        node.arguments[0].accept(self)
+
+        // Check if the function is defined
+        let fn_info = self.func_definitions.get_value(&node.identifier.id);
+
+        let Some(function_def) = fn_info else {
+            let message = format!("Function {} is not defined", node.identifier.id);
+            self.errors.push(message);
+            return None;
+        };
+
+        let function_def = function_def.clone();
+
+        // Check if parameter types match
+        let parameter_types: Vec<TypeAnnotation> = node
+            .arguments
+            .iter_mut()
+            .map(|arg| arg.accept(self))
+            .collect();
+        let fn_check_result = self
+            .type_checker
+            .check_functor_call(&function_def, &parameter_types);
+
+        if let Err(errors) = fn_check_result {
+            for error in errors {
+                self.errors.push(error);
+            }
+        }
+        *function_def.functor_type.return_type.clone()
     }
 
     fn visit_string_literal(&mut self, _node: &mut StringLiteral) -> TypeAnnotation {
@@ -245,6 +403,27 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
     }
 
     fn visit_new_expr(&mut self, node: &mut NewExpr) -> TypeAnnotation {
-        todo!()
+        let type_def = self.type_definitions.get_value(&node.type_name);
+        if let Some(type_def) = type_def {
+            if let TypeInfo::Defined(ty) = type_def {
+                let parameter_types: Vec<TypeAnnotation> = node
+                    .arguments
+                    .iter_mut()
+                    .map(|arg| arg.accept(self))
+                    .collect();
+                let constructor_check_result = self
+                    .type_checker
+                    .check_type_constructor(ty, &parameter_types);
+                if let Err(errors) = constructor_check_result {
+                    for error in errors {
+                        self.errors.push(error);
+                    }
+                }
+                return Some(Type::Defined(ty.name.clone()));
+            }
+        }
+        self.errors
+            .push(format!("Type {} is not defined", &node.type_name));
+        None
     }
 }

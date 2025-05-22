@@ -63,8 +63,14 @@ impl SemanticAnalyzer {
 
         let type_checker = TypeChecker::new(&self.type_hierarchy, &self.type_definitions);
 
-        let mut semantic_visitor =
-            SemanticVisitor::new(&mut self.var_definitions, &type_checker, &mut self.errors);
+        let mut semantic_visitor = SemanticVisitor::new(
+            &self.type_definitions,
+            &mut self.type_hierarchy,
+            &mut self.var_definitions,
+            &mut self.func_definitions,
+            &type_checker,
+            &mut self.errors,
+        );
         for expression in &mut program.expressions {
             expression.accept(&mut semantic_visitor);
         }

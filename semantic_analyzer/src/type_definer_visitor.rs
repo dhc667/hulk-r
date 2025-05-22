@@ -1,10 +1,10 @@
 use ast::{
     DefinitionVisitor, TypeName, VisitableDefinition,
-    typing::{BuiltInType, Type},
+    typing::{BuiltInType, Type, TypeAnnotation},
 };
 use generator::context::Context;
 
-use crate::{DefinedTypeInfo, DefinitionInfo, FuncInfo, TypeInfo};
+use crate::{DefinedTypeInfo, DefinitionInfo, FuncInfo, GlobalDefinitionInfo, TypeInfo};
 use std::collections::HashMap;
 
 pub struct TypeDefinerVisitor<'a> {
@@ -59,28 +59,49 @@ impl<'a> DefinitionVisitor<()> for TypeDefinerVisitor<'a> {
                 .push(format!("Type {} is already defined", type_name));
             return;
         }
-        let members_info: HashMap<_, _> = node
-            .data_member_defs
-            .iter()
-            .map(|member| {
-                (
-                    member.identifier.id.clone(),
-                    DefinitionInfo::new_from_identifier(&member.identifier, false, None),
-                )
-            })
-            .collect();
 
-        let methods_info: HashMap<_, _> = node
-            .function_member_defs
+        let mut members_info: HashMap<String, GlobalDefinitionInfo> = HashMap::new();
+
+        for member in &node.data_member_defs {
+            let member_name = member.identifier.id.clone();
+            if members_info.contains_key(&member_name) {
+                self.errors.push(format!(
+                    "Member {} is already defined in type {}",
+                    member_name, type_name
+                ));
+                continue;
+            }
+            members_info.insert(
+                member_name,
+                GlobalDefinitionInfo::Var(DefinitionInfo::new_from_identifier(
+                    &member.identifier,
+                    false,
+                    None,
+                )),
+            );
+        }
+
+        for member in &node.function_member_defs {
+            let member_name = member.identifier.id.clone();
+            if members_info.contains_key(&member_name) {
+                self.errors.push(format!(
+                    "Member {} is already defined in type {}",
+                    member_name, type_name
+                ));
+                continue;
+            }
+            members_info.insert(
+                member_name,
+                GlobalDefinitionInfo::Func(FuncInfo::from_func_def(&member)),
+            );
+        }
+
+        let arguments_types: Vec<TypeAnnotation> = node
+            .parameter_list
             .iter()
-            .map(|member| {
-                (
-                    member.identifier.id.clone(),
-                    FuncInfo::from_func_def(member),
-                )
-            })
+            .map(|id| id.info.ty.clone())
             .collect();
-        let type_def = DefinedTypeInfo::new(node.name.clone(), members_info, methods_info);
+        let type_def = DefinedTypeInfo::new(node.name.clone(), members_info, arguments_types);
         self.type_definitions
             .define(type_name, TypeInfo::Defined(type_def));
     }
@@ -96,10 +117,20 @@ impl<'a> DefinitionVisitor<()> for TypeDefinerVisitor<'a> {
             id: FuncInfo::get_type_wrapper_name(&func_info),
             position: node.function_def.identifier.position.clone(),
         };
-        let mut methods_info: HashMap<String, FuncInfo> = HashMap::new();
-        methods_info.insert("invoke".to_string(), func_info.clone());
-        let type_wrapper_def =
-            DefinedTypeInfo::new(type_wrapper_name.clone(), HashMap::new(), methods_info);
+        let methods_info: HashMap<String, GlobalDefinitionInfo> = ["invoke"]
+            .iter()
+            .map(|&name| {
+                (
+                    name.to_string(),
+                    GlobalDefinitionInfo::Func(func_info.clone()),
+                )
+            })
+            .collect();
+        let type_wrapper_def = DefinedTypeInfo::new(
+            type_wrapper_name.clone(),
+            methods_info,
+            func_info.functor_type.parameter_types.clone(),
+        );
         self.type_definitions.define(
             FuncInfo::get_type_wrapper_name(&func_info),
             TypeInfo::Defined(type_wrapper_def),
@@ -108,9 +139,10 @@ impl<'a> DefinitionVisitor<()> for TypeDefinerVisitor<'a> {
         // Define implicit instance of the type
         self.var_definitions.define(
             FuncInfo::get_var_instance_name(&func_info),
-            DefinitionInfo::new_from_identifier(
-                &node.function_def.identifier,
-                false,
+            DefinitionInfo::new(
+                node.function_def.identifier.id.clone(),
+                true,
+                node.function_def.identifier.position.clone(),
                 Some(Type::Defined(type_wrapper_name)),
             ),
         );

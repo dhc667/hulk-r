@@ -1,5 +1,6 @@
 use ast::{Identifier, TokenPosition, typing::TypeAnnotation};
 
+#[derive(Clone)]
 pub struct DefinitionInfo {
     pub name: String,
     pub is_defined: bool,
@@ -31,7 +32,11 @@ impl DefinitionInfo {
             name: identifier.id.clone(),
             is_defined,
             position: identifier.position.clone(),
-            ty,
+            ty: if identifier.info.ty.is_some() {
+                identifier.info.ty.clone()
+            } else {
+                ty
+            },
         }
     }
 }

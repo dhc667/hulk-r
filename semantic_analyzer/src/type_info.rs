@@ -1,11 +1,15 @@
 use std::collections::HashMap;
 use std::fmt::Display;
 
-use ast::{TypeName, typing::BuiltInType};
+use ast::{
+    TypeName,
+    typing::{BuiltInType, TypeAnnotation},
+};
 use std::fmt::{Formatter, Result};
 
-use crate::{DefinitionInfo, FuncInfo};
+use crate::GlobalDefinitionInfo;
 
+#[derive(Clone)]
 pub enum TypeInfo {
     BuiltIn(BuiltInType),
     Defined(DefinedTypeInfo),
@@ -29,22 +33,23 @@ impl TypeInfo {
     }
 }
 
+#[derive(Clone)]
 pub struct DefinedTypeInfo {
     pub name: TypeName,
-    pub members: HashMap<String, DefinitionInfo>,
-    pub methods: HashMap<String, FuncInfo>,
+    pub members: HashMap<String, GlobalDefinitionInfo>,
+    pub arguments_types: Vec<TypeAnnotation>,
 }
 
 impl DefinedTypeInfo {
     pub fn new(
         name: TypeName,
-        members: HashMap<String, DefinitionInfo>,
-        methods: HashMap<String, FuncInfo>,
+        members: HashMap<String, GlobalDefinitionInfo>,
+        arguments_types: Vec<TypeAnnotation>,
     ) -> Self {
         DefinedTypeInfo {
             name,
             members,
-            methods,
+            arguments_types,
         }
     }
 }

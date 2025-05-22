@@ -19,6 +19,9 @@ pub use type_checker::TypeChecker;
 
 pub mod lca;
 
+pub mod global_def_info;
+pub use global_def_info::GlobalDefinitionInfo;
+
 pub mod type_info;
 pub use type_info::DefinedTypeInfo;
 pub use type_info::TypeInfo;

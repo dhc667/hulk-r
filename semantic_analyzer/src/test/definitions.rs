@@ -149,7 +149,7 @@ fn func_definitions() {
             .unwrap()
             .as_defined()
             .unwrap()
-            .methods
+            .members
             .contains_key("invoke")
     );
 
@@ -165,5 +165,23 @@ fn func_definitions() {
             .unwrap()
             .id,
         "$fooTypeWrapper"
+    );
+}
+
+#[test]
+fn anotated_var_with_wrong_value_type() {
+    let p = ProgramParser::new();
+
+    let mut answ = p.parse("let x: Number = true in {x;};").unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+
+    assert_eq!(
+        semantic_analyzer.errors,
+        vec!["Type mismatch: Cannot assign Boolean to Number".to_string()]
     );
 }
