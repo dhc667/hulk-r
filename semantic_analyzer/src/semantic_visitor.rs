@@ -209,4 +209,8 @@ impl ExpressionVisitor<TypeAnnotation> for SemanticVisitor {
 
         result
     }
+
+    fn visit_new_expr(&mut self, node: &mut NewExpr) -> TypeAnnotation {
+        todo!()
+    }
 }

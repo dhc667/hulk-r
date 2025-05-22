@@ -9,6 +9,7 @@ pub trait ExpressionVisitor<R> {
     fn visit_bin_op(&mut self, node: &mut BinOp) -> R;
 
     fn visit_let_in(&mut self, node: &mut LetIn) -> R;
+    fn visit_new_expr(&mut self, node: &mut NewExpr) -> R;
     fn visit_assignment(&mut self, node: &mut Assignment) -> R;
 
     fn visit_if_else(&mut self, node: &mut IfElse) -> R;

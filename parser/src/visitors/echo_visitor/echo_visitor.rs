@@ -16,6 +16,7 @@ impl EchoVisitor {
             | ast::Expression::IfElse(_)
             | ast::Expression::While(_)
             | ast::Expression::For(_)
+            | ast::Expression::NewExpression(_)
             | ast::Expression::UnaryOp(_) => {
                 format!("({})", object.accept(self))
             }
@@ -182,5 +183,18 @@ impl ExpressionVisitor<String> for EchoVisitor {
 
     fn visit_return_statement(&mut self, node: &mut ast::ReturnStatement) -> String {
         format!("{} {}", node.return_token, node.expression.accept(self))
+    }
+
+    fn visit_new_expr(&mut self, node: &mut ast::NewExpr) -> String {
+        format!(
+            "{} {}({})",
+            node.new_token,
+            node.type_name,
+            node.arguments
+                .iter_mut()
+                .map(|arg| arg.accept(self))
+                .collect::<Vec<String>>()
+                .join(", ")
+        )
     }
 }

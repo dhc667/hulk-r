@@ -330,6 +330,7 @@ ForExpression: ast::For = {
 
 Atom: ast::Expression = {
     "(" <x:Expression> ")" => x,
+    NewExpression => ast::Expression::from(<>),
     FunctionCall => ast::Expression::from(<>),
     Block => ast::Expression::from(<>),
 
@@ -342,6 +343,11 @@ Atom: ast::Expression = {
     BooleanLiteral => ast::Expression::from(<>),
     StringLiteral => ast::Expression::from(<>),
     Identifier => ast::Expression::from(<>),
+}
+
+NewExpression: ast::NewExpr = {
+    <k:NewKeyword> <f:FunctionCall> 
+        => ast::NewExpr::from_function_call(k, f)
 }
 
 FunctionCall: ast::FunctionCall = {
@@ -504,6 +510,11 @@ BuiltInType: typing::BuiltInType = {
     "Number" => typing::BuiltInType::Number,
     "String" => typing::BuiltInType::String,
     "Bool" => typing::BuiltInType::Bool,
+}
+
+NewKeyword: tokens::Keyword = {
+    <s: @L> "new" <e: @R>
+        => tokens::Keyword::New(tokens::TokenPosition::new(s, e)),
 }
 
 ReturnKeyword: tokens::Keyword = {

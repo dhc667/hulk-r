@@ -13,6 +13,7 @@ pub enum Keyword {
     In(TokenPosition),
     Elif(TokenPosition),
 
+    New(TokenPosition),
     Function(TokenPosition),
     Type(TokenPosition),
     Inherits(TokenPosition),
@@ -40,6 +41,7 @@ impl Display for Keyword {
             Keyword::Extends(_) => write!(f, "extends"),
             Keyword::Return(_) => write!(f, "return"),
             Keyword::For(_) => write!(f, "for"),
+            Keyword::New(_) => write!(f, "new"),
         }
     }
 }
