@@ -13,19 +13,19 @@ use crate::{
 };
 
 pub struct SemanticVisitor<'a> {
-    pub definitions: &'a mut Context<DefinitionInfo>,
+    pub var_definitions: &'a mut Context<DefinitionInfo>,
     pub type_checker: &'a TypeChecker<'a>,
     pub errors: &'a mut Vec<String>,
 }
 
 impl<'a> SemanticVisitor<'a> {
     pub fn new(
-        definitions: &'a mut Context<DefinitionInfo>,
+        var_definitions: &'a mut Context<DefinitionInfo>,
         type_checker: &'a TypeChecker,
         errors: &'a mut Vec<String>,
     ) -> Self {
         SemanticVisitor {
-            definitions,
+            var_definitions,
             type_checker,
             errors,
         }
@@ -39,7 +39,7 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
 
     fn visit_destructive_assignment(&mut self, node: &mut DestructiveAssignment) -> TypeAnnotation {
         let expr_type = node.expression.accept(self);
-        let def_value = self.definitions.get_value(&node.identifier.id);
+        let def_value = self.var_definitions.get_value(&node.identifier.id);
         match def_value {
             Some(def) => {
                 if def.ty != expr_type {
@@ -81,18 +81,18 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
     }
 
     fn visit_let_in(&mut self, node: &mut LetIn) -> TypeAnnotation {
-        self.definitions.push_open_frame();
+        self.var_definitions.push_open_frame();
 
         node.assignment.accept(self);
         let body_type = node.body.accept(self);
 
-        self.definitions.pop_frame();
+        self.var_definitions.pop_frame();
         body_type
     }
 
     fn visit_assignment(&mut self, node: &mut Assignment) -> TypeAnnotation {
         let right_type = node.rhs.accept(self);
-        self.definitions.define(
+        self.var_definitions.define(
             node.identifier.id.clone(),
             DefinitionInfo::new_from_identifier(&node.identifier, true, right_type.clone()),
         );
@@ -130,7 +130,7 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
     }
 
     fn visit_variable(&mut self, node: &mut Identifier) -> TypeAnnotation {
-        let def_info = self.definitions.get_value(&node.id);
+        let def_info = self.var_definitions.get_value(&node.id);
         match def_info {
             Some(def) => {
                 node.info.ty = def.ty.clone();
@@ -158,7 +158,7 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
     }
 
     fn visit_for(&mut self, node: &mut For) -> TypeAnnotation {
-        self.definitions.push_open_frame();
+        self.var_definitions.push_open_frame();
 
         let iterable_type = node.iterable.accept(self);
         let identifier_type = match &iterable_type {
@@ -166,13 +166,13 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
             _ => None,
         };
 
-        self.definitions.define(
+        self.var_definitions.define(
             node.element.id.clone(),
             DefinitionInfo::new_from_identifier(&node.element, true, identifier_type),
         );
         let result = node.body.accept(self);
 
-        self.definitions.pop_frame();
+        self.var_definitions.pop_frame();
         result
     }
 
@@ -232,14 +232,14 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
     }
 
     fn visit_block(&mut self, node: &mut Block) -> TypeAnnotation {
-        self.definitions.push_open_frame();
+        self.var_definitions.push_open_frame();
 
         let mut result = None;
         for expression in &mut node.body_items {
             result = expression.accept(self);
         }
 
-        self.definitions.pop_frame();
+        self.var_definitions.pop_frame();
 
         result
     }

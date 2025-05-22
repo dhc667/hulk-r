@@ -23,10 +23,13 @@ pub mod type_info;
 pub use type_info::DefinedTypeInfo;
 pub use type_info::TypeInfo;
 
+pub mod func_info;
+pub use func_info::FuncInfo;
 #[cfg(test)]
 pub mod test {
     pub mod definitions;
     pub mod goblal_definitions;
     pub mod inheritance;
     pub mod type_checking;
+    pub mod type_definition;
 }

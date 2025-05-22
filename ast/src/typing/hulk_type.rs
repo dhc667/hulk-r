@@ -100,12 +100,12 @@ impl Display for BuiltInType {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FunctorType {
-    pub parameter_types: Vec<Type>,
-    pub return_type: Box<Type>,
+    pub parameter_types: Vec<TypeAnnotation>,
+    pub return_type: Box<TypeAnnotation>,
 }
 
 impl FunctorType {
-    pub fn new(parameter_types: Vec<Type>, return_type: Type) -> Self {
+    pub fn new(parameter_types: Vec<TypeAnnotation>, return_type: TypeAnnotation) -> Self {
         Self {
             parameter_types,
             return_type: Box::new(return_type),
@@ -118,9 +118,9 @@ impl Display for FunctorType {
         let params = self
             .parameter_types
             .iter()
-            .map(|p| p.to_string())
+            .map(|p| to_string(p))
             .collect::<Vec<_>>()
             .join("->");
-        write!(f, "({}): {}", params, self.return_type)
+        write!(f, "({}): {:?}", params, self.return_type)
     }
 }

@@ -120,3 +120,50 @@ fn several_undefinitions() {
         ]
     );
 }
+
+#[test]
+fn func_definitions() {
+    let p = ProgramParser::new();
+
+    let mut answ = p
+        .parse("function foo(x: Number, y: Number): Number { x+y;}")
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    assert!(result.is_ok(), "Errors: {:?}", result.err());
+
+    assert!(semantic_analyzer.func_definitions.is_defined("foo"));
+    assert!(semantic_analyzer.var_definitions.is_defined("$fooInstance"));
+    assert!(
+        semantic_analyzer
+            .type_definitions
+            .is_defined("$fooTypeWrapper")
+    );
+    assert!(
+        semantic_analyzer
+            .type_definitions
+            .get_value("$fooTypeWrapper")
+            .unwrap()
+            .as_defined()
+            .unwrap()
+            .methods
+            .contains_key("invoke")
+    );
+
+    assert_eq!(
+        semantic_analyzer
+            .var_definitions
+            .get_value("$fooInstance")
+            .unwrap()
+            .ty
+            .clone()
+            .unwrap()
+            .as_defined()
+            .unwrap()
+            .id,
+        "$fooTypeWrapper"
+    );
+}
