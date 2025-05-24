@@ -8,6 +8,15 @@ use generator::context::Context;
 
 use crate::def_info::TypeInfo;
 
+/// # Description
+/// Visitor that sets the inheritance relationship between types.
+/// It assumes that the built-in types are already defined in the context.
+/// It also assumes that the type definitions are already defined in the context.
+/// It does not visit fields or functions of the types, that is left for another visitor.
+/// # Arguments
+/// * `type_hierarchy` - A mutable reference to a HashMap that holds the inheritance relationship between types.
+/// * `type_definitions` - A mutable reference to a context that holds the type definitions.
+/// * `errors` - A mutable reference to a vector that holds the errors encountered during the visit.
 pub struct InheritanceVisitor<'a> {
     pub type_hierarchy: &'a mut HashMap<String, TypeAnnotation>,
     pub type_definitions: &'a mut Context<TypeInfo>,

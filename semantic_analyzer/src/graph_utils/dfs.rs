@@ -1,5 +1,12 @@
 use std::{collections::HashMap, fmt::Display};
 
+/// # Description
+/// Performs a depth-first search (DFS) on a graph represented as an adjacency list.
+/// # Arguments
+/// - `adj`: A vector of vectors representing the adjacency list of the graph.
+/// - `root`: The starting node for the DFS traversal.
+/// - `visitor`: A mutable reference to an object that implements the `DfsVisitable` trait.
+/// This is used to handle events during the DFS traversal, such as visiting a node or finishing visiting a child node.
 pub fn dfs<V: DfsVisitable>(adj: &Vec<Vec<usize>>, root: usize, visitor: &mut V) {
     let mut visited = vec![false; adj.len()];
     dfs_visit(adj, &mut visited, root, 0, visitor);
@@ -22,6 +29,9 @@ fn dfs_visit<V: DfsVisitable>(
     }
 }
 
+/// # Description
+/// The `DfsVisitable` trait defines methods that can be implemented to handle events during a depth-first search (DFS) traversal.
+/// It allows for custom behavior when visiting nodes and after visiting child nodes.
 pub trait DfsVisitable {
     fn before_visit(&mut self, node: usize, h: usize);
     fn after_visit_child(&mut self, node: usize, h: usize);
@@ -30,6 +40,9 @@ pub trait DfsVisitable {
 /// # Description
 /// Gets the cycle in a tree represented by a parent map.
 /// If there is no cycle, returns None.
+/// # Arguments
+/// - `tree`: A `HashMap` where keys are node identifiers (as `String`) and values are optional parent identifiers (as `Option<T>`).
+/// `T` must implement the `Display` trait for being able to generate a string key.
 pub fn get_cycle<T: Display>(tree: &HashMap<String, Option<T>>) -> Option<Vec<String>> {
     let mut visiting: HashMap<String, bool> = HashMap::new();
     let mut tree_path: Vec<String> = Vec::new();

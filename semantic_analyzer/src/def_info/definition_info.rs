@@ -1,5 +1,13 @@
 use super::{FuncInfo, TypeInfo, VarInfo};
 
+/// # Description
+/// `DefinitionInfo` is an enum that encapsulates different types of definitions
+/// in the semantic analyzer.
+/// It can represent a variable, a type, or a function definition.
+/// # Variants
+/// - `Var`: Represents a variable definition, encapsulated in `VarInfo`.
+/// - `Type`: Represents a type definition, encapsulated in `TypeInfo`.
+/// - `Func`: Represents a function definition, encapsulated in `FuncInfo`.
 #[derive(Clone)]
 pub enum DefinitionInfo {
     Var(VarInfo),

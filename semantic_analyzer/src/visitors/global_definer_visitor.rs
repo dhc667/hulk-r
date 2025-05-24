@@ -8,13 +8,12 @@ use std::collections::HashMap;
 
 use crate::def_info::{DefinedTypeInfo, DefinitionInfo, FuncInfo, TypeInfo, VarInfo};
 
+/// # Description
+/// Defines types, functions and protocols in the global context. It only looks at the names of the types.
+/// Setting the inheritance relationship between types and vitisiting fields and functions of the types is left for another visitor.
+/// This aims to solve the problem of recursive types, allowing the use of the type before it is defined, types that reference each
+/// other in a recursive manner, etc.
 pub struct GlobalDefinerVisitor<'a> {
-    /// # Description
-    ///
-    /// This is a visitor that defines types, functions and protocols in the global context. It only looks at the names of the types.
-    /// Setting the inheritance relationship between types and vitisiting fields and functions of the types is left for another visitor.
-    /// This aims to solve the problem of recursive types, allowing the use of the type before it is defined, types that reference each
-    /// other in a recursive manner, etc.
     pub type_definitions: &'a mut Context<TypeInfo>,
     pub var_definitions: &'a mut Context<VarInfo>,
     pub func_defintions: &'a mut Context<FuncInfo>,

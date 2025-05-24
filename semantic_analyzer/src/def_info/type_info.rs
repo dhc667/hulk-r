@@ -9,6 +9,12 @@ use std::fmt::{Formatter, Result};
 
 use super::DefinitionInfo;
 
+/// # Description
+/// `TypeInfo` is an enum that encapsulates information about a type definition.
+/// It can represent either a built-in type or a user-defined type.
+/// # Variants
+/// - `BuiltIn`: Represents a built-in type, such as `Number`, `Boolean`, etc.
+/// - `Defined`: Represents a user-defined type, which includes its name, members, and argument types.
 #[derive(Clone)]
 pub enum TypeInfo {
     BuiltIn(BuiltInType),

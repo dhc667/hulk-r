@@ -1,5 +1,14 @@
 use ast::{Identifier, TokenPosition, typing::TypeAnnotation};
 
+/// # Description
+/// `VarInfo` is a struct that encapsulates information about a variable definition.
+/// It includes the variable's name, whether it is defined, its position in the source code,
+/// and its type annotation.
+/// # Fields
+/// - `name`: The name of the variable.
+/// - `is_defined`: A boolean indicating whether the variable is defined.
+/// - `position`: The position of the variable in the source code, represented by a `TokenPosition`.
+/// - `ty`: The type annotation of the variable, represented by a `TypeAnnotation`.
 #[derive(Clone)]
 pub struct VarInfo {
     pub name: String,
