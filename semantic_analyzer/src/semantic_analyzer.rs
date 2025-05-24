@@ -3,13 +3,9 @@ use std::collections::HashMap;
 use ast::{VisitableDefinition, VisitableExpression, typing::TypeAnnotation};
 use generator::context::Context;
 
-use crate::{
-    InheritanceVisitor,
-    def_info::{FuncInfo, TypeInfo, VarInfo},
-    type_definer_visitor::TypeDefinerVisitor,
-};
+use crate::def_info::{FuncInfo, TypeInfo, VarInfo};
 
-use super::SemanticVisitor;
+use crate::visitors::{GlobalDefinerVisitor, InheritanceVisitor, SemanticVisitor};
 
 pub struct SemanticAnalyzer {
     pub type_definitions: Context<TypeInfo>,
@@ -32,7 +28,7 @@ impl SemanticAnalyzer {
 
     pub fn analyze_program_ast(&mut self, program: &mut ast::Program) -> Result<(), Vec<String>> {
         // Define types in the global context
-        let mut type_definer_visitor = TypeDefinerVisitor::new(
+        let mut type_definer_visitor = GlobalDefinerVisitor::new(
             &mut self.type_definitions,
             &mut self.var_definitions,
             &mut self.func_definitions,

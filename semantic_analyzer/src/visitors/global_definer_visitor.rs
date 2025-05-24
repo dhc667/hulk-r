@@ -8,26 +8,27 @@ use std::collections::HashMap;
 
 use crate::def_info::{DefinedTypeInfo, DefinitionInfo, FuncInfo, TypeInfo, VarInfo};
 
-pub struct TypeDefinerVisitor<'a> {
+pub struct GlobalDefinerVisitor<'a> {
     /// # Description
     ///
-    /// This is a visitor that defines types in the global context. It only looks at the names of the types. Setting the inheritance relationships
-    /// between types and vitisiting fields and functions of the types is left for another visitor. This aims to solve the problem of recursive types,
-    /// allowing the use of the type before it is defined, types that reference each other in a recursive manner, etc.
+    /// This is a visitor that defines types, functions and protocols in the global context. It only looks at the names of the types.
+    /// Setting the inheritance relationship between types and vitisiting fields and functions of the types is left for another visitor.
+    /// This aims to solve the problem of recursive types, allowing the use of the type before it is defined, types that reference each
+    /// other in a recursive manner, etc.
     pub type_definitions: &'a mut Context<TypeInfo>,
     pub var_definitions: &'a mut Context<VarInfo>,
     pub func_defintions: &'a mut Context<FuncInfo>,
     pub errors: &'a mut Vec<String>,
 }
 
-impl<'a> TypeDefinerVisitor<'a> {
+impl<'a> GlobalDefinerVisitor<'a> {
     pub fn new(
         type_definitions: &'a mut Context<TypeInfo>,
         var_definitions: &'a mut Context<VarInfo>,
         func_defintions: &'a mut Context<FuncInfo>,
         errors: &'a mut Vec<String>,
     ) -> Self {
-        let instance = TypeDefinerVisitor {
+        let instance = GlobalDefinerVisitor {
             type_definitions,
             var_definitions,
             func_defintions,
@@ -48,7 +49,7 @@ impl<'a> TypeDefinerVisitor<'a> {
     }
 }
 
-impl<'a> DefinitionVisitor<()> for TypeDefinerVisitor<'a> {
+impl<'a> DefinitionVisitor<()> for GlobalDefinerVisitor<'a> {
     fn visit_definition(&mut self, node: &mut ast::Definition) -> () {
         node.accept(self);
     }
