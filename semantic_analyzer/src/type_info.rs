@@ -3,7 +3,7 @@ use std::fmt::Display;
 
 use ast::{
     TypeName,
-    typing::{BuiltInType, TypeAnnotation},
+    typing::{BuiltInType, Type, TypeAnnotation},
 };
 use std::fmt::{Formatter, Result};
 
@@ -29,6 +29,29 @@ impl TypeInfo {
             Some(v)
         } else {
             None
+        }
+    }
+
+    pub fn as_built_in_mut(&mut self) -> Option<&mut BuiltInType> {
+        if let Self::BuiltIn(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+
+    pub fn as_defined_mut(&mut self) -> Option<&mut DefinedTypeInfo> {
+        if let Self::Defined(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+
+    pub fn get_type_annotation(&self) -> TypeAnnotation {
+        match self {
+            TypeInfo::Defined(ty) => Some(Type::Defined(ty.name.clone())),
+            TypeInfo::BuiltIn(ty) => Some(Type::BuiltIn(ty.clone())),
         }
     }
 }

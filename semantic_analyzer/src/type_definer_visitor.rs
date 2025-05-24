@@ -107,6 +107,18 @@ impl<'a> DefinitionVisitor<()> for TypeDefinerVisitor<'a> {
     }
 
     fn visit_function_def(&mut self, node: &mut ast::GlobalFunctionDef) -> () {
+        // Check if the function is already defined
+        if self
+            .func_defintions
+            .is_defined(&node.function_def.identifier.id)
+        {
+            self.errors.push(format!(
+                "Function {} is already defined",
+                node.function_def.identifier.id
+            ));
+            return;
+        }
+
         // Define function information in global context
         let func_info = FuncInfo::from_func_def(&node.function_def);
         self.func_defintions
@@ -148,12 +160,7 @@ impl<'a> DefinitionVisitor<()> for TypeDefinerVisitor<'a> {
         );
     }
 
-    fn visit_constant_def(&mut self, node: &mut ast::ConstantDef) -> () {
-        self.var_definitions.define(
-            node.identifier.id.clone(),
-            DefinitionInfo::new_from_identifier(&node.identifier, true, None),
-        );
-    }
+    fn visit_constant_def(&mut self, _node: &mut ast::ConstantDef) -> () {}
 
     fn visit_protocol_def(&mut self, _node: &mut ast::ProtocolDef) -> () {
         todo!()

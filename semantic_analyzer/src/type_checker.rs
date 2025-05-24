@@ -1,21 +1,20 @@
 use std::collections::HashMap;
 
 use ast::typing::{Type, TypeAnnotation, to_string};
-use generator::context::Context;
 
-use crate::{DefinedTypeInfo, FuncInfo, TypeInfo, lca::LCA};
+use crate::{DefinedTypeInfo, FuncInfo, lca::LCA};
 
-pub struct TypeChecker<'a> {
+pub struct TypeChecker {
     type_ids: HashMap<String, usize>,
     type_names: Vec<String>,
-    type_definitions: &'a Context<TypeInfo>,
+    type_definitions: HashMap<String, TypeAnnotation>,
     lca: LCA,
 }
 
-impl<'a> TypeChecker<'a> {
+impl TypeChecker {
     pub fn new(
         type_hierarchy: &HashMap<String, TypeAnnotation>,
-        type_definitions: &'a Context<TypeInfo>,
+        type_definitions: HashMap<String, TypeAnnotation>,
     ) -> Self {
         let mut type_ids = HashMap::new();
         let mut type_names = Vec::new();
@@ -89,11 +88,8 @@ impl<'a> TypeChecker<'a> {
                 let common = self.lca.get_lca(a_id, b_id);
                 let common_name = self.type_names.get(common);
                 if let Some(common_name) = common_name {
-                    if let Some(common_type) = self.type_definitions.get_value(common_name) {
-                        return match common_type {
-                            TypeInfo::Defined(ty) => Some(Type::Defined(ty.name.clone())),
-                            TypeInfo::BuiltIn(ty) => Some(Type::BuiltIn(ty.clone())),
-                        };
+                    if let Some(common_type) = self.type_definitions.get(common_name) {
+                        return common_type.clone();
                     }
                 }
                 None
@@ -110,9 +106,8 @@ impl<'a> TypeChecker<'a> {
         let functor = &fn_info.functor_type;
         if functor.parameter_types.len() != parameters.len() {
             errors.push(format!(
-                "Function {} {} has {} parameters, but {} were provided",
+                "Function {} expects {} parameters, but {} were provided",
                 fn_info.name,
-                functor,
                 functor.parameter_types.len(),
                 parameters.len()
             ));

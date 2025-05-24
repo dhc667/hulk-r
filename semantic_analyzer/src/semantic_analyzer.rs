@@ -4,8 +4,8 @@ use ast::{VisitableDefinition, VisitableExpression, typing::TypeAnnotation};
 use generator::context::Context;
 
 use crate::{
-    DefinitionInfo, FuncInfo, InheritanceVisitor, TypeChecker,
-    type_definer_visitor::TypeDefinerVisitor, type_info::TypeInfo,
+    DefinitionInfo, FuncInfo, InheritanceVisitor, type_definer_visitor::TypeDefinerVisitor,
+    type_info::TypeInfo,
 };
 
 use super::SemanticVisitor;
@@ -61,19 +61,26 @@ impl SemanticAnalyzer {
             return Err(self.errors.clone());
         }
 
-        let type_checker = TypeChecker::new(&self.type_hierarchy, &self.type_definitions);
+        // We return here to avoid running semantic checks on undefined stuff
+        if self.errors.len() > 0 {
+            return Err(self.errors.clone());
+        }
 
         let mut semantic_visitor = SemanticVisitor::new(
-            &self.type_definitions,
+            &mut self.type_definitions,
             &mut self.type_hierarchy,
             &mut self.var_definitions,
             &mut self.func_definitions,
-            &type_checker,
             &mut self.errors,
         );
+        for definition in &mut program.definitions {
+            definition.accept(&mut semantic_visitor);
+        }
+
         for expression in &mut program.expressions {
             expression.accept(&mut semantic_visitor);
         }
+
         if self.errors.len() > 0 {
             return Err(self.errors.clone());
         }

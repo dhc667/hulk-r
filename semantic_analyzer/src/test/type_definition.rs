@@ -1,3 +1,5 @@
+use std::vec;
+
 use ast::typing::to_string;
 use parser::ProgramParser;
 
@@ -394,4 +396,445 @@ fn infered_type_usage_with_indefinition() {
         semantic_analyzer.errors,
         vec!["Variable f is not defined".to_string(),]
     )
+}
+
+#[test]
+fn accessing_methods_with_arguments() {
+    let p = ProgramParser::new();
+
+    let mut answ = p
+        .parse(
+            "
+            type A { 
+                method(x: Number) => { x; }; 
+            } 
+            type B inherits A { 
+                method2(x: Number) => { x; }; 
+            } 
+            
+            let a = new B() in {
+                a.method(3); 
+                a.method2(4); 
+            };",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    assert!(result.is_ok(), "Errors: {:?}", result.err());
+}
+
+#[test]
+fn accessing_methods_with_arguments_and_ambiguity() {
+    let p = ProgramParser::new();
+
+    let mut answ = p
+        .parse(
+            "
+            type A { 
+                method(x: Number) => { x; }; 
+            } 
+            type B inherits A { 
+                method(x: Number) => { x; }; 
+            } 
+            
+            let a = new B() in {
+                a.method(3); 
+            };",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    assert!(result.is_ok(), "Errors: {:?}", result.err());
+}
+
+#[test]
+fn accesing_methods_with_invalid_amount_parameters() {
+    let p = ProgramParser::new();
+
+    let mut answ = p
+        .parse(
+            "
+            type A { 
+                method(x: Number) => { x; }; 
+            } 
+            type B inherits A { 
+                method2(x: Number) => { x; }; 
+            } 
+            
+            let a = new B() in {
+                a.method(3, 4); 
+                a.method2(4, 5); 
+            };",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    assert_eq!(
+        result.err().unwrap(),
+        vec![
+            "Function method expects 1 parameters, but 2 were provided".to_string(),
+            "Function method2 expects 1 parameters, but 2 were provided".to_string()
+        ]
+    );
+}
+
+#[test]
+fn accesing_methods_with_invalid_parameter_types() {
+    let p = ProgramParser::new();
+
+    let mut answ = p
+        .parse(
+            "
+            type A { 
+                method(x: Number) => { x; }; 
+            }
+            type B inherits A { 
+                method2(x: Number) => { x; }; 
+            }
+            
+            let a = new B() in {
+                a.method(true); 
+                a.method2(4.0); 
+            };",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    assert_eq!(
+        result.err().unwrap(),
+        vec!["Function method expects parameter 0 of type Number, but got Boolean".to_string()]
+    );
+}
+
+#[test]
+fn invalid_method_use() {
+    let p = ProgramParser::new();
+
+    let mut answ = p
+        .parse(
+            "
+            type A { 
+                method(x: Number) => { x; }; 
+            } 
+            
+            let a = new A() in {
+                a.method(3); 
+                a.method2(4); 
+            };",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    assert_eq!(
+        result.err().unwrap(),
+        vec!["Could not find method method2".to_string()]
+    );
+}
+
+#[test]
+fn type_mismatch_when_using_method() {
+    let p = ProgramParser::new();
+
+    let mut answ = p
+        .parse(
+            "
+            type A { 
+                method(x: Boolean): Boolean => { x; }; 
+            } 
+            
+            let a = new A() in {
+                3 + a.method(true); 
+            };",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    assert_eq!(
+        result.err().unwrap(),
+        vec!["Type mismatch: Cannot apply + to operands of type Number and Boolean".to_string()]
+    );
+}
+
+#[test]
+fn declaration_of_type_with_arguments() {
+    let p = ProgramParser::new();
+
+    let mut answ = p.parse("type A(x: Number) { field = x; }").unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    assert!(result.is_ok(), "Errors: {:?}", result.err());
+}
+
+#[test]
+fn declaration_of_type_with_arguments_and_usage() {
+    let p = ProgramParser::new();
+
+    let mut answ = p
+        .parse(
+            "
+            type A(x: Number) { field = x; } 
+            
+            let a = new A(3) in {
+                a.field; 
+            };",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    assert!(result.is_ok(), "Errors: {:?}", result.err());
+}
+
+#[test]
+fn declaration_of_type_with_arguments_and_usage2() {
+    let p = ProgramParser::new();
+
+    let mut answ = p
+        .parse(
+            "
+            type A(x: Number) { field = x; } 
+            
+            let a = new A(3) in {
+                true && a.field; 
+            };",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    assert_eq!(
+        result.err().unwrap(),
+        vec!["Type mismatch: Cannot apply && to operands of type Boolean and Number".to_string()]
+    );
+}
+
+#[test]
+fn declaration_of_type_with_reference_to_self() {
+    let p = ProgramParser::new();
+
+    let mut answ = p
+        .parse(
+            "
+            type A(x: Number) { 
+                field = x; 
+                method() => { self.field; }; 
+            } 
+            
+            let a = new A(3) in {
+                a.method(); 
+            };",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    assert!(result.is_ok(), "Errors: {:?}", result.err());
+}
+
+#[test]
+fn declaration_of_type_with_reference_to_self_wrong() {
+    let p = ProgramParser::new();
+
+    let mut answ = p
+        .parse(
+            "
+            type A(x: Boolean) { 
+                field = x; 
+                method() => { self.field + 3; }; 
+            } 
+            
+            let a = new A(true) in {
+                a.method(); 
+            };",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    assert_eq!(
+        result.err().unwrap(),
+        vec!["Type mismatch: Cannot apply + to operands of type Boolean and Number".to_string()]
+    );
+}
+
+#[test]
+fn declaration_of_type_with_self_inherited_access() {
+    let p = ProgramParser::new();
+
+    let mut answ = p
+        .parse(
+            "
+            type A { 
+                field = 3; 
+            } 
+            type B inherits A  {
+                method() => { self.field; }; 
+            } 
+            
+            let a = new B() in {
+                a.method();  
+            };",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    assert!(result.is_ok(), "Errors: {:?}", result.err());
+}
+
+#[test]
+fn declaration_of_type_with_self_inherited_access_wrong() {
+    let p = ProgramParser::new();
+
+    let mut answ = p
+        .parse(
+            "
+            type A { 
+                field = 3; 
+            } 
+            type B inherits A  {
+                method() => { self.field + 3; }; 
+            } 
+            
+            let a = new B() in {
+                a.method() && true;  
+            };",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    assert_eq!(
+        result.err().unwrap(),
+        vec!["Type mismatch: Cannot apply && to operands of type Number and Boolean".to_string()]
+    );
+}
+
+#[test]
+fn super_constructor_call() {
+    let p = ProgramParser::new();
+
+    let mut answ = p
+        .parse(
+            "
+            type A(x: Number) { 
+                field = x; 
+            } 
+            type B(x: Number) inherits A(2*x)  { 
+            } 
+            
+            let a = new B(3) in {
+                a.field;  
+            };",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    assert!(result.is_ok(), "Errors: {:?}", result.err());
+}
+
+#[test]
+fn super_constructor_call2() {
+    let p = ProgramParser::new();
+
+    let mut answ = p
+        .parse(
+            "
+            type A(x: Number, y: Number, z: Number) { 
+                field = x; 
+            } 
+            type B(x: Number) inherits A(2*x, 3*x, 4*x)  { 
+            } 
+            
+            let a = new B(3) in {
+                a.field;  
+            };",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    assert!(result.is_ok(), "Errors: {:?}", result.err());
+}
+
+#[test]
+fn super_constructor_with_wrong_arguments() {
+    let p = ProgramParser::new();
+
+    let mut answ = p
+        .parse(
+            "
+            type A(x: Boolean) { 
+                field = x; 
+            } 
+            type B(x: Number) inherits A(2*x)  { 
+            } 
+            
+            let a = new B(2) in {
+                a.field;  
+            };",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    assert_eq!(
+        result.err().unwrap(),
+        vec!["Type A expects parameter 0 of type Boolean, but got Number".to_string()]
+    );
+}
+
+#[test]
+fn nested_super_constructor_call() {
+    let p = ProgramParser::new();
+
+    let mut answ = p
+        .parse(
+            "
+            type A(x: Number) { 
+                field = x; 
+            } 
+            type B(x: Number) inherits A(2*x)  { 
+                field2 = 3; 
+            } 
+            type C(x: Number) inherits B(2*x)  { 
+                field3 = 4; 
+            } 
+            
+            let a = new C(3) in {
+                a.field;  
+                a.field2;
+                a.field3;
+            };",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    assert!(result.is_ok(), "Errors: {:?}", result.err());
 }
