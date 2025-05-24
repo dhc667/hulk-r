@@ -4,7 +4,7 @@ use ast::typing::{Type, TypeAnnotation, to_string};
 
 use crate::{
     def_info::{DefinedTypeInfo, FuncInfo},
-    lca::LCA,
+    graph_utils::{lca::LCA, parent_map_to_adj},
 };
 
 pub struct TypeChecker {
@@ -25,7 +25,7 @@ impl TypeChecker {
             type_ids.insert(type_name.clone(), i);
             type_names.push(type_name.clone());
         }
-        let adj = Self::build_adjacency_list(&type_hierarchy, &type_ids);
+        let adj = parent_map_to_adj(&type_hierarchy, &type_ids);
         let object_name = Type::BuiltIn(ast::typing::BuiltInType::Object).to_string();
         let root = type_ids[&object_name];
         let lca = LCA::new(&adj, root);
@@ -35,25 +35,6 @@ impl TypeChecker {
             type_definitions,
             lca,
         }
-    }
-
-    fn build_adjacency_list(
-        type_hierarchy: &HashMap<String, TypeAnnotation>,
-        type_ids: &HashMap<String, usize>,
-    ) -> Vec<Vec<usize>> {
-        let mut adj = vec![Vec::new(); type_hierarchy.len()];
-        for type_name in type_hierarchy.keys() {
-            let id = type_ids[type_name];
-            let parent = &type_hierarchy[type_name];
-            if parent.is_none() {
-                continue;
-            }
-            if let Some(parent_id) = type_ids.get(&parent.clone().unwrap().to_string()) {
-                adj[*parent_id].push(id);
-                adj[id].push(*parent_id);
-            }
-        }
-        adj
     }
 
     /// # Description

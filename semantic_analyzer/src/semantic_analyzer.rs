@@ -5,6 +5,7 @@ use generator::context::Context;
 
 use crate::def_info::{FuncInfo, TypeInfo, VarInfo};
 
+use crate::graph_utils::dfs::get_cycle;
 use crate::visitors::{GlobalDefinerVisitor, InheritanceVisitor, SemanticVisitor};
 
 pub struct SemanticAnalyzer {
@@ -50,7 +51,7 @@ impl SemanticAnalyzer {
         }
 
         // Check for cycles in the inheritance graph
-        if let Some(cycle) = inheritance_visitor.has_cycles() {
+        if let Some(cycle) = get_cycle(&inheritance_visitor.type_hierarchy) {
             self.errors.push(format!(
                 "Inheritance cycle detected: {:?}",
                 cycle.join(" -> ")

@@ -7,7 +7,7 @@ pub mod typing_utils;
 pub mod type_checker;
 pub use type_checker::TypeChecker;
 
-pub mod lca;
+pub mod graph_utils;
 
 pub mod def_info;
 #[cfg(test)]

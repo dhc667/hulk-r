@@ -1,3 +1,5 @@
+use super::dfs::{DfsVisitable, dfs};
+
 pub struct LCA {
     height: Vec<usize>,
     euler: Vec<usize>,
@@ -14,27 +16,10 @@ impl LCA {
             first: vec![0; n],
             sparse_table: Vec::new(),
         };
-        lca.dfs(adj, root);
+
+        dfs(adj, root, &mut lca);
         lca.build_sparse_table();
         lca
-    }
-
-    fn dfs(&mut self, adj: &Vec<Vec<usize>>, root: usize) {
-        let mut visited = vec![false; adj.len()];
-        self.dfs_visit(adj, &mut visited, root, 0);
-    }
-
-    fn dfs_visit(&mut self, adj: &Vec<Vec<usize>>, visited: &mut Vec<bool>, node: usize, h: usize) {
-        visited[node] = true;
-        self.height[node] = h;
-        self.first[node] = self.euler.len();
-        self.euler.push(node);
-        for &to in &adj[node] {
-            if !visited[to] {
-                self.dfs_visit(adj, visited, to, h + 1);
-                self.euler.push(node);
-            }
-        }
     }
 
     fn build_sparse_table(&mut self) {
@@ -75,5 +60,17 @@ impl LCA {
         } else {
             self.euler[right]
         }
+    }
+}
+
+impl DfsVisitable for LCA {
+    fn before_visit(&mut self, node: usize, h: usize) {
+        self.height[node] = h;
+        self.first[node] = self.euler.len();
+        self.euler.push(node);
+    }
+
+    fn after_visit_child(&mut self, node: usize, _h: usize) {
+        self.euler.push(node);
     }
 }
