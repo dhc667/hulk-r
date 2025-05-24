@@ -3,9 +3,6 @@ pub(crate) use semantic_visitor::SemanticVisitor;
 
 pub mod semantic_analyzer;
 
-pub mod def_info;
-pub use def_info::DefinitionInfo;
-
 pub mod typing_utils;
 
 pub mod type_definer_visitor;
@@ -19,15 +16,7 @@ pub use type_checker::TypeChecker;
 
 pub mod lca;
 
-pub mod global_def_info;
-pub use global_def_info::GlobalDefinitionInfo;
-
-pub mod type_info;
-pub use type_info::DefinedTypeInfo;
-pub use type_info::TypeInfo;
-
-pub mod func_info;
-pub use func_info::FuncInfo;
+pub mod def_info;
 #[cfg(test)]
 pub mod test {
     pub mod definitions;

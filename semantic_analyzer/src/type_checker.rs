@@ -2,7 +2,10 @@ use std::collections::HashMap;
 
 use ast::typing::{Type, TypeAnnotation, to_string};
 
-use crate::{DefinedTypeInfo, FuncInfo, lca::LCA};
+use crate::{
+    def_info::{DefinedTypeInfo, FuncInfo},
+    lca::LCA,
+};
 
 pub struct TypeChecker {
     type_ids: HashMap<String, usize>,

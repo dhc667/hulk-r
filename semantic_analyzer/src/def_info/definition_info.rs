@@ -1,13 +1,13 @@
-use crate::{DefinitionInfo, FuncInfo, TypeInfo};
+use super::{FuncInfo, TypeInfo, VarInfo};
 
 #[derive(Clone)]
-pub enum GlobalDefinitionInfo {
-    Var(DefinitionInfo),
+pub enum DefinitionInfo {
+    Var(VarInfo),
     Type(TypeInfo),
     Func(FuncInfo),
 }
 
-impl GlobalDefinitionInfo {
+impl DefinitionInfo {
     pub fn as_type(&self) -> Option<&TypeInfo> {
         if let Self::Type(v) = self {
             Some(v)
@@ -40,7 +40,7 @@ impl GlobalDefinitionInfo {
         }
     }
 
-    pub fn as_var(&self) -> Option<&DefinitionInfo> {
+    pub fn as_var(&self) -> Option<&VarInfo> {
         if let Self::Var(v) = self {
             Some(v)
         } else {
@@ -48,7 +48,7 @@ impl GlobalDefinitionInfo {
         }
     }
 
-    pub fn as_var_mut(&mut self) -> Option<&mut DefinitionInfo> {
+    pub fn as_var_mut(&mut self) -> Option<&mut VarInfo> {
         if let Self::Var(v) = self {
             Some(v)
         } else {

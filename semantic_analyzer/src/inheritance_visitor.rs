@@ -6,7 +6,7 @@ use ast::{
 };
 use generator::context::Context;
 
-use crate::TypeInfo;
+use crate::def_info::TypeInfo;
 
 pub struct InheritanceVisitor<'a> {
     pub type_hierarchy: &'a mut HashMap<String, TypeAnnotation>,

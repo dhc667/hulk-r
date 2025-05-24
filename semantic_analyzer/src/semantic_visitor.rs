@@ -8,16 +8,15 @@ use ast::{
 use generator::context::Context;
 
 use crate::{
-    DefinitionInfo, FuncInfo, GlobalDefinitionInfo, TypeChecker, TypeInfo,
-    typing_utils::{
+    def_info::{DefinitionInfo, FuncInfo, TypeInfo, VarInfo}, typing_utils::{
         get_bin_op_return_type, get_up_op_return_type, is_bin_op_admisible, is_un_op_admisible,
-    },
+    }, TypeChecker
 };
 
 pub struct SemanticVisitor<'a> {
     pub type_definitions: &'a mut Context<TypeInfo>,
     pub type_hierarchy: &'a HashMap<String, TypeAnnotation>,
-    pub var_definitions: &'a mut Context<DefinitionInfo>,
+    pub var_definitions: &'a mut Context<VarInfo>,
     pub func_definitions: &'a mut Context<FuncInfo>,
     pub type_checker: TypeChecker,
     pub errors: &'a mut Vec<String>,
@@ -27,7 +26,7 @@ impl<'a> SemanticVisitor<'a> {
     pub fn new(
         type_definitions: &'a mut Context<TypeInfo>,
         type_hierarchy: &'a HashMap<String, TypeAnnotation>,
-        var_definitions: &'a mut Context<DefinitionInfo>,
+        var_definitions: &'a mut Context<VarInfo>,
         func_definitions: &'a mut Context<FuncInfo>,
         errors: &'a mut Vec<String>,
     ) -> Self {
@@ -55,7 +54,7 @@ impl<'a> SemanticVisitor<'a> {
         &self,
         member_name: String,
         ty: &TypeAnnotation,
-    ) -> Option<&GlobalDefinitionInfo> {
+    ) -> Option<&DefinitionInfo> {
         let mut current_type = ty.clone();
         loop {
             let Some(ty) = &current_type else { break };
@@ -161,7 +160,7 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
 
         self.var_definitions.define(
             node.identifier.id.clone(),
-            DefinitionInfo::new_from_identifier(&node.identifier, true, right_type.clone()),
+            VarInfo::new_from_identifier(&node.identifier, true, right_type.clone()),
         );
         node.identifier.info.ty = right_type.clone();
         node.identifier.info.definition_pos = Some(node.identifier.position.clone());
@@ -249,7 +248,7 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
 
         self.var_definitions.define(
             node.element.id.clone(),
-            DefinitionInfo::new_from_identifier(&node.element, true, identifier_type.clone()),
+            VarInfo::new_from_identifier(&node.element, true, identifier_type.clone()),
         );
         let result = node.body.accept(self);
 
@@ -454,7 +453,7 @@ impl<'a> DefinitionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
         for param in &node.parameter_list {
             self.var_definitions.define(
                 param.id.clone(),
-                DefinitionInfo::new_from_identifier(param, true, None),
+                VarInfo::new_from_identifier(param, true, None),
             );
         }
 
@@ -490,7 +489,7 @@ impl<'a> DefinitionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
         // Define Reference to self
         self.var_definitions.define(
             "self".to_string(),
-            DefinitionInfo::new(
+            VarInfo::new(
                 node.name.id.clone(),
                 true,
                 node.name.position,
@@ -540,7 +539,7 @@ impl<'a> DefinitionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
 
             self.var_definitions.define(
                 member.identifier.id.clone(),
-                DefinitionInfo::new_from_identifier(&member.identifier, true, member_type),
+                VarInfo::new_from_identifier(&member.identifier, true, member_type),
             );
         }
 
@@ -550,14 +549,14 @@ impl<'a> DefinitionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
             for param in &method.parameters {
                 self.var_definitions.define(
                     param.id.clone(),
-                    DefinitionInfo::new_from_identifier(param, true, None),
+                    VarInfo::new_from_identifier(param, true, None),
                 );
             }
 
             let method_type = method.body.accept(self);
             self.var_definitions.define(
                 method.identifier.id.clone(),
-                DefinitionInfo::new_from_identifier(&method.identifier, true, method_type.clone()),
+                VarInfo::new_from_identifier(&method.identifier, true, method_type.clone()),
             );
 
             // Check if type is assignable to return type
@@ -608,7 +607,7 @@ impl<'a> DefinitionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
         for param in &node.function_def.parameters {
             self.var_definitions.define(
                 param.id.clone(),
-                DefinitionInfo::new_from_identifier(param, true, None),
+                VarInfo::new_from_identifier(param, true, None),
             );
         }
 
@@ -665,7 +664,7 @@ impl<'a> DefinitionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
         } else {
             self.var_definitions.define(
                 node.identifier.id.clone(),
-                DefinitionInfo::new_from_identifier(&node.identifier, true, right_type.clone()),
+                VarInfo::new_from_identifier(&node.identifier, true, right_type.clone()),
             );
             node.identifier.info.definition_pos = Some(node.identifier.position.clone());
         }

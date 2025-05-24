@@ -4,8 +4,9 @@ use ast::{VisitableDefinition, VisitableExpression, typing::TypeAnnotation};
 use generator::context::Context;
 
 use crate::{
-    DefinitionInfo, FuncInfo, InheritanceVisitor, type_definer_visitor::TypeDefinerVisitor,
-    type_info::TypeInfo,
+    InheritanceVisitor,
+    def_info::{FuncInfo, TypeInfo, VarInfo},
+    type_definer_visitor::TypeDefinerVisitor,
 };
 
 use super::SemanticVisitor;
@@ -14,7 +15,7 @@ pub struct SemanticAnalyzer {
     pub type_definitions: Context<TypeInfo>,
     pub type_hierarchy: HashMap<String, TypeAnnotation>,
     pub func_definitions: Context<FuncInfo>,
-    pub var_definitions: Context<DefinitionInfo>,
+    pub var_definitions: Context<VarInfo>,
     pub errors: Vec<String>,
 }
 
