@@ -87,49 +87,7 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
         node.accept(self)
     }
 
-    fn visit_destructive_assignment(&mut self, node: &mut DestructiveAssignment) -> TypeAnnotation {
-        let expr_type = node.expression.accept(self);
-        let def_value = self.var_definitions.get_value(&node.identifier.id);
-        match def_value {
-            Some(def) => {
-                if def.ty != expr_type {
-                    let message = format!(
-                        "Type mismatch: {} is {} but is being reassigned with {}",
-                        node.identifier.id,
-                        to_string(&def.ty),
-                        to_string(&expr_type)
-                    );
-                    self.errors.push(message);
-                }
-                def.ty.clone()
-            }
-            None => {
-                let message = format!("Variable {} is not defined", node.identifier.id);
-                self.errors.push(message);
-                expr_type
-            }
-        }
-    }
-
-    fn visit_bin_op(&mut self, node: &mut BinOp) -> TypeAnnotation {
-        let left_type = node.lhs.accept(self);
-        let right_type = node.rhs.accept(self);
-
-        let op_type = self
-            .type_checker
-            .check_bin_op(&node.op, &left_type, &right_type, &mut self.errors);
-        op_type
-    }
-
-    fn visit_let_in(&mut self, node: &mut LetIn) -> TypeAnnotation {
-        self.var_definitions.push_open_frame();
-
-        node.assignment.accept(self);
-        let body_type = node.body.accept(self);
-
-        self.var_definitions.pop_frame();
-        body_type
-    }
+    // Assigments
 
     fn visit_assignment(&mut self, node: &mut Assignment) -> TypeAnnotation {
         let right_type = node.rhs.accept(self);
@@ -156,17 +114,40 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
         None
     }
 
-    fn visit_if_else(&mut self, node: &mut IfElse) -> TypeAnnotation {
-        node.condition.accept(self);
-        let then_type = node.then_expression.accept(self);
-        let else_type = node.else_expression.accept(self);
-        self.type_checker
-            .get_common_supertype(&then_type, &else_type)
+    fn visit_destructive_assignment(&mut self, node: &mut DestructiveAssignment) -> TypeAnnotation {
+        let expr_type = node.expression.accept(self);
+        let def_value = self.var_definitions.get_value(&node.identifier.id);
+        match def_value {
+            Some(def) => {
+                if def.ty != expr_type {
+                    let message = format!(
+                        "Type mismatch: {} is {} but is being reassigned with {}",
+                        node.identifier.id,
+                        to_string(&def.ty),
+                        to_string(&expr_type)
+                    );
+                    self.errors.push(message);
+                }
+                def.ty.clone()
+            }
+            None => {
+                let message = format!("Variable {} is not defined", node.identifier.id);
+                self.errors.push(message);
+                expr_type
+            }
+        }
     }
 
-    fn visit_while(&mut self, node: &mut While) -> TypeAnnotation {
-        node.condition.accept(self);
-        node.body.accept(self)
+    // Operators
+
+    fn visit_bin_op(&mut self, node: &mut BinOp) -> TypeAnnotation {
+        let left_type = node.lhs.accept(self);
+        let right_type = node.rhs.accept(self);
+
+        let op_type = self
+            .type_checker
+            .check_bin_op(&node.op, &left_type, &right_type, &mut self.errors);
+        op_type
     }
 
     fn visit_un_op(&mut self, node: &mut UnOp) -> TypeAnnotation {
@@ -178,32 +159,31 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
         op_type
     }
 
-    fn visit_variable(&mut self, node: &mut Identifier) -> TypeAnnotation {
-        let def_info = self.var_definitions.get_value(&node.id);
-        match def_info {
-            Some(def) => {
-                node.info.ty = def.ty.clone();
-                node.info.definition_pos = Some(def.position.clone());
-                def.ty.clone()
-            }
-            None => {
-                let message = format!("Variable {} is not defined", node.id);
-                self.errors.push(message);
-                None
-            }
-        }
+    // Control flow
+
+    fn visit_let_in(&mut self, node: &mut LetIn) -> TypeAnnotation {
+        self.var_definitions.push_open_frame();
+
+        node.assignment.accept(self);
+        let body_type = node.body.accept(self);
+
+        self.var_definitions.pop_frame();
+        body_type
     }
 
-    fn visit_number_literal(&mut self, _node: &mut NumberLiteral) -> TypeAnnotation {
-        Some(Type::BuiltIn(BuiltInType::Number))
+    fn visit_if_else(&mut self, node: &mut IfElse) -> TypeAnnotation {
+        node.condition.accept(self);
+        let then_type = node.then_expression.accept(self);
+        let else_type = node.else_expression.accept(self);
+        self.type_checker
+            .get_common_supertype(&then_type, &else_type)
     }
 
-    fn visit_empty_expression(&mut self) -> TypeAnnotation {
-        None
-    }
+    // Loops
 
-    fn visit_boolean_literal(&mut self, _node: &mut BooleanLiteral) -> TypeAnnotation {
-        Some(Type::BuiltIn(BuiltInType::Bool))
+    fn visit_while(&mut self, node: &mut While) -> TypeAnnotation {
+        node.condition.accept(self);
+        node.body.accept(self)
     }
 
     fn visit_for(&mut self, node: &mut For) -> TypeAnnotation {
@@ -241,6 +221,56 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
         self.var_definitions.pop_frame();
         result
     }
+
+    // Literals and Identifiers
+
+    fn visit_variable(&mut self, node: &mut Identifier) -> TypeAnnotation {
+        let def_info = self.var_definitions.get_value(&node.id);
+        match def_info {
+            Some(def) => {
+                node.info.ty = def.ty.clone();
+                node.info.definition_pos = Some(def.position.clone());
+                def.ty.clone()
+            }
+            None => {
+                let message = format!("Variable {} is not defined", node.id);
+                self.errors.push(message);
+                None
+            }
+        }
+    }
+
+    fn visit_number_literal(&mut self, _node: &mut NumberLiteral) -> TypeAnnotation {
+        Some(Type::BuiltIn(BuiltInType::Number))
+    }
+
+    fn visit_empty_expression(&mut self) -> TypeAnnotation {
+        None
+    }
+
+    fn visit_boolean_literal(&mut self, _node: &mut BooleanLiteral) -> TypeAnnotation {
+        Some(Type::BuiltIn(BuiltInType::Bool))
+    }
+
+    fn visit_string_literal(&mut self, _node: &mut StringLiteral) -> TypeAnnotation {
+        Some(Type::BuiltIn(BuiltInType::String))
+    }
+
+    fn visit_list_literal(&mut self, node: &mut ListLiteral) -> TypeAnnotation {
+        let mut result_type = None;
+        for item in &mut node.elements {
+            let item_type = item.accept(self);
+            result_type = self
+                .type_checker
+                .get_common_supertype(&result_type, &item_type)
+        }
+        match result_type {
+            Some(result_type) => Some(Type::Iterable(Box::new(result_type))),
+            None => todo!("We need a way to handle unknown list types"),
+        }
+    }
+
+    // Dot access
 
     fn visit_data_member_access(&mut self, node: &mut DataMemberAccess) -> TypeAnnotation {
         let member_name = node.member.id.clone();
@@ -287,6 +317,8 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
             .push(format!("Could not find method {}", func_name));
         None
     }
+
+    // Other
 
     fn visist_list_indexing(&mut self, node: &mut ListIndexing) -> TypeAnnotation {
         let iterable_type = node.list.accept(self);
@@ -362,24 +394,6 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
         }
         node.identifier.info.ty = *function_def.functor_type.return_type.clone();
         *function_def.functor_type.return_type.clone()
-    }
-
-    fn visit_string_literal(&mut self, _node: &mut StringLiteral) -> TypeAnnotation {
-        Some(Type::BuiltIn(BuiltInType::String))
-    }
-
-    fn visit_list_literal(&mut self, node: &mut ListLiteral) -> TypeAnnotation {
-        let mut result_type = None;
-        for item in &mut node.elements {
-            let item_type = item.accept(self);
-            result_type = self
-                .type_checker
-                .get_common_supertype(&result_type, &item_type)
-        }
-        match result_type {
-            Some(result_type) => Some(Type::Iterable(Box::new(result_type))),
-            None => todo!("We need a way to handle unknown list types"),
-        }
     }
 
     fn visit_return_statement(&mut self, node: &mut ReturnStatement) -> TypeAnnotation {
