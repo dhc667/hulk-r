@@ -1,7 +1,11 @@
 use std::collections::HashMap;
 
-use ast::typing::{Type, TypeAnnotation, to_string};
+use ast::{
+    BinaryOperator, UnaryOperator,
+    typing::{Type, TypeAnnotation, to_string},
+};
 
+use super::{get_binary_op_functor_type, get_unary_op_functor_type};
 use crate::{
     def_info::{DefinedTypeInfo, FuncInfo},
     graph_utils::{lca::LCA, parent_map_to_adj},
@@ -46,7 +50,7 @@ impl TypeChecker {
         *id.unwrap()
     }
 
-    pub fn is_subtype(&self, a: &TypeAnnotation, b: &TypeAnnotation) -> bool {
+    pub fn conforms(&self, a: &TypeAnnotation, b: &TypeAnnotation) -> bool {
         match (a, b) {
             (None, _) => return true,
             (_, None) => return true,
@@ -81,6 +85,46 @@ impl TypeChecker {
         }
     }
 
+    pub fn check_bin_op(
+        &self,
+        op: &BinaryOperator,
+        left: &TypeAnnotation,
+        right: &TypeAnnotation,
+        errors: &mut Vec<String>,
+    ) -> TypeAnnotation {
+        let functor = get_binary_op_functor_type(&op);
+
+        if !self.conforms(&left, &functor.parameter_types[0])
+            || !self.conforms(&right, &functor.parameter_types[1])
+        {
+            errors.push(format!(
+                "Type mismatch: Cannot apply {} to operands of type {} and {}",
+                op,
+                to_string(&left),
+                to_string(&right)
+            ));
+        }
+        *functor.return_type.clone()
+    }
+
+    pub fn check_up_op(
+        &self,
+        op: &UnaryOperator,
+        operand: &TypeAnnotation,
+        errors: &mut Vec<String>,
+    ) -> TypeAnnotation {
+        let functor = get_unary_op_functor_type(&op);
+
+        if !self.conforms(&operand, &functor.parameter_types[0]) {
+            errors.push(format!(
+                "Type mismatch: Cannot apply {} to operand of type {}",
+                op,
+                to_string(&operand)
+            ));
+        }
+        *functor.return_type.clone()
+    }
+
     pub fn check_functor_call(
         &self,
         fn_info: &FuncInfo,
@@ -103,7 +147,7 @@ impl TypeChecker {
             .zip(parameters.iter())
             .enumerate()
         {
-            if !self.is_subtype(expected, provided) {
+            if !self.conforms(expected, provided) {
                 errors.push(format!(
                     "Function {} expects parameter {} of type {}, but got {}",
                     fn_info.name,
@@ -141,7 +185,7 @@ impl TypeChecker {
             .zip(parameters.iter())
             .enumerate()
         {
-            if !self.is_subtype(expected, provided) {
+            if !self.conforms(expected, provided) {
                 errors.push(format!(
                     "Type {} expects parameter {} of type {}, but got {}",
                     type_definition.name.id,

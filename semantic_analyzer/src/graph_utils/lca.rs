@@ -54,7 +54,7 @@ impl LCA {
         let len = r - l + 1;
         let k = (len as f64).log2() as usize;
         let left = self.sparse_table[k][l];
-        let right = self.sparse_table[k][r - (1 << k) + 1];
+        let right = self.sparse_table[k][r + 1 - (1 << k)];
         if self.height[self.euler[left]] < self.height[self.euler[right]] {
             self.euler[left]
         } else {

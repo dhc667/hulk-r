@@ -8,9 +8,7 @@ use ast::{
 use generator::context::Context;
 
 use crate::{
-    def_info::{DefinitionInfo, FuncInfo, TypeInfo, VarInfo}, typing_utils::{
-        get_bin_op_return_type, get_up_op_return_type, is_bin_op_admisible, is_un_op_admisible,
-    }, TypeChecker
+    def_info::{DefinitionInfo, FuncInfo, TypeInfo, VarInfo}, typing::TypeChecker
 };
 
 pub struct SemanticVisitor<'a> {
@@ -114,21 +112,12 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
     }
 
     fn visit_bin_op(&mut self, node: &mut BinOp) -> TypeAnnotation {
-        let op_type = Some(get_bin_op_return_type(&node.op));
-
         let left_type = node.lhs.accept(self);
         let right_type = node.rhs.accept(self);
 
-        if !is_bin_op_admisible(&left_type, &node.op) || !is_bin_op_admisible(&right_type, &node.op)
-        {
-            let message = format!(
-                "Type mismatch: Cannot apply {} to operands of type {} and {}",
-                node.op,
-                to_string(&left_type),
-                to_string(&right_type)
-            );
-            self.errors.push(message)
-        }
+        let op_type = self
+            .type_checker
+            .check_bin_op(&node.op, &left_type, &right_type, &mut self.errors);
         op_type
     }
 
@@ -147,7 +136,7 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
 
         let is_asignable = self
             .type_checker
-            .is_subtype(&right_type, &node.identifier.info.ty);
+            .conforms(&right_type, &node.identifier.info.ty);
 
         if !is_asignable {
             let message = format!(
@@ -181,17 +170,11 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
     }
 
     fn visit_un_op(&mut self, node: &mut UnOp) -> TypeAnnotation {
-        let op_type = Some(get_up_op_return_type(&node.op));
 
         let operand_type = node.rhs.accept(self);
-        if !is_un_op_admisible(&operand_type, &node.op) {
-            let message = format!(
-                "Type mismatch: Cannot apply {} to operand of type {}",
-                node.op,
-                to_string(&operand_type)
-            );
-            self.errors.push(message);
-        }
+        let op_type = self
+            .type_checker
+            .check_up_op(&node.op, &operand_type, &mut self.errors);
         op_type
     }
 
@@ -234,7 +217,7 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
 
         let is_assignable = self
             .type_checker
-            .is_subtype(&identifier_type, &node.element.info.ty);
+            .conforms(&identifier_type, &node.element.info.ty);
 
         if !is_assignable {
             let message = format!(
@@ -504,7 +487,7 @@ impl<'a> DefinitionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
             // Check if type is assignable
             if !self
                 .type_checker
-                .is_subtype(&member_type, &member.identifier.info.ty)
+                .conforms(&member_type, &member.identifier.info.ty)
             {
                 let message = format!(
                     "Type mismatch: Member {} is {} but is being assigned {}",
@@ -579,7 +562,7 @@ impl<'a> DefinitionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
                     &node.name.id
                 ));
             
-            if !self.type_checker.is_subtype(&method_type, &method_info.functor_type.return_type) {
+            if !self.type_checker.conforms(&method_type, &method_info.functor_type.return_type) {
                 self.errors.push(format!(
                     "Type mismatch: Method {} returns {} but {} was found",
                     method.identifier.id,
@@ -619,7 +602,7 @@ impl<'a> DefinitionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
                     &node.function_def.identifier.id, 
                 ));
         // Check if type is assignable to return type
-        if !self.type_checker.is_subtype(&body_type, &func_info.functor_type.return_type) {
+        if !self.type_checker.conforms(&body_type, &func_info.functor_type.return_type) {
             self.errors.push(format!(
                 "Type mismatch: Function {} returns {} but {} was found",
                 node.function_def.identifier.id,
@@ -644,7 +627,7 @@ impl<'a> DefinitionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
 
         let is_asignable = self
             .type_checker
-            .is_subtype(&right_type, &node.identifier.info.ty);
+            .conforms(&right_type, &node.identifier.info.ty);
 
         if !is_asignable {
             let message = format!(

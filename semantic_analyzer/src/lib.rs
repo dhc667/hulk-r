@@ -2,10 +2,7 @@ pub mod semantic_analyzer;
 
 pub mod visitors;
 
-pub mod typing_utils;
-
-pub mod type_checker;
-pub use type_checker::TypeChecker;
+pub mod typing;
 
 pub mod graph_utils;
 
