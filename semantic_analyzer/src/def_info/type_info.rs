@@ -7,7 +7,7 @@ use ast::{
 };
 use std::fmt::{Formatter, Result};
 
-use crate::GlobalDefinitionInfo;
+use super::DefinitionInfo;
 
 #[derive(Clone)]
 pub enum TypeInfo {
@@ -59,14 +59,14 @@ impl TypeInfo {
 #[derive(Clone)]
 pub struct DefinedTypeInfo {
     pub name: TypeName,
-    pub members: HashMap<String, GlobalDefinitionInfo>,
+    pub members: HashMap<String, DefinitionInfo>,
     pub arguments_types: Vec<TypeAnnotation>,
 }
 
 impl DefinedTypeInfo {
     pub fn new(
         name: TypeName,
-        members: HashMap<String, GlobalDefinitionInfo>,
+        members: HashMap<String, DefinitionInfo>,
         arguments_types: Vec<TypeAnnotation>,
     ) -> Self {
         DefinedTypeInfo {

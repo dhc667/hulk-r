@@ -3,18 +3,16 @@ use std::collections::HashMap;
 use ast::{VisitableDefinition, VisitableExpression, typing::TypeAnnotation};
 use generator::context::Context;
 
-use crate::{
-    DefinitionInfo, FuncInfo, InheritanceVisitor, type_definer_visitor::TypeDefinerVisitor,
-    type_info::TypeInfo,
-};
+use crate::def_info::{FuncInfo, TypeInfo, VarInfo};
 
-use super::SemanticVisitor;
+use crate::graph_utils::dfs::get_cycle;
+use crate::visitors::{GlobalDefinerVisitor, InheritanceVisitor, SemanticVisitor};
 
 pub struct SemanticAnalyzer {
     pub type_definitions: Context<TypeInfo>,
     pub type_hierarchy: HashMap<String, TypeAnnotation>,
     pub func_definitions: Context<FuncInfo>,
-    pub var_definitions: Context<DefinitionInfo>,
+    pub var_definitions: Context<VarInfo>,
     pub errors: Vec<String>,
 }
 
@@ -31,7 +29,7 @@ impl SemanticAnalyzer {
 
     pub fn analyze_program_ast(&mut self, program: &mut ast::Program) -> Result<(), Vec<String>> {
         // Define types in the global context
-        let mut type_definer_visitor = TypeDefinerVisitor::new(
+        let mut type_definer_visitor = GlobalDefinerVisitor::new(
             &mut self.type_definitions,
             &mut self.var_definitions,
             &mut self.func_definitions,
@@ -53,7 +51,7 @@ impl SemanticAnalyzer {
         }
 
         // Check for cycles in the inheritance graph
-        if let Some(cycle) = inheritance_visitor.has_cycles() {
+        if let Some(cycle) = get_cycle(&inheritance_visitor.type_hierarchy) {
             self.errors.push(format!(
                 "Inheritance cycle detected: {:?}",
                 cycle.join(" -> ")

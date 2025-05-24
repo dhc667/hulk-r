@@ -1,21 +1,21 @@
 use ast::{Identifier, TokenPosition, typing::TypeAnnotation};
 
 #[derive(Clone)]
-pub struct DefinitionInfo {
+pub struct VarInfo {
     pub name: String,
     pub is_defined: bool,
     pub position: TokenPosition,
     pub ty: TypeAnnotation,
 }
 
-impl DefinitionInfo {
+impl VarInfo {
     pub fn new(
         name: String,
         is_defined: bool,
         position: TokenPosition,
         ty: TypeAnnotation,
     ) -> Self {
-        DefinitionInfo {
+        VarInfo {
             name,
             is_defined,
             position,
@@ -26,16 +26,16 @@ impl DefinitionInfo {
     pub fn new_from_identifier(
         identifier: &Identifier,
         is_defined: bool,
-        ty: TypeAnnotation,
+        fallback_ty: TypeAnnotation,
     ) -> Self {
-        DefinitionInfo {
+        VarInfo {
             name: identifier.id.clone(),
             is_defined,
             position: identifier.position.clone(),
             ty: if identifier.info.ty.is_some() {
                 identifier.info.ty.clone()
             } else {
-                ty
+                fallback_ty
             },
         }
     }

@@ -4,29 +4,31 @@ use ast::{
 };
 use generator::context::Context;
 
-use crate::{DefinedTypeInfo, DefinitionInfo, FuncInfo, GlobalDefinitionInfo, TypeInfo};
 use std::collections::HashMap;
 
-pub struct TypeDefinerVisitor<'a> {
+use crate::def_info::{DefinedTypeInfo, DefinitionInfo, FuncInfo, TypeInfo, VarInfo};
+
+pub struct GlobalDefinerVisitor<'a> {
     /// # Description
     ///
-    /// This is a visitor that defines types in the global context. It only looks at the names of the types. Setting the inheritance relationships
-    /// between types and vitisiting fields and functions of the types is left for another visitor. This aims to solve the problem of recursive types,
-    /// allowing the use of the type before it is defined, types that reference each other in a recursive manner, etc.
+    /// This is a visitor that defines types, functions and protocols in the global context. It only looks at the names of the types.
+    /// Setting the inheritance relationship between types and vitisiting fields and functions of the types is left for another visitor.
+    /// This aims to solve the problem of recursive types, allowing the use of the type before it is defined, types that reference each
+    /// other in a recursive manner, etc.
     pub type_definitions: &'a mut Context<TypeInfo>,
-    pub var_definitions: &'a mut Context<DefinitionInfo>,
+    pub var_definitions: &'a mut Context<VarInfo>,
     pub func_defintions: &'a mut Context<FuncInfo>,
     pub errors: &'a mut Vec<String>,
 }
 
-impl<'a> TypeDefinerVisitor<'a> {
+impl<'a> GlobalDefinerVisitor<'a> {
     pub fn new(
         type_definitions: &'a mut Context<TypeInfo>,
-        var_definitions: &'a mut Context<DefinitionInfo>,
+        var_definitions: &'a mut Context<VarInfo>,
         func_defintions: &'a mut Context<FuncInfo>,
         errors: &'a mut Vec<String>,
     ) -> Self {
-        let instance = TypeDefinerVisitor {
+        let instance = GlobalDefinerVisitor {
             type_definitions,
             var_definitions,
             func_defintions,
@@ -47,7 +49,7 @@ impl<'a> TypeDefinerVisitor<'a> {
     }
 }
 
-impl<'a> DefinitionVisitor<()> for TypeDefinerVisitor<'a> {
+impl<'a> DefinitionVisitor<()> for GlobalDefinerVisitor<'a> {
     fn visit_definition(&mut self, node: &mut ast::Definition) -> () {
         node.accept(self);
     }
@@ -60,7 +62,7 @@ impl<'a> DefinitionVisitor<()> for TypeDefinerVisitor<'a> {
             return;
         }
 
-        let mut members_info: HashMap<String, GlobalDefinitionInfo> = HashMap::new();
+        let mut members_info: HashMap<String, DefinitionInfo> = HashMap::new();
 
         for member in &node.data_member_defs {
             let member_name = member.identifier.id.clone();
@@ -73,7 +75,7 @@ impl<'a> DefinitionVisitor<()> for TypeDefinerVisitor<'a> {
             }
             members_info.insert(
                 member_name,
-                GlobalDefinitionInfo::Var(DefinitionInfo::new_from_identifier(
+                DefinitionInfo::Var(VarInfo::new_from_identifier(
                     &member.identifier,
                     false,
                     None,
@@ -90,10 +92,7 @@ impl<'a> DefinitionVisitor<()> for TypeDefinerVisitor<'a> {
                 ));
                 continue;
             }
-            members_info.insert(
-                member_name,
-                GlobalDefinitionInfo::Func(FuncInfo::from_func_def(&member)),
-            );
+            members_info.insert(member_name, DefinitionInfo::Func(FuncInfo::from(member)));
         }
 
         let arguments_types: Vec<TypeAnnotation> = node
@@ -120,7 +119,7 @@ impl<'a> DefinitionVisitor<()> for TypeDefinerVisitor<'a> {
         }
 
         // Define function information in global context
-        let func_info = FuncInfo::from_func_def(&node.function_def);
+        let func_info = FuncInfo::from(&node.function_def);
         self.func_defintions
             .define(node.function_def.identifier.id.clone(), func_info.clone());
 
@@ -129,14 +128,9 @@ impl<'a> DefinitionVisitor<()> for TypeDefinerVisitor<'a> {
             id: FuncInfo::get_type_wrapper_name(&func_info),
             position: node.function_def.identifier.position.clone(),
         };
-        let methods_info: HashMap<String, GlobalDefinitionInfo> = ["invoke"]
+        let methods_info: HashMap<String, DefinitionInfo> = ["invoke"]
             .iter()
-            .map(|&name| {
-                (
-                    name.to_string(),
-                    GlobalDefinitionInfo::Func(func_info.clone()),
-                )
-            })
+            .map(|&name| (name.to_string(), DefinitionInfo::Func(func_info.clone())))
             .collect();
         let type_wrapper_def = DefinedTypeInfo::new(
             type_wrapper_name.clone(),
@@ -151,7 +145,7 @@ impl<'a> DefinitionVisitor<()> for TypeDefinerVisitor<'a> {
         // Define implicit instance of the type
         self.var_definitions.define(
             FuncInfo::get_var_instance_name(&func_info),
-            DefinitionInfo::new(
+            VarInfo::new(
                 node.function_def.identifier.id.clone(),
                 true,
                 node.function_def.identifier.position.clone(),

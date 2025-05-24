@@ -21,7 +21,17 @@ impl FuncInfo {
         }
     }
 
-    pub fn from_func_def(func_def: &FunctionDef) -> Self {
+    pub fn get_type_wrapper_name(info: &FuncInfo) -> String {
+        format!("${}TypeWrapper", info.name.clone())
+    }
+
+    pub fn get_var_instance_name(info: &FuncInfo) -> String {
+        format!("${}Instance", info.name.clone())
+    }
+}
+
+impl From<&FunctionDef> for FuncInfo {
+    fn from(func_def: &FunctionDef) -> Self {
         let parameters = func_def.parameters.clone();
         Self {
             name: func_def.identifier.clone(),
@@ -35,13 +45,5 @@ impl FuncInfo {
                 func_def.identifier.info.ty.clone(),
             ),
         }
-    }
-
-    pub fn get_type_wrapper_name(info: &FuncInfo) -> String {
-        format!("${}TypeWrapper", info.name.clone())
-    }
-
-    pub fn get_var_instance_name(info: &FuncInfo) -> String {
-        format!("${}Instance", info.name.clone())
     }
 }
