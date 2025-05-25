@@ -19,7 +19,7 @@ pub struct VarInfo {
     pub is_defined: bool,
     pub position: TokenPosition,
     pub ty: TypeAnnotation,
-    pub is_self: bool,
+    pub is_constant: bool,
 }
 
 impl VarInfo {
@@ -34,7 +34,7 @@ impl VarInfo {
             is_defined,
             position,
             ty,
-            is_self: false,
+            is_constant: false,
         }
     }
 
@@ -52,8 +52,18 @@ impl VarInfo {
             } else {
                 fallback_ty
             },
-            is_self: false,
+            is_constant: false,
         }
+    }
+
+    pub fn new_constant_from_identifier(
+        identifier: &Identifier,
+        is_defined: bool,
+        fallback_ty: TypeAnnotation,
+    ) -> Self {
+        let mut res = VarInfo::new_from_identifier(identifier, is_defined, fallback_ty);
+        res.is_constant = true;
+        res
     }
 
     pub fn new_self_instance(type_name: &TypeName) -> Self {
@@ -62,7 +72,7 @@ impl VarInfo {
             is_defined: true,
             position: type_name.position.clone(),
             ty: Some(Type::Defined(type_name.clone())),
-            is_self: true,
+            is_constant: true,
         }
     }
 }

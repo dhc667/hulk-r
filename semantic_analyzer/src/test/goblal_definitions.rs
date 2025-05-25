@@ -276,3 +276,43 @@ fn define_global_arrow_function() {
     assert_eq!(semantic_analyzer.func_definitions.is_defined("f"), true);
     assert!(result.is_ok(), "Errors: {:?}", result.err());
 }
+
+#[test]
+fn try_dassign_constant() {
+    let p = ProgramParser::new();
+
+    let mut answ = p.parse("constant zero: Number = 0; zero:= 2;").unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    assert_eq!(semantic_analyzer.var_definitions.is_defined("zero"), true);
+    assert_eq!(
+        result.err().unwrap(),
+        vec!["Semantic Error: `zero` is not a valid assignment target".to_string()]
+    )
+}
+
+#[test]
+fn shadowed_dassignment_to_constant() {
+    let p = ProgramParser::new();
+
+    let mut answ = p
+        .parse(
+            "
+            constant zero: Number = 0; 
+            let zero = 1 in {
+                zero := 3;
+            };
+        ",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    assert_eq!(semantic_analyzer.var_definitions.is_defined("zero"), true);
+    assert!(result.is_ok(), "Errors: {:?}", result.err());
+}

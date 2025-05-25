@@ -142,8 +142,9 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
                 self.errors.push(message);
                 expr_type
             }
-            Some(def) if def.is_self => {
-                let message = "Semantic Error: `self` is not a valid assignment target".to_string();
+            Some(def) if def.is_constant => {
+                let message = format!("Semantic Error: `{}` is not a valid assignment target", node.identifier.id);
+
                 self.errors.push(message);
                 def.ty.clone()
             }
@@ -317,7 +318,7 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
         // Check if expresion is self
         let id_info = node.object.as_variable().and_then(|var| self.var_definitions.get_value(&var.id));
         if let Some(self_info) = id_info {
-            if self_info.is_self {
+            if self_info.is_constant {
                 return member_info.ty.clone();
             }
         }
@@ -697,7 +698,7 @@ impl<'a> DefinitionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
         } else {
             self.var_definitions.define(
                 node.identifier.id.clone(),
-                VarInfo::new_from_identifier(&node.identifier, true, right_type.clone()),
+                VarInfo::new_constant_from_identifier(&node.identifier, true, right_type.clone()),
             );
             node.identifier.info.definition_pos = Some(node.identifier.position.clone());
         }
