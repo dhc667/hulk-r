@@ -121,7 +121,7 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
             node.identifier.id.clone(),
             VarInfo::new_from_identifier(&node.identifier, true, right_type.clone()),
         );
-        node.identifier.info.ty = right_type.clone();
+        node.identifier.set_type_if_none(right_type.clone());
         node.identifier.info.definition_pos = Some(node.identifier.position.clone());
         None
     }
@@ -227,7 +227,8 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
         );
         let result = node.body.accept(self);
 
-        node.element.info.ty = identifier_type.clone();
+        node.element.set_type_if_none(identifier_type.clone());
+        node.element.info.definition_pos = Some(node.element.position.clone());
         
 
         self.var_definitions.pop_frame();
@@ -240,7 +241,7 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
         let def_info = self.var_definitions.get_value(&node.id);
         match def_info {
             Some(def) => {
-                node.info.ty = def.ty.clone();
+                node.set_type_if_none(def.ty.clone());
                 node.info.definition_pos = Some(def.position.clone());
                 def.ty.clone()
             }
@@ -290,7 +291,7 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
 
         let member_info = self.find_member_info(member_name.clone(), &ty);
         if let Some(member_info) = member_info.and_then(|d| d.as_var()) {
-            node.member.info.ty = member_info.ty.clone();
+            node.member.set_type_if_none(member_info.ty.clone());
             return member_info.ty.clone();
         }
 
@@ -321,7 +322,7 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
                     self.errors.push(error);
                 }
             }
-            node.member.identifier.info.ty = *member_info.functor_type.return_type.clone();
+            node.member.identifier.set_type_if_none(*member_info.functor_type.return_type.clone());
             return *member_info.functor_type.return_type.clone();
         }
 
@@ -404,7 +405,7 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
                 self.errors.push(error);
             }
         }
-        node.identifier.info.ty = *function_def.functor_type.return_type.clone();
+        node.identifier.set_type_if_none(*function_def.functor_type.return_type.clone());
         *function_def.functor_type.return_type.clone()
     }
 
@@ -524,7 +525,7 @@ impl<'a> DefinitionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
                 self.errors.push(message);
             }
             // anotate the type of the member
-            member.identifier.info.ty = member_type.clone();
+            member.identifier.set_type_if_none(member_type.clone());
 
             let member_info = self.type_definitions
                 .get_value_mut(&node.name.id)
@@ -597,8 +598,7 @@ impl<'a> DefinitionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
                 ));
             }
 
-            method.identifier.info.ty = method_type.clone();
-
+            method.identifier.set_type_if_none(method_type.clone());
             // annotate the return type if it is not already annotated
             if method_info.functor_type.return_type.is_none() {
                 method_info.functor_type.return_type = Box::new(method_type);
@@ -637,7 +637,7 @@ impl<'a> DefinitionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
             ));
         }
 
-        node.function_def.identifier.info.ty = body_type.clone();
+        node.function_def.identifier.set_type_if_none(body_type.clone());
 
         // annotate the return type if it is not already annotated
         if func_info.functor_type.return_type.is_none() {

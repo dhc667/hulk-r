@@ -23,6 +23,12 @@ impl Identifier {
     pub fn annotate_type(&mut self, ty: Type) {
         self.info.ty = Some(ty);
     }
+
+    pub fn set_type_if_none(&mut self, ty: TypeAnnotation) {
+        if self.info.ty.is_none() {
+            self.info.ty = ty;
+        }
+    }
 }
 
 impl Display for Identifier {
