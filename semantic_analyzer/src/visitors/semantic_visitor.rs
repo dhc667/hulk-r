@@ -134,16 +134,21 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
     }
 
     fn visit_destructive_assignment(&mut self, node: &mut DestructiveAssignment) -> TypeAnnotation {
-        let expr_type = node.expression.accept(self);
-        let def_value = self.var_definitions.get_value(&node.identifier.id);
+        let expr_type = node.rhs.accept(self);
+        let variable_id = match node.lhs.as_ref() {
+            Expression::Variable(var) => &var.id,
+            _ => todo!()
+        };
+
+        let def_value = self.var_definitions.get_value(&variable_id);
         match def_value {
             None => {
-                let message = format!("Variable {} is not defined", node.identifier.id);
+                let message = format!("Variable {} is not defined", variable_id);
                 self.errors.push(message);
                 expr_type
             }
             Some(def) if def.is_constant => {
-                let message = format!("Semantic Error: `{}` is not a valid assignment target", node.identifier.id);
+                let message = format!("Semantic Error: `{}` is not a valid assignment target", variable_id);
 
                 self.errors.push(message);
                 def.ty.clone()
@@ -151,7 +156,7 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
             Some(def) if !self.type_checker.conforms(&expr_type, &def.ty) => {
                 let message = format!(
                     "Type mismatch: {} is {} but is being reassigned with {}",
-                    node.identifier.id,
+                    variable_id,
                     to_string(&def.ty),
                     to_string(&expr_type)
                 );

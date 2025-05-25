@@ -5,17 +5,17 @@ use crate::{
 };
 
 pub struct DestructiveAssignment {
-    pub identifier: Identifier,
+    pub lhs: Box<Expression>,
     pub op: BinaryOperator,
-    pub expression: Box<Expression>,
+    pub rhs: Box<Expression>,
 }
 
 impl DestructiveAssignment {
-    pub fn new(identifier: Identifier, op: BinaryOperator, rhs: Expression) -> Self {
+    pub fn new(lhs: Expression, op: BinaryOperator, rhs: Expression) -> Self {
         DestructiveAssignment {
-            identifier,
+            lhs: Box::new(lhs),
             op,
-            expression: Box::new(rhs),
+            rhs: Box::new(rhs),
         }
     }
 }

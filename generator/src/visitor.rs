@@ -15,7 +15,7 @@ use std::collections::HashMap;
 
 use crate::context::Context;
 use crate::llvm_types::{LlvmHandle, LlvmType};
-use ast::{ExpressionVisitor, VisitableExpression};
+use ast::{Expression, ExpressionVisitor, VisitableExpression};
 
 pub struct VisitorResult {
     pub result_handle: Option<LlvmHandle>,
@@ -101,20 +101,25 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
         &mut self,
         node: &mut ast::DestructiveAssignment,
     ) -> VisitorResult {
-        let expression_result = node.expression.accept(self);
+        let expression_result = node.rhs.accept(self);
         let mut preamble = expression_result.preamble;
 
         let exp_result_handle = expression_result.result_handle.expect(
             "Variable must be dassigned to non-null expression result, SA should've caught this",
         );
 
+        let variable = match node.lhs.as_ref() {
+            Expression::Variable(var) => var,
+            _ => todo!()
+        };
+
         let var_llvm_name = &self
             .context
-            .get_value(&node.identifier.id)
+            .get_value(&variable.id)
             .expect(
                 format!(
                     "Variable {} not found, SA should have caught this",
-                    node.identifier.id
+                    variable.id
                 )
                 .as_str(),
             )

@@ -40,8 +40,9 @@ impl ExpressionVisitor<String> for EchoVisitor {
     }
 
     fn visit_destructive_assignment(&mut self, node: &mut ast::DestructiveAssignment) -> String {
-        let expression = node.expression.accept(self);
-        format!("{} {} {}", node.identifier, node.op, expression)
+        let assignee = node.lhs.accept(self);
+        let expression = node.rhs.accept(self);
+        format!("{} {} {}", assignee, node.op, expression)
     }
 
     fn visit_bin_op(&mut self, node: &mut ast::BinOp) -> String {
