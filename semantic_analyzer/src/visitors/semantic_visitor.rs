@@ -64,6 +64,7 @@ impl<'a> SemanticVisitor<'a> {
         &self,
         member_name: String,
         ty: &TypeAnnotation,
+        with_lookup: bool,
     ) -> Option<&DefinitionInfo> {
         let mut current_type = ty.clone();
         loop {
@@ -76,6 +77,12 @@ impl<'a> SemanticVisitor<'a> {
                 if let Some(info) = type_def.members.get(&member_name) {
                     return Some(info);
                 }
+
+                // If we are not looking up in the inheritance tree, we can stop here
+                if !with_lookup {
+                    return None;
+                }
+
                 // Try parent type
                 let parent_type = self.type_hierarchy.get(&type_name).cloned();
                 if let Some(parent) = parent_type {
@@ -293,22 +300,40 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
         let member_name = node.member.id.clone();
         let ty = node.object.accept(self);
 
-        let member_info = self.find_member_info(member_name.clone(), &ty);
-        if let Some(member_info) = member_info.and_then(|d| d.as_var()) {
-            node.member.set_type_if_none(member_info.ty.clone());
-            return member_info.ty.clone();
-        }
+        // Resolve the member info
+        let member_info = self.find_member_info(member_name.clone(), &ty, false);
+        let member_info = match member_info.and_then(|d| d.as_var()).cloned() {
+            Some(info) => info,
+            None => {
+                self.errors
+                    .push(format!("Could not find data member {}", member_name));
+                return None;
+            }
+        };
 
-        self.errors
-            .push(format!("Could not find data member {}", member_name));
-        None
+        // Annotate identifier
+        node.member.set_type_if_none(member_info.ty.clone());
+
+        // Check if expresion is self
+        let id_info = node.object.as_variable().and_then(|var| self.var_definitions.get_value(&var.id));
+        if let Some(self_info) = id_info {
+            if self_info.is_self {
+                return member_info.ty.clone();
+            }
+        }
+        self.errors.push(format!(
+            "Cannot access member {} of type {}. Properties are private, even to inherited types.",
+            member_name,
+            to_string(&ty)
+        ));
+        member_info.ty.clone()
     }
 
     fn visit_function_member_access(&mut self, node: &mut FunctionMemberAccess) -> TypeAnnotation {
         let func_name = node.member.identifier.id.clone();
         let ty = node.object.accept(self);
 
-        let func_info = self.find_member_info(func_name.clone(), &ty);
+        let func_info = self.find_member_info(func_name.clone(), &ty, true);
         if let Some(member_info) = func_info.and_then(|d| d.as_func()) {
             let member_info = member_info.clone();
             let parameter_types: Vec<TypeAnnotation> = node

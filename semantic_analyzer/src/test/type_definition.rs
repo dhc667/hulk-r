@@ -139,7 +139,13 @@ fn inherited_member_resolve() {
     assert!(b_def.members.contains_key("field2"));
     assert!(b_def.members.contains_key("method2"));
 
-    assert!(result.is_ok(), "Errors: {:?}", result.err());
+    assert_eq!(
+        result.err().unwrap(),
+        vec![
+            "Could not find data member field".to_string(),
+            "Cannot access member field2 of type B. Properties are private, even to inherited types.".to_string()
+        ]
+    );
 }
 
 #[test]
@@ -191,7 +197,12 @@ fn inherited_member_resolve_with_ambiguity() {
     assert!(b_def.members.contains_key("field"));
     assert!(b_def.members.contains_key("method"));
 
-    assert!(result.is_ok(), "Errors: {:?}", result.err());
+    assert_eq!(
+        result.err().unwrap(),
+        vec![
+            "Cannot access member field of type B. Properties are private, even to inherited types.".to_string()
+        ]
+    );
 }
 
 #[test]
@@ -262,7 +273,14 @@ fn several_inheritance_member_usage() {
     assert!(c_def.members.contains_key("field3"));
     assert!(c_def.members.contains_key("method3"));
 
-    assert!(result.is_ok(), "Errors: {:?}", result.err());
+    assert_eq!(
+        result.err().unwrap(),
+        vec![
+            "Could not find data member field".to_string(),
+            "Could not find data member field2".to_string(),
+            "Cannot access member field3 of type C. Properties are private, even to inherited types.".to_string()
+        ]
+    );
 }
 
 #[test]
@@ -327,7 +345,10 @@ fn inherited_member_in_operation() {
     assert!(b_def.members.contains_key("field2"));
     assert!(b_def.members.contains_key("method2"));
 
-    assert!(result.is_ok(), "Errors: {:?}", result.err());
+    assert_eq!(
+        result.err().unwrap(),
+        vec!["Could not find data member field".to_string()]
+    );
 }
 
 #[test]
@@ -597,7 +618,12 @@ fn declaration_of_type_with_arguments_and_usage() {
     let mut semantic_analyzer = SemanticAnalyzer::new();
     let result = semantic_analyzer.analyze_program_ast(&mut answ);
 
-    assert!(result.is_ok(), "Errors: {:?}", result.err());
+    assert_eq!(
+        result.err().unwrap(),
+        vec![
+            "Cannot access member field of type A. Properties are private, even to inherited types."
+        ]
+    );
 }
 
 #[test]
@@ -620,7 +646,10 @@ fn declaration_of_type_with_arguments_and_usage2() {
 
     assert_eq!(
         result.err().unwrap(),
-        vec!["Type mismatch: Cannot apply && to operands of type Boolean and Number".to_string()]
+        vec![
+            "Cannot access member field of type A. Properties are private, even to inherited types.".to_string(),
+            "Type mismatch: Cannot apply && to operands of type Boolean and Number".to_string()
+        ]
     );
 }
 
@@ -698,7 +727,10 @@ fn declaration_of_type_with_self_inherited_access() {
     let mut semantic_analyzer = SemanticAnalyzer::new();
     let result = semantic_analyzer.analyze_program_ast(&mut answ);
 
-    assert!(result.is_ok(), "Errors: {:?}", result.err());
+    assert_eq!(
+        result.err().unwrap(),
+        vec!["Could not find data member field".to_string()]
+    );
 }
 
 #[test]
@@ -726,7 +758,10 @@ fn declaration_of_type_with_self_inherited_access_wrong() {
 
     assert_eq!(
         result.err().unwrap(),
-        vec!["Type mismatch: Cannot apply && to operands of type Number and Boolean".to_string()]
+        vec![
+            "Could not find data member field".to_string(),
+            "Type mismatch: Cannot apply && to operands of type Number and Boolean".to_string()
+        ]
     );
 }
 
@@ -744,7 +779,7 @@ fn super_constructor_call() {
             } 
             
             let a = new B(3) in {
-                a.field;  
+                a;
             };",
         )
         .unwrap();
@@ -769,7 +804,7 @@ fn super_constructor_call2() {
             } 
             
             let a = new B(3) in {
-                a.field;  
+                a;  
             };",
         )
         .unwrap();
@@ -794,7 +829,7 @@ fn super_constructor_with_wrong_arguments() {
             } 
             
             let a = new B(2) in {
-                a.field;  
+                a;  
             };",
         )
         .unwrap();
@@ -836,7 +871,14 @@ fn nested_super_constructor_call() {
     let mut semantic_analyzer = SemanticAnalyzer::new();
     let result = semantic_analyzer.analyze_program_ast(&mut answ);
 
-    assert!(result.is_ok(), "Errors: {:?}", result.err());
+    assert_eq!(
+        result.err().unwrap(),
+        vec![
+            "Could not find data member field".to_string(),
+            "Could not find data member field2".to_string(),
+            "Cannot access member field3 of type C. Properties are private, even to inherited types.".to_string()
+        ]
+    );
 }
 
 #[test]
