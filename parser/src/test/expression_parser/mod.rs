@@ -18,5 +18,6 @@ mod functions;
 mod function_member;
 mod data_member;
 
+mod destructive_assignment;
 
 
