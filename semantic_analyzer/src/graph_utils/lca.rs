@@ -41,7 +41,7 @@ impl LCA {
     /// # Returns
     /// A new instance of `LCA` initialized with the given adjacency list and root node.
     /// # Note
-    /// This function asumes that the input graph is a tree (i.e., it is connected and acyclic) and that the root node is valid.
+    /// This function assumes that the input graph is a tree (i.e., it is connected and acyclic) and that the root node is valid.
     pub fn new(adj: &Vec<Vec<usize>>, root: usize) -> Self {
         let n = adj.len();
         let mut lca = LCA {
