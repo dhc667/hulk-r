@@ -1,4 +1,7 @@
-use ast::{Identifier, TokenPosition, typing::TypeAnnotation};
+use ast::{
+    Identifier, TokenPosition, TypeName,
+    typing::{Type, TypeAnnotation},
+};
 
 /// # Description
 /// `VarInfo` is a struct that encapsulates information about a variable definition.
@@ -9,12 +12,14 @@ use ast::{Identifier, TokenPosition, typing::TypeAnnotation};
 /// - `is_defined`: A boolean indicating whether the variable is defined.
 /// - `position`: The position of the variable in the source code, represented by a `TokenPosition`.
 /// - `ty`: The type annotation of the variable, represented by a `TypeAnnotation`.
+/// - `is_self`: A boolean indicating whether the variable is an instance of `self`.
 #[derive(Clone)]
 pub struct VarInfo {
     pub name: String,
     pub is_defined: bool,
     pub position: TokenPosition,
     pub ty: TypeAnnotation,
+    pub is_self: bool,
 }
 
 impl VarInfo {
@@ -29,6 +34,7 @@ impl VarInfo {
             is_defined,
             position,
             ty,
+            is_self: false,
         }
     }
 
@@ -46,6 +52,17 @@ impl VarInfo {
             } else {
                 fallback_ty
             },
+            is_self: false,
+        }
+    }
+
+    pub fn new_self_instance(type_name: &TypeName) -> Self {
+        VarInfo {
+            name: "self".to_string(),
+            is_defined: true,
+            position: type_name.position.clone(),
+            ty: Some(Type::Defined(type_name.clone())),
+            is_self: true,
         }
     }
 }

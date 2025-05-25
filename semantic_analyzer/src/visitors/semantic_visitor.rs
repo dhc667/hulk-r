@@ -130,23 +130,27 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
         let expr_type = node.expression.accept(self);
         let def_value = self.var_definitions.get_value(&node.identifier.id);
         match def_value {
-            Some(def) => {
-                if def.ty != expr_type {
-                    let message = format!(
-                        "Type mismatch: {} is {} but is being reassigned with {}",
-                        node.identifier.id,
-                        to_string(&def.ty),
-                        to_string(&expr_type)
-                    );
-                    self.errors.push(message);
-                }
-                def.ty.clone()
-            }
             None => {
                 let message = format!("Variable {} is not defined", node.identifier.id);
                 self.errors.push(message);
                 expr_type
             }
+            Some(def) if def.is_self => {
+                let message = "Semantic Error: `self` is not a valid assignment target".to_string();
+                self.errors.push(message);
+                def.ty.clone()
+            }
+            Some(def) if !self.type_checker.conforms(&expr_type, &def.ty) => {
+                let message = format!(
+                    "Type mismatch: {} is {} but is being reassigned with {}",
+                    node.identifier.id,
+                    to_string(&def.ty),
+                    to_string(&expr_type)
+                );
+                self.errors.push(message);
+                def.ty.clone()
+            }
+            Some(def) => def.ty.clone(),
         }
     }
 
@@ -499,12 +503,7 @@ impl<'a> DefinitionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
         // Define Reference to self
         self.var_definitions.define(
             "self".to_string(),
-            VarInfo::new(
-                node.name.id.clone(),
-                true,
-                node.name.position,
-                Some(Type::Defined(node.name.clone())),
-            ),
+            VarInfo::new_self_instance(&node.name),
         );
 
         // Define the data members

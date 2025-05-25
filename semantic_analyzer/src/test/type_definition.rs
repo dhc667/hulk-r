@@ -838,3 +838,50 @@ fn nested_super_constructor_call() {
 
     assert!(result.is_ok(), "Errors: {:?}", result.err());
 }
+
+#[test]
+fn dassigning_to_self() {
+    let p = ProgramParser::new();
+
+    let mut answ = p
+        .parse(
+            "
+            type A { 
+                method() => { self := 5; };
+            }
+            ",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    assert_eq!(
+        result.err().unwrap(),
+        vec!["Semantic Error: `self` is not a valid assignment target".to_string()]
+    );
+}
+
+#[test]
+fn shadowed_dassignment_to_self() {
+    let p = ProgramParser::new();
+
+    let mut answ = p
+        .parse(
+            "
+            type A { 
+                method() => { let self = 5 in { self := 3; }; };
+            }
+
+            let self = 3 in {
+                self := 4;
+            };
+            ",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    assert!(result.is_ok(), "Errors: {:?}", result.err());
+}
