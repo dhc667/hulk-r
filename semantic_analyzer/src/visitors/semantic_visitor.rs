@@ -135,35 +135,69 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
 
     fn visit_destructive_assignment(&mut self, node: &mut DestructiveAssignment) -> TypeAnnotation {
         let expr_type = node.rhs.accept(self);
-        let variable_id = match node.lhs.as_ref() {
-            Expression::Variable(var) => &var.id,
-            _ => todo!()
-        };
+        let assignee_type = node.lhs.accept(self);
 
-        let def_value = self.var_definitions.get_value(&variable_id);
-        match def_value {
-            None => {
-                let message = format!("Variable {} is not defined", variable_id);
-                self.errors.push(message);
-                expr_type
-            }
-            Some(def) if def.is_constant => {
-                let message = format!("Semantic Error: `{}` is not a valid assignment target", variable_id);
+        match node.lhs.as_ref() {
+            Expression::Variable(variable) => {
+                let variable_id = variable.id.clone();
+                let def_value = self.var_definitions.get_value(&variable_id);
+                match def_value {
+                    None => {
+                        let message = format!("Variable {} is not defined", variable_id);
+                        self.errors.push(message);
+                        expr_type
+                    }
+                    Some(def) if def.is_constant => {
+                        let message = format!("Semantic Error: `{}` is not a valid assignment target", variable_id);
+        
+                        self.errors.push(message);
+                        assignee_type
+                    }
+                    Some(def) if !self.type_checker.conforms(&expr_type, &def.ty) => {
+                        let message = format!(
+                            "Type mismatch: {} is {} but is being reassigned with {}",
+                            variable_id,
+                            to_string(&def.ty),
+                            to_string(&expr_type)
+                        );
+                        self.errors.push(message);
+                        assignee_type
+                    }
+                    Some(_) => assignee_type,
+                }
 
-                self.errors.push(message);
-                def.ty.clone()
             }
-            Some(def) if !self.type_checker.conforms(&expr_type, &def.ty) => {
+            Expression::DataMemberAccess(member) => {
+                let member_name = member.member.id.clone();
+                if !self.type_checker.conforms(&expr_type, &assignee_type) {
+                    let message = format!(
+                        "Type mismatch: {} is {} but is being reassigned with {}",
+                        member_name,
+                        to_string(&member.member.info.ty),
+                        to_string(&expr_type)
+                    );
+                    self.errors.push(message);
+                }
+                assignee_type
+            }
+            Expression::ListIndexing(_) => {
+                if !self.type_checker.conforms(&expr_type, &assignee_type) {
+                    let message = format!(
+                        "Type mismatch: Cannot assign {} to list element of type {}",
+                        to_string(&expr_type),
+                        to_string(&assignee_type)
+                    );
+                    self.errors.push(message);
+                }
+                assignee_type
+            }
+            _ => {
                 let message = format!(
-                    "Type mismatch: {} is {} but is being reassigned with {}",
-                    variable_id,
-                    to_string(&def.ty),
-                    to_string(&expr_type)
+                    "Semantic Error: only variables and self properties can be assigned",
                 );
                 self.errors.push(message);
-                def.ty.clone()
+                None
             }
-            Some(def) => def.ty.clone(),
         }
     }
 
@@ -540,7 +574,7 @@ impl<'a> DefinitionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
         // Define the data members
         for member in &mut node.data_member_defs {
             let member_type = member.default_value.accept(self);
-
+            
             // Check if type is assignable
             if !self
                 .type_checker

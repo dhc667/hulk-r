@@ -185,3 +185,121 @@ fn anotated_var_with_wrong_value_type() {
         vec!["Type mismatch: Cannot assign Boolean to Number".to_string()]
     );
 }
+
+#[test]
+fn list_definition() {
+    let p = ProgramParser::new();
+
+    let mut answ = p.parse("let x: Boolean* = [true, false] in x;").unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+
+    semantic_analyzer.analyze_program_ast(&mut answ).unwrap();
+
+    // No errors expected
+    assert!(semantic_analyzer.errors.is_empty());
+}
+
+#[test]
+fn mutate_field() {
+    let p = ProgramParser::new();
+
+    let mut answ = p
+        .parse(
+            "
+            type A {
+                x  = 3;
+                method(): Number {
+                    self.x := 4;  
+                }
+            }
+        ",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+
+    semantic_analyzer.analyze_program_ast(&mut answ).unwrap();
+
+    // No errors expected
+    assert!(semantic_analyzer.errors.is_empty());
+}
+
+#[test]
+fn mutate_indexing() {
+    let p = ProgramParser::new();
+
+    let mut answ = p
+        .parse(
+            "
+            let a = [1, 2, 3] in {
+                a[0] := 4;
+                a[1] := 5;
+                a[2] := 6;
+            };
+        ",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+
+    semantic_analyzer.analyze_program_ast(&mut answ).unwrap();
+
+    // No errors expected
+    assert!(semantic_analyzer.errors.is_empty());
+}
+
+#[test]
+fn mutate_non_variable() {
+    let p = ProgramParser::new();
+
+    let mut answ = p
+        .parse(
+            "
+            3:= 4;
+        ",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    // No errors expected
+    assert_eq!(
+        result.err().unwrap(),
+        vec!["Semantic Error: only variables and self properties can be assigned".to_string()]
+    );
+}
+
+#[test]
+fn mutate_field_outside_definition() {
+    let p = ProgramParser::new();
+
+    let mut answ = p
+        .parse(
+            "
+            type A {
+                x  = 3;
+            }
+            let a = new A() in {
+                a.x := 4;
+            };
+        ",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+
+    assert_eq!(
+        semantic_analyzer.errors,
+        vec![
+            "Cannot access member x of type A. Properties are private, even to inherited types."
+                .to_string()
+        ]
+    );
+}

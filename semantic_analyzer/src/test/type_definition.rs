@@ -927,3 +927,108 @@ fn shadowed_dassignment_to_self() {
 
     assert!(result.is_ok(), "Errors: {:?}", result.err());
 }
+
+#[test]
+fn list_field() {
+    let p = ProgramParser::new();
+
+    let mut answ = p
+        .parse(
+            "
+            type A { 
+                field: Number* = [1, 2, 3];
+                getField() => { self.field; }; 
+            } 
+            
+            let a = new A() in {
+                a.getField();  
+            };",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    assert!(result.is_ok(), "Errors: {:?}", result.err());
+}
+
+#[test]
+fn mutate_field_in_list() {
+    let p = ProgramParser::new();
+
+    let mut answ = p
+        .parse(
+            "
+            type A {
+                array: Number*  = [1];
+                getArray() => { self.array; };
+            }
+            let a: A* = [new A(), new A()] in {
+                a[0].getArray()[0] + 1;
+            };
+        ",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    assert!(result.is_ok(), "Errors: {:?}", result.err());
+}
+
+#[test]
+fn mutate_field_in_list_incorrect_typing() {
+    let p = ProgramParser::new();
+
+    let mut answ = p
+        .parse(
+            "
+            type A {
+                array: Number  = [1];
+                getArray() => { self.array; };
+            }
+            let a: A* = [new A(), new A()] in {
+                a[0].getArray()[0] + 1;
+            };
+        ",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    assert_eq!(
+        result.err().unwrap(),
+        vec!["Type mismatch: Member array is Number but is being assigned Number*".to_string()]
+    );
+}
+
+#[test]
+fn operation_on_element_without_indexing() {
+    let p = ProgramParser::new();
+
+    let mut answ = p
+        .parse(
+            "
+            type A {
+                array: Number*  = [1];
+                getArray() => { self.array; };
+            }
+            let a: A* = [new A(), new A()] in {
+                a[0].getArray() + 1;
+            };
+        ",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    assert_eq!(
+        result.err().unwrap(),
+        vec!["Type mismatch: Cannot apply + to operands of type Number* and Number".to_string()]
+    );
+}

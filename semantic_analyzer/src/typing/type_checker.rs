@@ -61,7 +61,6 @@ impl TypeChecker {
         let id = self.type_ids.get(&type_name);
         *id.unwrap()
     }
-
     /// # Description
     /// Checks if two type annotations conform to each other.
     /// The rules of the conforming relationship between types are:
@@ -83,13 +82,27 @@ impl TypeChecker {
             (None, _) => return true,
             (_, None) => return true,
             (Some(a), Some(b)) => {
-                let a_id = self.type_to_id(a);
-                let b_id = self.type_to_id(b);
-                if a_id == b_id {
-                    return true;
+                match (a, b) {
+                    (Type::Iterable(a_it), Type::Iterable(b_it)) => {
+                        let a_primitive = a_it.as_ref();
+                        let b_primitive = b_it.as_ref();
+                        return self
+                            .conforms(&Some(a_primitive.clone()), &Some(b_primitive.clone()));
+                    }
+                    (Type::Iterable(_), _) | (_, Type::Iterable(_)) => {
+                        // Iterable types can only conform to other iterable types
+                        return false;
+                    }
+                    (_, _) => {
+                        let a_id = self.type_to_id(&a);
+                        let b_id = self.type_to_id(&b);
+                        if a_id == b_id {
+                            return true;
+                        }
+                        let common = self.lca.get_lca(a_id, b_id);
+                        common == b_id
+                    }
                 }
-                let common = self.lca.get_lca(a_id, b_id);
-                common == b_id
             }
         }
     }
