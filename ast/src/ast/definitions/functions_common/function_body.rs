@@ -1,4 +1,4 @@
-use crate::{ArrowOperator, Block, Expression};
+use crate::{ArrowOperator, Block, Expression, ExpressionVisitor, VisitableExpression};
 
 pub enum FunctionBody {
     ArrowExpression(ArrowExpression),
@@ -32,6 +32,15 @@ impl From<Block> for FunctionBody {
 impl From<ArrowExpression> for FunctionBody {
     fn from(v: ArrowExpression) -> Self {
         Self::ArrowExpression(v)
+    }
+}
+
+impl<T: ExpressionVisitor<R>, R> VisitableExpression<T, R> for FunctionBody {
+    fn accept(&mut self, visitor: &mut T) -> R {
+        match self {
+            FunctionBody::ArrowExpression(v) => v.expression.accept(visitor),
+            FunctionBody::Block(v) => v.accept(visitor),
+        }
     }
 }
 

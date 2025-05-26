@@ -1,13 +1,14 @@
+use crate::{DefinitionVisitor, VisitableDefinition};
+
 use super::{
-    constants::ConstantDef, global_functions::GlobalFunctionDef,
-    types::TypeDef, ProtocolDef,
+    ProtocolDef, constants::ConstantDef, global_functions::GlobalFunctionDef, types::TypeDef,
 };
 
 pub enum Definition {
     TypeDef(TypeDef),
     FunctionDef(GlobalFunctionDef),
     ConstantDef(ConstantDef),
-    ProtocolDef(ProtocolDef)
+    ProtocolDef(ProtocolDef),
 }
 
 impl Definition {
@@ -68,4 +69,13 @@ impl From<TypeDef> for Definition {
     }
 }
 
-
+impl<T: DefinitionVisitor<R>, R> VisitableDefinition<T, R> for Definition {
+    fn accept(&mut self, visitor: &mut T) -> R {
+        match self {
+            Self::TypeDef(v) => visitor.visit_type_def(v),
+            Self::FunctionDef(v) => visitor.visit_function_def(v),
+            Self::ConstantDef(v) => visitor.visit_constant_def(v),
+            Self::ProtocolDef(v) => visitor.visit_protocol_def(v),
+        }
+    }
+}
