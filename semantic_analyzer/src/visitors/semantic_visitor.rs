@@ -84,16 +84,12 @@ impl<'a> SemanticVisitor<'a> {
                 }
 
                 // Try parent type
-                let parent_type = self.type_hierarchy.get(&type_name).cloned();
-                if let Some(parent) = parent_type {
-                    current_type = parent;
-                    continue;
-                }
-                // Is not defined in inheritance tree
-                panic!(
-                    "Type name {} is not found in type tree, this should not happen in semantic visitor",
-                    type_name
-                );
+                let parent_type = self.type_hierarchy.get(&type_name).cloned().expect(&format!(
+                   "Type name {} is not found in type tree, this should not happen in semantic visitor",
+                    type_name 
+                ));
+                current_type = parent_type;
+                continue;
             }
             current_type = None;
         }
