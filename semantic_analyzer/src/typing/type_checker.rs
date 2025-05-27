@@ -216,7 +216,7 @@ impl TypeChecker {
         parameters: &Vec<TypeAnnotation>,
     ) -> Result<(), Vec<String>> {
         let mut errors = Vec::new();
-        let functor = &fn_info.functor_type;
+        let functor = fn_info.get_functor_type();
         if functor.parameter_types.len() != parameters.len() {
             errors.push(format!(
                 "Function {} expects {} parameters, but {} were provided",

@@ -391,8 +391,8 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
                     self.errors.push(error);
                 }
             }
-            node.member.identifier.set_type_if_none(*member_info.functor_type.return_type.clone());
-            return *member_info.functor_type.return_type.clone();
+            node.member.identifier.set_type_if_none(*member_info.get_functor_type().return_type.clone());
+            return *member_info.get_functor_type().return_type.clone();
         }
 
         self.errors
@@ -474,8 +474,8 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
                 self.errors.push(error);
             }
         }
-        node.identifier.set_type_if_none(*function_def.functor_type.return_type.clone());
-        *function_def.functor_type.return_type.clone()
+        node.identifier.set_type_if_none(*function_def.get_functor_type().return_type.clone());
+        *function_def.get_functor_type().return_type.clone()
     }
 
     fn visit_return_statement(&mut self, node: &mut ReturnStatement) -> TypeAnnotation {
@@ -627,10 +627,10 @@ impl<'a> DefinitionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
                 );
             }
 
-            let method_type = method.body.accept(self);
+            let method_body_type = method.body.accept(self);
             self.var_definitions.define(
                 method.identifier.id.clone(),
-                VarInfo::new_from_identifier(&method.identifier, true, method_type.clone()),
+                VarInfo::new_from_identifier(&method.identifier, true, method_body_type.clone()),
             );
 
             // Check if type is assignable to return type
@@ -653,20 +653,19 @@ impl<'a> DefinitionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
                     &node.name.id
                 ));
             
-            if !self.type_checker.conforms(&method_type, &method_info.functor_type.return_type) {
+            if !self.type_checker.conforms(&method_body_type, &method_info.get_functor_type().return_type) {
                 self.errors.push(format!(
                     "Type mismatch: Method {} returns {} but {} was found",
                     method.identifier.id,
-                    to_string(&method_info.functor_type.return_type),
-                    to_string(&method_type)
+                    to_string(&method_info.get_functor_type().return_type),
+                    to_string(&method_body_type)
                 ));
             }
 
-            method.identifier.set_type_if_none(method_type.clone());
-            // annotate the return type if it is not already annotated
-            if method_info.functor_type.return_type.is_none() {
-                method_info.functor_type.return_type = Box::new(method_type);
-            }
+            // annotate the function identifier with return type in the AST
+            method.identifier.set_type_if_none(method_body_type.clone());
+            // annotate the function identifier with return type in the info
+            method_info.name.set_type_if_none(method_body_type.clone());
         }
         
         self.var_definitions.pop_frame();        
@@ -692,11 +691,11 @@ impl<'a> DefinitionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
                     &node.function_def.identifier.id, 
                 ));
         // Check if type is assignable to return type
-        if !self.type_checker.conforms(&body_type, &func_info.functor_type.return_type) {
+        if !self.type_checker.conforms(&body_type, &func_info.get_functor_type().return_type) {
             self.errors.push(format!(
                 "Type mismatch: Function {} returns {} but {} was found",
                 node.function_def.identifier.id,
-                to_string(&func_info.functor_type.return_type),
+                to_string(&func_info.get_functor_type().return_type),
                 to_string(&body_type)
             ));
         }
@@ -704,9 +703,8 @@ impl<'a> DefinitionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
         node.function_def.identifier.set_type_if_none(body_type.clone());
 
         // annotate the return type if it is not already annotated
-        if func_info.functor_type.return_type.is_none() {
-            func_info.functor_type.return_type = Box::new(body_type.clone());
-        }
+        func_info.name.set_type_if_none(body_type.clone());
+        
         
         self.var_definitions.pop_frame();
         None
