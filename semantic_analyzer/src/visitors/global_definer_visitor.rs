@@ -131,11 +131,8 @@ impl<'a> DefinitionVisitor<()> for GlobalDefinerVisitor<'a> {
             .iter()
             .map(|&name| (name.to_string(), DefinitionInfo::Func(func_info.clone())))
             .collect();
-        let type_wrapper_def = DefinedTypeInfo::new(
-            type_wrapper_name.clone(),
-            methods_info,
-            func_info.functor_type.parameter_types.clone(),
-        );
+        let type_wrapper_def =
+            DefinedTypeInfo::new(type_wrapper_name.clone(), methods_info, vec![]);
         self.type_definitions.define(
             FuncInfo::get_type_wrapper_name(&func_info),
             TypeInfo::Defined(type_wrapper_def),
