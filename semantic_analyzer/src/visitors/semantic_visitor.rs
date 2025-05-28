@@ -624,10 +624,6 @@ impl<'a> DefinitionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
             }
 
             let method_body_type = method.body.accept(self);
-            self.var_definitions.define(
-                method.identifier.id.clone(),
-                VarInfo::new_from_identifier(&method.identifier, true, method_body_type.clone()),
-            );
 
             // Check if type is assignable to return type
             let type_info = self
