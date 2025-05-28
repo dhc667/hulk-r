@@ -279,5 +279,26 @@ pub fn list_indexing_typing_error_2() {
         vec!["Type mismatch: Cannot use index of type Boolean to access iterable".to_string()]
     );
 }
+
+#[test]
+pub fn call_var_with_method_name() {
+    let p = ProgramParser::new();
+    let mut answ = p
+        .parse(
+            "
+            type A {
+                method(): Number {
+                    return method + 1;
+                }
+            }
+        ",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    assert!(result.is_err(), "Errors {:?}", result.err())
+}
 // TODO: Add more tests for the following cases:
 // - Function calls
