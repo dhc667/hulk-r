@@ -5,7 +5,7 @@ use ast::{
     typing::{Type, TypeAnnotation, to_string},
 };
 
-use super::{get_binary_op_functor_type, get_unary_op_functor_type};
+use super::{generics::GenericType, get_binary_op_functor_type, get_unary_op_functor_type};
 use crate::{
     def_info::{DefinedTypeInfo, FuncInfo},
     graph_utils::{lca::LCA, parent_map_to_adj},
@@ -81,30 +81,37 @@ impl TypeChecker {
         match (a, b) {
             (None, _) => return true,
             (_, None) => return true,
-            (Some(a), Some(b)) => {
-                match (a, b) {
-                    (Type::Iterable(a_it), Type::Iterable(b_it)) => {
-                        let a_primitive = a_it.as_ref();
-                        let b_primitive = b_it.as_ref();
-                        return self
-                            .conforms(&Some(a_primitive.clone()), &Some(b_primitive.clone()));
-                    }
-                    (Type::Iterable(_), _) | (_, Type::Iterable(_)) => {
-                        // Iterable types can only conform to other iterable types
-                        return false;
-                    }
-                    (_, _) => {
-                        let a_id = self.type_to_id(&a);
-                        let b_id = self.type_to_id(&b);
-                        if a_id == b_id {
-                            return true;
-                        }
-                        let common = self.lca.get_lca(a_id, b_id);
-                        common == b_id
-                    }
+            (Some(a), Some(b)) => match (a, b) {
+                (Type::Iterable(a_it), Type::Iterable(b_it)) => {
+                    self.conforms_many(&a_it.generic_params(), &b_it.generic_params())
                 }
+                (Type::Iterable(_), _) | (_, Type::Iterable(_)) => false,
+                (Type::Functor(a_functor), Type::Functor(b_functor)) => {
+                    self.conforms_many(&a_functor.generic_params(), &b_functor.generic_params())
+                }
+                (_, _) => {
+                    let a_id = self.type_to_id(&a);
+                    let b_id = self.type_to_id(&b);
+                    if a_id == b_id {
+                        return true;
+                    }
+                    let common = self.lca.get_lca(a_id, b_id);
+                    common == b_id
+                }
+            },
+        }
+    }
+
+    fn conforms_many(&self, a: &Vec<TypeAnnotation>, b: &Vec<TypeAnnotation>) -> bool {
+        if a.len() != b.len() {
+            return false;
+        }
+        for (a_ty, b_ty) in a.iter().zip(b.iter()) {
+            if !self.conforms(a_ty, b_ty) {
+                return false;
             }
         }
+        true
     }
 
     /// # Description
