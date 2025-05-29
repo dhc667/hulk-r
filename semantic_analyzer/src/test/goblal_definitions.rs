@@ -31,7 +31,7 @@ fn test_define_type_twice() {
     assert_eq!(semantic_analyzer.type_definitions.is_defined("Point"), true);
     assert_eq!(
         result.err().unwrap(),
-        vec!["Type Point is already defined".to_string()]
+        vec!["Already exists a type or protocol Point".to_string()]
     );
 }
 
@@ -315,4 +315,48 @@ fn shadowed_dassignment_to_constant() {
 
     assert_eq!(semantic_analyzer.var_definitions.is_defined("zero"), true);
     assert!(result.is_ok(), "Errors: {:?}", result.err());
+}
+
+#[test]
+fn unknown_annotation_in_global_function_param() {
+    let p = ProgramParser::new();
+
+    let mut answ = p
+        .parse(
+            "
+            function f(x:Number, y: Boniato): Number {x;}
+        ",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    assert_eq!(
+        result.err().unwrap(),
+        vec!["Semantic Error: Type or protocol Boniato is not defined.".to_string(),]
+    );
+}
+
+#[test]
+fn unknown_annotation_in_constant_definition() {
+    let p = ProgramParser::new();
+
+    let mut answ = p
+        .parse(
+            "
+            constant x: Boniato = 3;
+        ",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    assert_eq!(
+        result.err().unwrap(),
+        vec!["Semantic Error: Type or protocol Boniato is not defined.".to_string(),]
+    );
 }

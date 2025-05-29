@@ -57,7 +57,7 @@ impl<'a> DefinitionVisitor<()> for GlobalDefinerVisitor<'a> {
         let type_name = node.name.id.clone();
         if self.type_definitions.is_defined(&type_name) {
             self.errors
-                .push(format!("Type {} is already defined", type_name));
+                .push(format!("Already exists a type or protocol {}", type_name));
             return;
         }
 

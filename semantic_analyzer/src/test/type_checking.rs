@@ -300,5 +300,25 @@ pub fn call_var_with_method_name() {
 
     assert!(result.is_err(), "Errors {:?}", result.err())
 }
-// TODO: Add more tests for the following cases:
-// - Function calls
+
+#[test]
+pub fn iterate_non_iterable() {
+    let p = ProgramParser::new();
+    let mut answ = p
+        .parse(
+            "
+            for(a in 3){
+                a;
+            };
+        ",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    assert_eq!(
+        result.err().unwrap(),
+        vec!["Semantic Error: Cannot iterate over type Number".to_string()]
+    )
+}
