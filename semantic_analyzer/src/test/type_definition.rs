@@ -1001,7 +1001,7 @@ fn mutate_field_in_list_incorrect_typing() {
 
     assert_eq!(
         result.err().unwrap(),
-        vec!["Type mismatch: Member array is Number but is being assigned Number*".to_string()]
+        vec!["Type mismatch: Cannot assign Number* to Number".to_string()]
     );
 }
 
@@ -1129,5 +1129,32 @@ fn unknown_annotation_in_type_arg() {
     assert_eq!(
         result.err().unwrap(),
         vec!["Semantic Error: Type or protocol Boniato is not defined.".to_string(),]
+    );
+}
+
+#[test]
+fn reassign_nonexisting_property() {
+    let p = ProgramParser::new();
+
+    let mut answ = p
+        .parse(
+            "
+            type A {
+                x=3;
+            }
+            let a = new A() in {
+                a.y := 1;
+            };
+        ",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    assert_eq!(
+        result.err().unwrap(),
+        vec!["Could not find data member y".to_string()]
     );
 }
