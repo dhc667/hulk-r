@@ -95,6 +95,31 @@ impl<'a> SemanticVisitor<'a> {
         }
         None
     }
+
+    fn get_conformable(&self, annotation: &TypeAnnotation) -> Result<TypeAnnotation, String> {
+        let ty = if let Some(annotation) = annotation.as_ref() {
+            annotation
+        } else {
+            return Ok(None);
+        };
+        
+        //TODO: we probably need to do something generic for this
+        let ty = if let Type::Iterable(inner) = ty { 
+            inner.as_ref()
+         } else {
+            ty
+        };
+
+        if self.type_definitions.is_defined(&ty.to_string()){
+            return Ok(annotation.clone());
+        }
+        Err(
+            format!(
+                "Semantic Error: Type or protocol {} is not defined.",
+                ty.to_string()
+            )
+        )
+    }
 }
 
 impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
@@ -107,9 +132,22 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
     fn visit_assignment(&mut self, node: &mut Assignment) -> TypeAnnotation {
         let right_type = node.rhs.accept(self);
 
+        self.var_definitions.define(
+            node.identifier.id.clone(),
+            VarInfo::new_from_identifier(&node.identifier, true, right_type.clone()),
+        );
+
+        let var_type = match self.get_conformable(&node.identifier.info.ty) {
+            Ok(conformable) => conformable,
+            Err(message) => {
+                self.errors.push(message);
+                None
+            },
+        };
+
         let is_asignable = self
             .type_checker
-            .conforms(&right_type, &node.identifier.info.ty);
+            .conforms(&right_type, &var_type);
 
         if !is_asignable {
             let message = format!(
@@ -120,10 +158,6 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
             self.errors.push(message);
         }
 
-        self.var_definitions.define(
-            node.identifier.id.clone(),
-            VarInfo::new_from_identifier(&node.identifier, true, right_type.clone()),
-        );
         node.identifier.set_type_if_none(right_type.clone());
         node.identifier.info.definition_pos = Some(node.identifier.position.clone());
         None
@@ -250,13 +284,34 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
 
         let iterable_type = node.iterable.accept(self);
         let identifier_type = match &iterable_type {
-            Some(Type::Iterable(inner_type)) => Some(*inner_type.clone()),
-            _ => None,
+            Some(Type::Iterable(inner_type)) => Some(inner_type.as_ref().clone()),
+            ty => {
+                self.errors.push(
+                    format!(
+                        "Semantic Error: Cannot iterate over type {}",
+                        to_string(&ty)
+                    )
+                );
+                None
+            },
+        };
+
+        self.var_definitions.define(
+            node.element.id.clone(),
+            VarInfo::new_from_identifier(&node.element, true, iterable_type.clone()),
+        );
+
+        let var_type = match self.get_conformable(&node.element.info.ty) {
+            Ok(conformable) => conformable,
+            Err(message) => {
+                self.errors.push(message);
+                None
+            },
         };
 
         let is_assignable = self
             .type_checker
-            .conforms(&identifier_type, &node.element.info.ty);
+            .conforms(&identifier_type, &var_type);
 
         if !is_assignable {
             let message = format!(
@@ -524,13 +579,28 @@ impl<'a> DefinitionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
 
     fn visit_type_def(&mut self, node: &mut TypeDef) -> TypeAnnotation {
         // Define the parameters
+        let mut has_invalid_annotations = false;
+
         self.var_definitions.push_closed_frame();
         for param in &node.parameter_list {
             self.var_definitions.define(
                 param.id.clone(),
                 VarInfo::new_from_identifier(param, true, None),
             );
+            match self.get_conformable(&param.info.ty) {
+                Ok(_) => {},
+                Err(message) => {
+                    self.errors.push(message);
+                    has_invalid_annotations = true;
+                },
+            }
         }
+        // If there is an unknown param annotation skip the method checking
+        if has_invalid_annotations {
+            return None;
+        }
+        
+
 
         // Check the super constructor
         if let Some(inheritance) = &mut node.inheritance_indicator {
@@ -616,11 +686,31 @@ impl<'a> DefinitionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
         //Define the methods
         for method in &mut node.function_member_defs {
             // Define the parameters
+            let mut has_invalid_annotations = false;
+            match self.get_conformable(&method.identifier.info.ty) {
+                Ok(_) => {},
+                Err(message) => {
+                    self.errors.push(message);
+                    has_invalid_annotations = true;
+                },
+            };
+
             for param in &method.parameters {
                 self.var_definitions.define(
                     param.id.clone(),
                     VarInfo::new_from_identifier(param, true, None),
                 );
+                match self.get_conformable(&param.info.ty) {
+                    Ok(_) => {},
+                    Err(message) => {
+                        self.errors.push(message);
+                        has_invalid_annotations = true;
+                    },
+                }
+            }
+            // If there is an unknown param annotation skip the method checking
+            if has_invalid_annotations {
+                continue;
             }
 
             let method_body_type = method.body.accept(self);
@@ -668,11 +758,31 @@ impl<'a> DefinitionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
         self.var_definitions.push_closed_frame();
 
         // Define the parameters
+        let mut has_invalid_annotations = false;
+        match self.get_conformable(&node.function_def.identifier.info.ty) {
+            Ok(_) => {},
+            Err(message) => {
+                self.errors.push(message);
+                has_invalid_annotations = true;
+            },
+        };
         for param in &node.function_def.parameters {
             self.var_definitions.define(
                 param.id.clone(),
                 VarInfo::new_from_identifier(param, true, None),
             );
+            match self.get_conformable(&param.info.ty) {
+                    Ok(_) => {},
+                    Err(message) => {
+                        self.errors.push(message);
+                        has_invalid_annotations = true;
+                    },
+                }
+        }
+
+        // If there is an unknown param annotation skip the method checking
+        if has_invalid_annotations {
+            return None;
         }
 
         let body_type = node.function_def.body.accept(self);
@@ -705,19 +815,6 @@ impl<'a> DefinitionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
     fn visit_constant_def(&mut self, node: &mut ConstantDef) -> TypeAnnotation {
         let right_type = node.initializer_expression.accept(self);
 
-        let is_asignable = self
-            .type_checker
-            .conforms(&right_type, &node.identifier.info.ty);
-
-        if !is_asignable {
-            let message = format!(
-                "Type mismatch: Cannot assign {} to {}",
-                to_string(&right_type),
-                to_string(&node.identifier.info.ty)
-            );
-            self.errors.push(message);
-        }
-
         if self.var_definitions.is_defined(&node.identifier.id) {
             let message = format!(
                 "Constant {} is already defined",
@@ -729,8 +826,30 @@ impl<'a> DefinitionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
                 node.identifier.id.clone(),
                 VarInfo::new_constant_from_identifier(&node.identifier, true, right_type.clone()),
             );
-            node.identifier.info.definition_pos = Some(node.identifier.position.clone());
         }
+
+        let var_type = match self.get_conformable(&node.identifier.info.ty) {
+            Ok(conformable) => conformable,
+            Err(message) => {
+                self.errors.push(message);
+                None
+            },
+        };
+
+        let is_asignable = self
+            .type_checker
+            .conforms(&right_type, &var_type);
+
+        if !is_asignable {
+            let message = format!(
+                "Type mismatch: Cannot assign {} to {}",
+                to_string(&right_type),
+                to_string(&node.identifier.info.ty)
+            );
+            self.errors.push(message);
+        }
+
+        node.identifier.info.definition_pos = Some(node.identifier.position.clone());
         None
     }
 

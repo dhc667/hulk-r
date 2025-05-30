@@ -1032,3 +1032,102 @@ fn operation_on_element_without_indexing() {
         vec!["Type mismatch: Cannot apply + to operands of type Number* and Number".to_string()]
     );
 }
+
+#[test]
+fn unknown_annotation() {
+    let p = ProgramParser::new();
+
+    let mut answ = p
+        .parse(
+            "
+            let a: Boniato = 1 in {a;};
+        ",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    assert_eq!(
+        result.err().unwrap(),
+        vec!["Semantic Error: Type or protocol Boniato is not defined.".to_string()]
+    );
+}
+
+#[test]
+fn unknown_annotation_in_method_param() {
+    let p = ProgramParser::new();
+
+    let mut answ = p
+        .parse(
+            "
+            type A {
+                method(x: Number, y: Boniato, z: Malanga): Number {
+                    x;
+                }
+            }
+        ",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    assert_eq!(
+        result.err().unwrap(),
+        vec![
+            "Semantic Error: Type or protocol Boniato is not defined.".to_string(),
+            "Semantic Error: Type or protocol Malanga is not defined.".to_string()
+        ]
+    );
+}
+
+#[test]
+fn unknown_annotation_in_method_return() {
+    let p = ProgramParser::new();
+
+    let mut answ = p
+        .parse(
+            "
+            type A {
+                method(x: Number, y: Number, z: Number): Boniato {
+                    x;
+                }
+            }
+        ",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    assert_eq!(
+        result.err().unwrap(),
+        vec!["Semantic Error: Type or protocol Boniato is not defined.".to_string(),]
+    );
+}
+
+#[test]
+fn unknown_annotation_in_type_arg() {
+    let p = ProgramParser::new();
+
+    let mut answ = p
+        .parse(
+            "
+            type A(x: Boniato, y: Number){}
+        ",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    assert_eq!(
+        result.err().unwrap(),
+        vec!["Semantic Error: Type or protocol Boniato is not defined.".to_string(),]
+    );
+}
