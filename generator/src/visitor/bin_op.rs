@@ -28,19 +28,15 @@ impl GeneratorVisitor {
             HandleType::Literal(LlvmType::I1) | HandleType::Register(LlvmType::I1) => {
                 return self.get_boolean_bin_op_visitor_result(op, lhs_result, rhs_result);
             }
+            HandleType::Literal(LlvmType::String) | HandleType::Register(LlvmType::String) => {
+                return self.get_string_bin_op_visitor_result(op, lhs_result, rhs_result);
+            }
+            HandleType::Literal(LlvmType::Object) | HandleType::Register(LlvmType::Object) => {
+                return self.get_object_bin_op_visitor_result(op, lhs_result, rhs_result);
+            }            
         };
     }
 
-    /// # Description
-    ///
-    /// This will be used internally to create a visitor result when the
-    /// operands of a binary operator are doubles, to not fill the
-    /// visit_bin_op handler with code
-    ///
-    /// # Panics
-    ///
-    /// - If eiher of the operand handles are None or the operator is
-    /// not supported for double values
     fn get_double_bin_op_visitor_result(
         &mut self,
         op: &ast::BinaryOperator,
@@ -156,6 +152,71 @@ impl GeneratorVisitor {
         VisitorResult {
             preamble: lhs.preamble + &rhs.preamble + &operation,
             result_handle: Some(LlvmHandle::new_i1_register(result_register)),
+        }
+    }
+
+    fn get_string_bin_op_visitor_result(
+        &mut self,
+        op: &ast::BinaryOperator,
+        lhs: VisitorResult,
+        rhs: VisitorResult,
+    ) -> VisitorResult {
+        let lhs_handle = lhs.result_handle.unwrap();
+        let rhs_handle = rhs.result_handle.unwrap();
+
+        let preamble = lhs.preamble + &rhs.preamble;
+        let result_handle = self.generate_tmp_variable();
+
+        let operation = match op {
+            _ => panic!("Unsupported string operator"),
+        } + "\n";
+
+        let result_handle = match op {
+            EqualEqual(_) | NotEqual(_) | Less(_) | LessEqual(_) | Greater(_) | GreaterEqual(_) => {
+                Some(LlvmHandle::new_i1_register(result_handle))
+            },
+            Plus(_) => {
+                Some(LlvmHandle::new_string_register(result_handle))
+            },
+            Equal(_) => panic!("= found in non-assignment, parser problem"),
+            ColonEqual(_) => panic!(":= found in non-destructive assignment, parser problem"),
+            _ => panic!("Unsupported string operator"),
+        };
+
+        VisitorResult {
+            preamble: preamble + &operation,
+            result_handle,
+        }
+    }
+
+    fn get_object_bin_op_visitor_result(
+        &mut self,
+        op: &ast::BinaryOperator,
+        lhs: VisitorResult,
+        rhs: VisitorResult,
+    ) -> VisitorResult {
+        let lhs_handle = lhs.result_handle.unwrap();
+        let rhs_handle = rhs.result_handle.unwrap();
+
+        let preamble = lhs.preamble + &rhs.preamble;
+        let result_handle = self.generate_tmp_variable();
+        
+        let operation = match op {
+            _ => panic!("Unsupported object operator"),
+        } + "\n";
+
+        let result_handle = match op {
+            EqualEqual(_) | NotEqual(_) => {
+                Some(LlvmHandle::new_i1_register(result_handle))
+            },
+            Equal(_) => panic!("= found in non-assignment, parser problem"),
+            ColonEqual(_) => panic!(":= found in non-destructive assignment, parser problem"),
+            _ => panic!("Unsupported object operator"),
+        };
+
+        VisitorResult {
+            preamble: preamble + &operation,
+            result_handle,
         }
     }
 }
