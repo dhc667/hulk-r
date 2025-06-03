@@ -9,6 +9,18 @@ impl GeneratorVisitor {
             + "@.false_str = private constant [7 x i8] c\"false\\0A\\00\", align 1\n"
             + "@.none_str = private constant [6 x i8] c\"none\\0A\\00\", align 1\n"
             + "declare i32 @printf(i8*, ...)\n"
+            + "declare i8* @string_concat(i8*, i8*)\n"
+            + "declare i1 @string_equals(i8*, i8*)\n"
+            + "declare i1 @string_not_equals(i8*, i8*)\n"
+            + "declare i1 @string_less_than(i8*, i8*)\n"
+            + "declare i1 @string_less_equal(i8*, i8*)\n"
+            + "declare i1 @string_greater_than(i8*, i8*)\n"
+            + "declare i1 @string_greater_equal(i8*, i8*)\n"
+            + "declare i1 @object_equals(i8*, i8*)\n"
+            + "declare i1 @object_not_equals(i8*, i8*)\n"
+            + "declare void @print_string(i8*)\n"
+            + "declare void @print_object(i8*)\n"
+            + "declare i8* @malloc(i64)\n"
     }
 
     pub(crate) fn handle_print(&mut self, inner_result: VisitorResult) -> VisitorResult {
@@ -27,6 +39,12 @@ impl GeneratorVisitor {
                     }
                     HandleType::Register(LlvmType::I1) => {
                         self.print_boolean_register(&handle.llvm_name)
+                    }
+                    HandleType::Register(LlvmType::String) | HandleType::Literal(LlvmType::String) => {
+                        self.print_string(&handle.llvm_name)
+                    }
+                    HandleType::Register(LlvmType::Object) | HandleType::Literal(LlvmType::Object) => {
+                        self.print_object(&handle.llvm_name)
                     }
                 },
                 None => self.print_none(),
@@ -81,5 +99,13 @@ impl GeneratorVisitor {
             "{} = getelementptr [6 x i8], [6 x i8]* @.none_str, i32 0, i32 0\n",
             element_ptr
         ) + &format!("call i32 (i8*, ...) @printf(i8* {})\n", element_ptr)
+    }
+
+    fn print_string(&mut self, handle: &str) -> String {
+        format!("call void @print_string(i8* {})\n", handle)
+    }
+
+    fn print_object(&mut self, handle: &str) -> String {
+        format!("call void @print_object(i8* {})\n", handle)
     }
 }

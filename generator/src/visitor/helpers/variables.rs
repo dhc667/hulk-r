@@ -42,6 +42,8 @@ impl GeneratorVisitor {
         let result_handle = match var_type {
             LlvmType::F64 => LlvmHandle::new_f64_register(target_register_name),
             LlvmType::I1 => LlvmHandle::new_i1_register(target_register_name),
+            LlvmType::String => LlvmHandle::new_string_register(target_register_name),
+            LlvmType::Object => LlvmHandle::new_object_register(target_register_name),
         };
 
         (preamble, result_handle)
@@ -64,6 +66,8 @@ impl GeneratorVisitor {
         match llvm_type {
             LlvmType::F64 => ("double", 8),
             LlvmType::I1 => ("i1", 1),
+            LlvmType::String => ("i8*", 8),
+            LlvmType::Object => ("i8*", 8),
         }
     }
 }
