@@ -1,4 +1,4 @@
-use ast::typing::{BuiltInType, Type};
+use ast::typing::{BuiltInType, Type, to_string};
 use parser::ProgramParser;
 
 use crate::semantic_analyzer::SemanticAnalyzer;
@@ -321,4 +321,66 @@ pub fn iterate_non_iterable() {
         result.err().unwrap(),
         vec!["Semantic Error: Cannot iterate over type Number".to_string()]
     )
+}
+
+#[test]
+pub fn annotate_field_accessed_object() {
+    let p = ProgramParser::new();
+    let mut answ = p
+        .parse(
+            "
+            type A{
+                x = 3;
+                method(): Number => self.x;
+            }
+        ",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    semantic_analyzer.analyze_program_ast(&mut answ).unwrap();
+
+    let self_type = answ.definitions[0]
+        .as_type_def()
+        .unwrap()
+        .function_member_defs[0]
+        .body
+        .as_arrow_expression()
+        .unwrap()
+        .expression
+        .as_data_member_access()
+        .unwrap()
+        .obj_type
+        .clone();
+
+    assert_eq!(to_string(&self_type), "A".to_string());
+}
+
+#[test]
+pub fn annotate_function_accessed_object() {
+    let p = ProgramParser::new();
+    let mut answ = p
+        .parse(
+            "
+            type A{
+                method(): Number => 3;
+            }
+            let a = new A() in a.method();
+        ",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    semantic_analyzer.analyze_program_ast(&mut answ).unwrap();
+
+    let a_type = answ.expressions[0]
+        .as_let_in()
+        .unwrap()
+        .body
+        .as_function_member_access()
+        .unwrap()
+        .obj_type
+        .clone();
+
+    assert_eq!(to_string(&a_type), "A".to_string());
 }

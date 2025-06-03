@@ -249,6 +249,8 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
 
         // Annotate identifier
         node.member.set_type_if_none(member_info.ty.clone());
+        // Annotate expr
+        node.obj_type = ty.clone();
 
         // Check if expresion is self
         let id_info = node.object.as_variable().and_then(|var| self.var_definitions.get_value(&var.id));
@@ -269,11 +271,13 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
         let func_name = node.member.identifier.id.clone();
         let ty = node.object.accept(self);
 
+        // annotate object
+        node.obj_type = ty.clone();
+
         let func_info = self.find_member_info(func_name.clone(), &ty, true);
         if let Some(member_info) = func_info.and_then(|d| d.as_func()).cloned() {
             return self.handle_function_call(member_info, &mut node.member.identifier, &mut node.member.arguments)
         }
-
         self.errors
             .push(format!("Could not find method {}", func_name));
         None
