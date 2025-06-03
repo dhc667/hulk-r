@@ -168,6 +168,10 @@ impl GeneratorVisitor {
         let result_handle = self.generate_tmp_variable();
 
         let operation = match op {
+            EqualEqual(_) => format!(
+                "{} = fcmp oeq double {}, {}",
+                result_handle, lhs_handle.llvm_name, rhs_handle.llvm_name
+            ),
             _ => panic!("Unsupported string operator"),
         } + "\n";
 
@@ -202,6 +206,10 @@ impl GeneratorVisitor {
         let result_handle = self.generate_tmp_variable();
         
         let operation = match op {
+            EqualEqual(_) => format!(
+                "{} = fcmp oeq double {}, {}",
+                result_handle, lhs_handle.llvm_name, rhs_handle.llvm_name
+            ),
             _ => panic!("Unsupported object operator"),
         } + "\n";
 

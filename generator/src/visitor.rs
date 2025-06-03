@@ -86,6 +86,8 @@ pub struct GeneratorVisitor {
     /// We need this in order to be able to shadow variables, or define
     /// variables with the same name in different contexts
     variable_ids: HashMap<String, u32>,
+
+    type_members_ids: HashMap<(String,String), u32>,
 }
 
 impl GeneratorVisitor {
@@ -94,6 +96,14 @@ impl GeneratorVisitor {
             context: Context::new_one_frame(),
             tmp_variable_id: 0,
             variable_ids: HashMap::new(),
+            type_members_ids: HashMap::new(),
+        }
+    }
+
+    fn save_type_member_indices_from_defs(&mut self, type_name: &str, data_member_defs: &[ast::DataMemberDef]) {
+        for (i, data_member) in data_member_defs.iter().enumerate() {
+            let member_id = data_member.identifier.id.clone();
+            self.type_members_ids.insert((type_name.to_string(), member_id), i as u32);
         }
     }
 }
@@ -207,14 +217,13 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
     }
 
     fn visit_data_member_access(&mut self, node: &mut ast::DataMemberAccess) -> VisitorResult {
-        // Evaluate the object expression first
         let object_result = node.object.accept(self);
         let mut preamble = object_result.preamble;
         let object_ptr = object_result.result_handle.expect("Object must have a result").llvm_name;
+        let object_type = node.obj_type.clone();
 
-        // Get the type of the member being accessed
         let member_type = node.member.info.ty.clone();
-        println!("Member type: {}", to_string(&member_type));
+
         let llvm_type = match &member_type {
             Some(ty) => match ty {
                 ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Number) => LlvmType::F64,
@@ -225,27 +234,30 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
             },
             None => LlvmType::Object,
         };
-        println!("LLVM type for member: {}", llvm_type.llvm_type_str());
-        let field_index = 0;
-        let result_var = self.generate_tmp_variable();
 
-        // todo: Find the field index based on the member and the definition of the object
+        let type_name = match &object_type {
+            Some(ty) => to_string(&Some(ty.clone())),
+            None => panic!("Object type not found for data member access"),
+        };
+        let member_id = node.member.id.clone();
+        let field_index = *self.type_members_ids.get(&(type_name.clone(), member_id.clone()))
+            .unwrap_or_else(|| panic!("Field '{}' not found in type '{}'", member_id, type_name));
+        let result_var = self.generate_tmp_variable();
 
         let gep_instr = match llvm_type {
             LlvmType::F64 | LlvmType::I1 => {
-                // Scalar type: only one index
                 format!(
-                    "  {} = getelementptr inbounds {}, {}* {}, i32 0\n",
+                    "  {} = getelementptr inbounds %{}_type, %{}_type* {}, i32 0, i32 {}\n",
                     result_var,
-                    llvm_type.llvm_type_str(),
-                    llvm_type.llvm_type_str(),
-                    object_ptr
+                    type_name,
+                    type_name,
+                    object_ptr,
+                    field_index
                 )
             }
             _ => panic!("Unsupported type for data member access: {}", llvm_type.llvm_type_str()),
         };
         preamble += &gep_instr;
-
 
         if matches!(llvm_type, LlvmType::F64 | LlvmType::I1) {
             let load_var = self.generate_tmp_variable();
@@ -409,6 +421,7 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
     }
 
     fn visit_type_def(&mut self, node: &mut ast::TypeDef) -> VisitorResult {
+        
         let mut preamble = String::new();
         let type_name = &node.name.id;
  
@@ -417,6 +430,7 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
         let mut field_types = Vec::new();
 
         for (i, data_member) in node.data_member_defs.iter().enumerate() {
+            
             let member_type = match data_member.identifier.info.ty.clone() {
                 Some(ty) => match ty {
                     ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Number) => "double",
@@ -514,6 +528,9 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
             preamble += "}\n\n";
         }
         
+        
+        self.save_type_member_indices_from_defs(type_name, &node.data_member_defs);
+
         VisitorResult {
             preamble,
             result_handle: None,
