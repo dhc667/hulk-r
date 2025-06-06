@@ -43,16 +43,6 @@ impl SemanticAnalyzer {
         }
 
         // Check if every type exists
-        let mut annotation_visitor =
-            AnnotationVisitor::new(&mut self.type_definitions, &mut self.errors);
-
-        for definition in &mut program.definitions {
-            definition.accept(&mut annotation_visitor);
-        }
-
-        for expression in &mut program.expressions {
-            expression.accept(&mut annotation_visitor);
-        }
 
         // Define inheritance relationships
         let mut inheritance_visitor = InheritanceVisitor::new(
@@ -76,6 +66,20 @@ impl SemanticAnalyzer {
         // We return here to avoid running semantic checks on undefined stuff
         if self.errors.len() > 0 {
             return Err(self.errors.clone());
+        }
+
+        let mut annotation_visitor = AnnotationVisitor::new(
+            &mut self.type_definitions,
+            &mut self.func_definitions,
+            &mut self.errors,
+        );
+
+        for definition in &mut program.definitions {
+            definition.accept(&mut annotation_visitor);
+        }
+
+        for expression in &mut program.expressions {
+            expression.accept(&mut annotation_visitor);
         }
 
         let mut semantic_visitor = SemanticVisitor::new(

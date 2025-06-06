@@ -404,6 +404,60 @@ pub fn unknown_annotation_in_constructor_called() {
 
     assert_eq!(
         result.err().unwrap(),
-        vec!["Semantic Error: Type or protocol Bool is not defined."]
+        vec![
+            "Semantic Error: Type or protocol Bool is not defined.",
+            "Cannot access member y of type Point. Properties are private, even to inherited types."
+        ]
+    )
+}
+
+#[test]
+pub fn unknown_annotation_in_func_called() {
+    let p = ProgramParser::new();
+    let mut answ = p
+        .parse(
+            "
+            function foo(a: Number, b: Bool): Number => a;
+            foo(1, false) + true;
+        ",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    assert_eq!(
+        result.err().unwrap(),
+        vec![
+            "Semantic Error: Type or protocol Bool is not defined.",
+            "Type mismatch: Cannot apply + to operands of type Number and Boolean"
+        ]
+    )
+}
+
+#[test]
+pub fn unknown_annotation_in_method_called() {
+    let p = ProgramParser::new();
+    let mut answ = p
+        .parse(
+            "
+            type A{
+                method(x: Bool): Number => 3;
+            }
+            let a = new A() in 
+                a.method(true) + false;
+        ",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    assert_eq!(
+        result.err().unwrap(),
+        vec![
+            "Semantic Error: Type or protocol Bool is not defined.",
+            "Type mismatch: Cannot apply + to operands of type Number and Boolean"
+        ]
     )
 }
