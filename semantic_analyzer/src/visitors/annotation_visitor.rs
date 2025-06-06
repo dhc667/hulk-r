@@ -3,21 +3,31 @@ use ast::{
     DefinitionVisitor, DestructiveAssignment, Expression, ExpressionVisitor, For, FunctionCall,
     FunctionMemberAccess, GlobalFunctionDef, Identifier, IfElse, LetIn, ListIndexing, ListLiteral,
     NewExpr, NumberLiteral, ProtocolDef, ReturnStatement, StringLiteral, TypeDef, UnOp,
-    VisitableDefinition, VisitableExpression, While, typing::Type,
+    VisitableDefinition, VisitableExpression, While,
+    typing::{Type, TypeAnnotation},
 };
 use generator::context::Context;
 
-use crate::{def_info::TypeInfo, typing::get_conformable::GetConformable};
+use crate::{
+    def_info::{DefinedTypeInfo, FuncInfo, TypeInfo, VarInfo},
+    typing::get_conformable::GetConformable,
+};
 
 pub struct AnnotationVisitor<'a> {
     pub type_definitions: &'a mut Context<TypeInfo>,
+    pub func_definitions: &'a mut Context<FuncInfo>,
     pub errors: &'a mut Vec<String>,
 }
 
 impl<'a> AnnotationVisitor<'a> {
-    pub fn new(type_definitions: &'a mut Context<TypeInfo>, errors: &'a mut Vec<String>) -> Self {
+    pub fn new(
+        type_definitions: &'a mut Context<TypeInfo>,
+        func_definitions: &'a mut Context<FuncInfo>,
+        errors: &'a mut Vec<String>,
+    ) -> Self {
         Self {
             type_definitions,
+            func_definitions,
             errors,
         }
     }
@@ -30,6 +40,38 @@ impl<'a> AnnotationVisitor<'a> {
                 id.info.ty = None
             }
         }
+    }
+
+    fn get_type_unsafe_mut(&mut self, id: &str) -> &mut DefinedTypeInfo {
+        self.type_definitions
+            .get_value_mut(&id)
+            .expect("Type definition not found")
+            .as_defined_mut()
+            .expect("Type definition should be defined")
+    }
+
+    fn get_member_unsafe_mut(&mut self, type_id: &str, member_id: &str) -> &mut VarInfo {
+        self.get_type_unsafe_mut(type_id)
+            .members
+            .get_mut(member_id)
+            .expect("Member not found in type definition")
+            .as_var_mut()
+            .expect("Member should be a variable")
+    }
+
+    fn get_method_unsafe_mut(&mut self, type_id: &str, func_id: &str) -> &mut FuncInfo {
+        self.get_type_unsafe_mut(type_id)
+            .members
+            .get_mut(func_id)
+            .expect("Function not found in type definition")
+            .as_func_mut()
+            .expect("Function should be a variable")
+    }
+
+    fn get_func_unsafe_mut(&mut self, func_id: &str) -> &mut FuncInfo {
+        self.func_definitions
+            .get_value_mut(&func_id)
+            .expect("Function definition not found")
     }
 }
 
@@ -46,23 +88,77 @@ impl<'a> DefinitionVisitor<()> for AnnotationVisitor<'a> {
 
     fn visit_type_def(&mut self, node: &mut TypeDef) -> () {
         // check type arguments
-        for arg in &mut node.parameter_list {
-            self.fix_annotation(arg);
+        let mut args_to_fix = vec![];
+        for (i, arg) in node.parameter_list.iter_mut().enumerate() {
+            match self.get_conformable(&arg.info.ty) {
+                Ok(_) => {}
+                Err(message) => {
+                    self.errors.push(message);
+                    arg.info.ty = None;
+                    args_to_fix.push(i);
+                }
+            }
+        }
+        let args: &mut Vec<TypeAnnotation> = self
+            .get_type_unsafe_mut(&node.name.id)
+            .arguments_types
+            .as_mut();
+
+        for i in args_to_fix {
+            args[i] = None;
         }
 
         // check fields declarations
-        for member in &mut node.data_member_defs {
-            self.fix_annotation(&mut member.identifier);
+        let mut members_to_fix = vec![];
+        for member in node.data_member_defs.iter_mut() {
+            match self.get_conformable(&member.identifier.info.ty) {
+                Ok(_) => {}
+                Err(message) => {
+                    self.errors.push(message);
+                    member.identifier.info.ty = None;
+                    members_to_fix.push(member.identifier.id.clone());
+                }
+            }
             member.default_value.accept(self);
+        }
+
+        for member in members_to_fix {
+            // might be less efficient inlining this, but it is more readable, and technically is O(1) ;)
+            let member_info = self.get_member_unsafe_mut(&node.name.id, &member);
+            member_info.ty = None;
         }
 
         // check functions declarations
         for func in &mut node.function_member_defs {
             // check return type
-            self.fix_annotation(&mut func.identifier);
-            // check return parameters
-            for arg in &mut func.parameters {
-                self.fix_annotation(arg);
+            let mut fix_return_type = false;
+            match self.get_conformable(&func.identifier.info.ty) {
+                Ok(_) => {}
+                Err(message) => {
+                    self.errors.push(message);
+                    func.identifier.info.ty = None;
+                    fix_return_type = true;
+                }
+            }
+
+            // check arg types
+            let mut args_to_fix = vec![];
+            for (i, arg) in &mut func.parameters.iter_mut().enumerate() {
+                match self.get_conformable(&arg.info.ty) {
+                    Ok(_) => {}
+                    Err(message) => {
+                        self.errors.push(message);
+                        arg.info.ty = None;
+                        args_to_fix.push(i);
+                    }
+                }
+            }
+            let func_info = self.get_method_unsafe_mut(&node.name.id, &func.identifier.id);
+            for i in args_to_fix {
+                func_info.parameters[i].info.ty = None;
+            }
+            if fix_return_type {
+                func_info.name.info.ty = None;
             }
             // check body
             func.body.accept(self);
@@ -70,13 +166,37 @@ impl<'a> DefinitionVisitor<()> for AnnotationVisitor<'a> {
     }
 
     fn visit_function_def(&mut self, node: &mut GlobalFunctionDef) -> () {
+        let func = &mut node.function_def;
         // check return type
-        self.fix_annotation(&mut node.function_def.identifier);
-        // check return parameters
-        for arg in &mut node.function_def.parameters {
-            self.fix_annotation(arg);
+        let mut fix_return_type = false;
+        match self.get_conformable(&func.identifier.info.ty) {
+            Ok(_) => {}
+            Err(message) => {
+                self.errors.push(message);
+                func.identifier.info.ty = None;
+                fix_return_type = true;
+            }
         }
-        // check body
+
+        // check arg types
+        let mut args_to_fix = vec![];
+        for (i, arg) in &mut func.parameters.iter_mut().enumerate() {
+            match self.get_conformable(&arg.info.ty) {
+                Ok(_) => {}
+                Err(message) => {
+                    self.errors.push(message);
+                    arg.info.ty = None;
+                    args_to_fix.push(i);
+                }
+            }
+        }
+        let func_info = self.get_func_unsafe_mut(&func.identifier.id);
+        for i in args_to_fix {
+            func_info.parameters[i].info.ty = None;
+        }
+        if fix_return_type {
+            func_info.name.info.ty = None;
+        }
         node.function_def.body.accept(self);
     }
 
