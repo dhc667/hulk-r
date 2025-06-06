@@ -1,4 +1,4 @@
-use crate::regex_engine::regex_ast::CharSet;
+use crate::regex_engine::regex_ast::symbol::CharSet;
 
 pub enum Symbol {
     Char(char),

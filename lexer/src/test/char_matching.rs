@@ -1,4 +1,4 @@
-use crate::regex_engine::regex_ast::{CharSet, Symbol};
+use crate::regex_engine::regex_ast::symbol::{CharSet, Symbol};
 
 #[test]
 pub fn charset_matching() {

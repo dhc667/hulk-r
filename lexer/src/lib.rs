@@ -1,4 +1,4 @@
-mod regex_engine;
+pub mod regex_engine;
 
 #[cfg(test)]
 pub mod test {
