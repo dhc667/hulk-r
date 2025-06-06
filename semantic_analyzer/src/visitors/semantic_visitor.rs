@@ -16,7 +16,7 @@ use ast::{
 use generator::context::Context;
 
 use crate::{
-    def_info::{FuncInfo, TypeInfo, VarInfo}, typing::TypeChecker
+    def_info::{FuncInfo, TypeInfo, VarInfo}, typing::{get_conformable::GetConformable, TypeChecker}
 };
 
 /// # Description

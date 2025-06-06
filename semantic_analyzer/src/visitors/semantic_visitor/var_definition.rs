@@ -3,7 +3,9 @@ use ast::{
     typing::{TypeAnnotation, to_string},
 };
 
-use crate::{def_info::VarInfo, visitors::SemanticVisitor};
+use crate::{
+    def_info::VarInfo, typing::get_conformable::GetConformable, visitors::SemanticVisitor,
+};
 
 impl<'a> SemanticVisitor<'a> {
     /// # Description
