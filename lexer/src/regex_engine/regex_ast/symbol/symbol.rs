@@ -1,5 +1,6 @@
 use crate::regex_engine::regex_ast::symbol::CharSet;
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Symbol {
     Char(char),
     CharSet(CharSet),
