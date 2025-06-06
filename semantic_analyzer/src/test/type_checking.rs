@@ -384,3 +384,26 @@ pub fn annotate_function_accessed_object() {
 
     assert_eq!(to_string(&a_type), "A".to_string());
 }
+
+#[test]
+pub fn unknown_annotation_in_constructor_called() {
+    let p = ProgramParser::new();
+    let mut answ = p
+        .parse(
+            "
+            type Point(a: Number, b: Bool){x=a;y=b;}
+            let a = new Point(4, false) in 
+                let x = if(a.y) 1 else 2 in 
+                    x;
+        ",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    assert_eq!(
+        result.err().unwrap(),
+        vec!["Semantic Error: Type or protocol Bool is not defined."]
+    )
+}

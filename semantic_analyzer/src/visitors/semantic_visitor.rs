@@ -16,7 +16,7 @@ use ast::{
 use generator::context::Context;
 
 use crate::{
-    def_info::{FuncInfo, TypeInfo, VarInfo}, typing::TypeChecker
+    def_info::{FuncInfo, TypeInfo, VarInfo}, typing::{TypeChecker}
 };
 
 /// # Description
@@ -367,25 +367,13 @@ impl<'a> DefinitionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
 
     fn visit_type_def(&mut self, node: &mut TypeDef) -> TypeAnnotation {
         // Define the parameters
-        let mut has_invalid_annotations = false;
-
         self.var_definitions.push_closed_frame();
         for param in &node.parameter_list {
             self.var_definitions.define(
                 param.id.clone(),
                 VarInfo::new_from_identifier(param, true, None),
             );
-            match self.get_conformable(&param.info.ty) {
-                Ok(_) => {},
-                Err(message) => {
-                    self.errors.push(message);
-                    has_invalid_annotations = true;
-                },
-            }
-        }
-        // If there is an unknown param annotation skip the type checking
-        if has_invalid_annotations {
-            return None;
+            
         }
 
         // Check the super constructor
