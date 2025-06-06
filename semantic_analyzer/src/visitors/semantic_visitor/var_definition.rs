@@ -3,9 +3,7 @@ use ast::{
     typing::{TypeAnnotation, to_string},
 };
 
-use crate::{
-    def_info::VarInfo, typing::get_conformable::GetConformable, visitors::SemanticVisitor,
-};
+use crate::{def_info::VarInfo, visitors::SemanticVisitor};
 
 impl<'a> SemanticVisitor<'a> {
     /// # Description
@@ -27,15 +25,7 @@ impl<'a> SemanticVisitor<'a> {
         right_type: TypeAnnotation,
         shadoweable: bool,
     ) -> TypeAnnotation {
-        let var_type = match self.get_conformable(&identifier.info.ty) {
-            Ok(conformable) => conformable,
-            Err(message) => {
-                self.errors.push(message);
-                None
-            }
-        };
-
-        let is_asignable = self.type_checker.conforms(&right_type, &var_type);
+        let is_asignable = self.type_checker.conforms(&right_type, &identifier.info.ty);
 
         if !is_asignable {
             let message = format!(
