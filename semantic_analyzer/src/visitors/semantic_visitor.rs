@@ -305,7 +305,7 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
 
     fn visit_function_call(&mut self, node: &mut FunctionCall) -> TypeAnnotation {
         if node.identifier.id == "print" {
-            self.handle_print(&mut node.arguments);
+            return self.handle_print(&mut node.arguments);
         }
         // Check if the function is defined
         let function_def = self.func_definitions.get_value(&node.identifier.id).cloned();
