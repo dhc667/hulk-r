@@ -16,8 +16,8 @@ pub struct BinOp {
 impl Display for BinOp {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self.op {
-            BinaryOperator::Concat => write!(f, "{} {}", self.left, self.right),
-            BinaryOperator::Union => write!(f, "({} | {})", self.left, self.right),
+            BinaryOperator::Concat => write!(f, "({}{})", self.left, self.right),
+            BinaryOperator::Union => write!(f, "({}|{})", self.left, self.right),
         }
     }
 }
