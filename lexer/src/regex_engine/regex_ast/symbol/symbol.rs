@@ -16,6 +16,12 @@ impl Symbol {
     }
 }
 
+impl From<char> for Symbol {
+    fn from(c: char) -> Self {
+        Symbol::Char(c)
+    }
+}
+
 pub enum SymbolSet {
     CharSet(CharSet),
     Dot,
