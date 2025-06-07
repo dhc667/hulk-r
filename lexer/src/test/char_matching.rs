@@ -2,9 +2,8 @@ use crate::regex_engine::regex_ast::symbol::{CharSet, Symbol, symbol::SymbolSet}
 
 #[test]
 pub fn charset_matching() {
-    let c = 'a';
+    let c = 'e';
     let set = CharSet {
-        chars: vec!['a', 'b', 'c'].into_iter().collect(),
         ranges: vec![('d', 'f')],
         negated: false,
     };
@@ -20,7 +19,6 @@ pub fn charset_matching() {
 pub fn charset_negation() {
     let c = 'x';
     let set = CharSet {
-        chars: vec!['a', 'b', 'c'].into_iter().collect(),
         ranges: vec![('d', 'f')],
         negated: true,
     };

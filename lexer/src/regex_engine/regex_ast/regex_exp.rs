@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::regex_engine::regex_ast::{bin_op::BinOp, symbol::symbol::MatchableSymbol, un_op::UnOp};
 
 pub enum RegexExp {
@@ -28,6 +30,16 @@ impl RegexExp {
             Some(v)
         } else {
             None
+        }
+    }
+}
+
+impl Display for RegexExp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Atom(atom) => write!(f, "{}", atom),
+            Self::BinOp(bin_op) => write!(f, "{}", bin_op),
+            Self::UnOp(un_op) => write!(f, "{}", un_op),
         }
     }
 }

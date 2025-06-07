@@ -1,18 +1,16 @@
-use std::hash::{Hash, Hasher};
+use std::{
+    fmt::Display,
+    hash::{Hash, Hasher},
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CharSet {
-    pub chars: Vec<char>,
     pub ranges: Vec<(char, char)>,
     pub negated: bool,
 }
 
 impl CharSet {
-    pub fn new(chars: Vec<char>, ranges: Vec<(char, char)>, negated: bool) -> Self {
-        // Sort the characters and ranges for consistent ordering
-        let mut chars = chars;
-        chars.sort();
-
+    pub fn new(ranges: Vec<(char, char)>, negated: bool) -> Self {
         let mut ranges = ranges;
         for range in &mut ranges {
             // Ensure ranges are in order
@@ -21,39 +19,40 @@ impl CharSet {
             }
         }
         ranges.sort();
-        CharSet {
-            chars,
-            ranges,
-            negated,
-        }
+        CharSet { ranges, negated }
     }
 }
 
 impl PartialEq<char> for CharSet {
     fn eq(&self, other: &char) -> bool {
-        let in_range = self
-            .ranges
-            .iter()
-            .any(|&(start, end)| *other >= start && *other <= end);
-        let in_set = self.chars.binary_search(other).is_ok();
-        return self.negated ^ (in_range || in_set);
+        self.negated
+            ^ self
+                .ranges
+                .iter()
+                .any(|&(start, end)| *other >= start && *other <= end)
     }
 }
 
-impl Hash for CharSet {
-    fn hash<H: Hasher>(&self, state: &mut H) {
+impl Display for CharSet {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut repr = String::new();
+        repr.push('[');
         if self.negated {
             repr.push('^');
-        }
-        for c in &self.chars {
-            repr.push(*c);
         }
         for &(start, end) in &self.ranges {
             repr.push(start);
             repr.push('-');
             repr.push(end);
         }
+        repr.push(']');
+        write!(f, "{}", repr)
+    }
+}
+
+impl Hash for CharSet {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        let repr = self.to_string();
         repr.hash(state);
     }
 }

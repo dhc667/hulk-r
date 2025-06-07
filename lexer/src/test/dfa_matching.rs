@@ -215,7 +215,6 @@ pub fn match_alpha() {
     let regex = RegexExp::UnOp(UnOp {
         operand: Box::new(RegexExp::Atom(MatchableSymbol::SymbolSet(
             SymbolSet::CharSet(CharSet {
-                chars: vec![],
                 ranges: vec![('a', 'z'), ('A', 'Z')],
                 negated: false,
             }),
@@ -245,7 +244,6 @@ pub fn match_digit() {
     let regex = RegexExp::UnOp(UnOp {
         operand: Box::new(RegexExp::Atom(MatchableSymbol::SymbolSet(
             SymbolSet::CharSet(CharSet {
-                chars: vec![],
                 ranges: vec![('0', '9')],
                 negated: false,
             }),
@@ -271,8 +269,7 @@ pub fn match_char_set_1() {
     let regex = RegexExp::UnOp(UnOp {
         operand: Box::new(RegexExp::Atom(MatchableSymbol::SymbolSet(
             SymbolSet::CharSet(CharSet {
-                chars: vec!['a', 'b', 'c'],
-                ranges: vec![],
+                ranges: vec![('a', 'c')],
                 negated: false,
             }),
         ))),
@@ -298,7 +295,6 @@ pub fn match_non_alpha() {
     let regex = RegexExp::UnOp(UnOp {
         operand: Box::new(RegexExp::Atom(MatchableSymbol::SymbolSet(
             SymbolSet::CharSet(CharSet {
-                chars: vec![],
                 ranges: vec![('a', 'z'), ('A', 'Z')],
                 negated: true,
             }),
@@ -469,7 +465,6 @@ pub fn match_plus_2() {
     let regex = RegexExp::UnOp(UnOp {
         operand: Box::new(RegexExp::Atom(MatchableSymbol::SymbolSet(
             SymbolSet::CharSet(CharSet {
-                chars: vec![],
                 ranges: vec![('0', '9')],
                 negated: false,
             }),
@@ -514,7 +509,6 @@ pub fn match_optional_2() {
     let regex = RegexExp::UnOp(UnOp {
         operand: Box::new(RegexExp::Atom(MatchableSymbol::SymbolSet(
             SymbolSet::CharSet(CharSet {
-                chars: vec![],
                 ranges: vec![('0', '9')],
                 negated: false,
             }),
@@ -541,7 +535,6 @@ pub fn match_identifier() {
     let regex = RegexExp::BinOp(BinOp {
         left: Box::new(RegexExp::Atom(MatchableSymbol::SymbolSet(
             SymbolSet::CharSet(CharSet {
-                chars: vec![],
                 ranges: vec![('a', 'z'), ('A', 'Z')],
                 negated: false,
             }),
@@ -549,7 +542,6 @@ pub fn match_identifier() {
         right: Box::new(RegexExp::UnOp(UnOp {
             operand: Box::new(RegexExp::Atom(MatchableSymbol::SymbolSet(
                 SymbolSet::CharSet(CharSet {
-                    chars: vec![],
                     ranges: vec![('0', '9'), ('a', 'z'), ('A', 'Z')],
                     negated: false,
                 }),
@@ -579,7 +571,6 @@ pub fn match_float() {
         left: Box::new(RegexExp::UnOp(UnOp {
             operand: Box::new(RegexExp::Atom(MatchableSymbol::SymbolSet(
                 SymbolSet::CharSet(CharSet {
-                    chars: vec![],
                     ranges: vec![('0', '9')],
                     negated: false,
                 }),
@@ -591,7 +582,6 @@ pub fn match_float() {
             right: Box::new(RegexExp::UnOp(UnOp {
                 operand: Box::new(RegexExp::Atom(MatchableSymbol::SymbolSet(
                     SymbolSet::CharSet(CharSet {
-                        chars: vec![],
                         ranges: vec![('0', '9')],
                         negated: false,
                     }),

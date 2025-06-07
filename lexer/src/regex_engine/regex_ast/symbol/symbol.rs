@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::regex_engine::regex_ast::symbol::CharSet;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -22,6 +24,15 @@ impl From<char> for Symbol {
     }
 }
 
+impl Display for Symbol {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Symbol::Char(c) => write!(f, "{}", c),
+            Symbol::Epsilon => write!(f, "\\epsilon"),
+        }
+    }
+}
+
 pub enum SymbolSet {
     CharSet(CharSet),
     Dot,
@@ -33,6 +44,17 @@ impl SymbolSet {
             Some(v)
         } else {
             None
+        }
+    }
+}
+
+impl Display for SymbolSet {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SymbolSet::CharSet(char_set) => {
+                write!(f, "{}", char_set)
+            }
+            SymbolSet::Dot => write!(f, "."),
         }
     }
 }
@@ -56,6 +78,20 @@ impl MatchableSymbol {
             Some(v)
         } else {
             None
+        }
+    }
+}
+
+impl Display for MatchableSymbol {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            MatchableSymbol::Symbol(symbol) => write!(f, "{}", symbol),
+            MatchableSymbol::SymbolSet(symbol_set) => match symbol_set {
+                SymbolSet::CharSet(char_set) => {
+                    write!(f, "{}", char_set)
+                }
+                SymbolSet::Dot => write!(f, "."),
+            },
         }
     }
 }

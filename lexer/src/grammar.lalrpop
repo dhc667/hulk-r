@@ -1,8 +1,12 @@
-use crate::regex_engine::regex_ast::regex_exp::RegexExp;
-use crate::regex_engine::regex_ast::bin_op::{BinOp, BinaryOperator};
-use crate::regex_engine::regex_ast::un_op::{UnOp, UnaryOperator};
-use crate::regex_engine::regex_ast::symbol::symbol::{MatchableSymbol, Symbol, SymbolSet};
-use crate::regex_engine::regex_ast::symbol::char_set::CharSet;
+use crate::regex_engine::regex_ast::{
+    regex_exp::RegexExp,
+    bin_op::{BinOp, BinaryOperator},
+    un_op::{UnOp, UnaryOperator},
+    symbol::{
+        symbol::{MatchableSymbol, Symbol, SymbolSet},
+        char_set::CharSet,
+    },
+};
 
 grammar;
 
@@ -46,7 +50,7 @@ UnOp: UnaryOperator = {
 Atom: RegexExp = {
     <c:Char> => RegexExp::Atom(MatchableSymbol::Symbol(Symbol::Char(c))),
     "[" <neg:Negation?> <elems:RangeElems> "]" => RegexExp::Atom(MatchableSymbol::SymbolSet(
-        SymbolSet::CharSet(CharSet::new(vec![], elems, neg.is_some()))
+        SymbolSet::CharSet(CharSet::new(elems, neg.is_some()))
     )),
     <c:Escapable> => RegexExp::Atom(MatchableSymbol::Symbol(Symbol::from(c))),
     "(" <r:Regex> ")" => r,
