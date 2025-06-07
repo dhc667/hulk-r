@@ -1,4 +1,4 @@
-use crate::regex_engine::regex_ast::symbol::{CharSet, Symbol};
+use crate::regex_engine::regex_ast::symbol::{CharSet, Symbol, symbol::SymbolSet};
 
 #[test]
 pub fn charset_matching() {
@@ -10,8 +10,8 @@ pub fn charset_matching() {
     };
 
     assert!(Symbol::Char(c) == c);
-    assert!(Symbol::CharSet(set.clone()) == c);
-    assert!(Symbol::Dot == c);
+    assert!(SymbolSet::CharSet(set.clone()) == c);
+    assert!(SymbolSet::Dot == c);
     assert!(Symbol::Epsilon != c);
     assert!(set.clone() == c);
 }
@@ -26,8 +26,8 @@ pub fn charset_negation() {
     };
 
     assert!(Symbol::Char(c) == c);
-    assert!(Symbol::CharSet(set.clone()) == c);
-    assert!(Symbol::Dot == c);
+    assert!(SymbolSet::CharSet(set.clone()) == c);
+    assert!(SymbolSet::Dot == c);
     assert!(Symbol::Epsilon != c);
     assert!(set.clone() == c);
 }

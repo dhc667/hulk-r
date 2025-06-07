@@ -1,14 +1,14 @@
-use crate::regex_engine::regex_ast::{bin_op::BinOp, symbol::Symbol, un_op::UnOp};
+use crate::regex_engine::regex_ast::{bin_op::BinOp, symbol::symbol::MatchableSymbol, un_op::UnOp};
 
 pub enum RegexExp {
-    Symbol(Symbol),
+    Atom(MatchableSymbol),
     BinOp(BinOp),
     UnOp(UnOp),
 }
 
 impl RegexExp {
-    pub fn as_symbol(&self) -> Option<&Symbol> {
-        if let Self::Symbol(v) = self {
+    pub fn as_atom(&self) -> Option<&MatchableSymbol> {
+        if let Self::Atom(v) = self {
             Some(v)
         } else {
             None

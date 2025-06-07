@@ -5,7 +5,7 @@ use crate::regex_engine::{
     regex_ast::{
         bin_op::{BinOp, BinaryOperator},
         regex_exp::RegexExp,
-        symbol::Symbol,
+        symbol::{Symbol, symbol::MatchableSymbol},
         un_op::{UnOp, UnaryOperator},
     },
 };
@@ -21,20 +21,24 @@ impl NFABuilder {
 
     pub fn build_from_regex(&mut self, regex: &RegexExp) -> NFA {
         match regex {
-            RegexExp::Symbol(symbol) => self.symbol(symbol),
+            RegexExp::Atom(symbol) => self.symbol(symbol),
             RegexExp::BinOp(bin_op) => self.bin_op(bin_op),
             RegexExp::UnOp(un_op) => self.un_op(un_op),
         }
     }
 
-    fn symbol(&mut self, symbol: &Symbol) -> NFA {
+    fn symbol(&mut self, symbol: &MatchableSymbol) -> NFA {
         let q0 = self.current_state;
         let qf = self.current_state + 1;
         self.current_state += 2;
 
         let mut d = HashMap::new();
-        d.insert((q0, symbol.clone()), HashSet::from([qf]));
-
+        for a in 0u8..=127u8 {
+            let a = a as char;
+            if *symbol == a {
+                d.insert((q0, Symbol::Char(a)), HashSet::from([qf]));
+            }
+        }
         NFA { q0, qf, d }
     }
 
