@@ -57,8 +57,12 @@ impl From<NFA> for DFA {
 
         let mut queue = MarkedQueue::new();
 
-        let e0 = nfa.e_closure(&HashSet::from([nfa.q0]));
-        queue.add_unmarked(to_str(&e0));
+        let e0_set = nfa.e_closure(&HashSet::from([nfa.q0]));
+        let e0 = to_str(&e0_set);
+        queue.add_unmarked(e0.clone());
+        if e0_set.contains(&nfa.qf) {
+            qf.insert(queue[&e0]);
+        }
         while let Some(t) = queue.pop_unmarked() {
             let t_set = to_set(&t);
             for c in 0..=255u8 {

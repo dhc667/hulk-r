@@ -33,10 +33,18 @@ impl NFABuilder {
         self.current_state += 2;
 
         let mut d = HashMap::new();
-        for a in 0u8..=127u8 {
-            let a = a as char;
-            if *symbol == a {
-                d.insert((q0, Symbol::Char(a)), HashSet::from([qf]));
+
+        match symbol {
+            MatchableSymbol::SymbolSet(char_set) => {
+                for a in 0u8..=127u8 {
+                    let a = a as char;
+                    if *char_set == a {
+                        d.insert((q0, Symbol::Char(a)), HashSet::from([qf]));
+                    }
+                }
+            }
+            MatchableSymbol::Symbol(s) => {
+                d.insert((q0, s.clone()), HashSet::from([qf]));
             }
         }
         NFA { q0, qf, d }
