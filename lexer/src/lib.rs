@@ -4,4 +4,5 @@ pub mod regex_engine;
 pub mod test {
     pub mod char_matching;
     pub mod dfa_matching;
+    pub mod nfa_matching;
 }

@@ -43,4 +43,13 @@ impl NFA {
 
         next_states
     }
+
+    pub fn simulate(&self, input: Vec<char>) -> bool {
+        let mut s = self.e_closure(&HashSet::from([self.q0]));
+
+        for &c in input.iter() {
+            s = self.e_closure(&self.move_to(&s, &Symbol::from(c)));
+        }
+        s.contains(&self.qf)
+    }
 }
