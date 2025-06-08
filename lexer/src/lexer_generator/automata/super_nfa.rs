@@ -13,7 +13,9 @@ where
     TokenKind: Clone + PartialEq,
 {
     pub q0: usize,
-    pub qf: HashMap<usize, TokenKind>,
+    /// Final states and their associated token kind
+    /// Each key is a final state index, and the value is the priority of the associated token kind.
+    pub qf: HashMap<usize, (TokenKind, usize)>,
     pub d: HashMap<(usize, Symbol), HashSet<usize>>,
 }
 
@@ -29,7 +31,7 @@ where
         let mut d = HashMap::new();
         d.insert((q0, Symbol::Epsilon), HashSet::new());
 
-        for (nfa, kind) in attributed_nfas {
+        for (i, (nfa, kind)) in attributed_nfas.iter().enumerate() {
             let offset = max_state + 1; // Offset for the current NFA's states
 
             // Add epsilon transitions from the SuperNFA's initial state to the NFA's initial state
@@ -48,7 +50,7 @@ where
                     .extend(next);
             }
             // Add final states and their associated token kind
-            qf.insert(nfa.qf, kind.clone());
+            qf.insert(nfa.qf, (kind.clone(), i));
         }
 
         SuperNFA { q0, qf, d }
