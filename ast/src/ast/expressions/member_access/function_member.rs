@@ -8,7 +8,6 @@ pub struct FunctionMemberAccess {
     pub obj_type: TypeAnnotation,
     pub op: DotOperator,
     pub member: FunctionCall,
-    pub resolved_type: TypeAnnotation,
 }
 
 impl FunctionMemberAccess {
@@ -18,7 +17,6 @@ impl FunctionMemberAccess {
             obj_type: None,
             op,
             member,
-            resolved_type: None,
         }
     }
 }
