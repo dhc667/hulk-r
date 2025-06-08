@@ -16,7 +16,7 @@ use std::collections::HashMap;
 
 use crate::context::Context;
 use crate::llvm_types::{LlvmHandle, LlvmType, HandleType};
-use ast::{Expression, ExpressionVisitor, VisitableExpression, Definition, DefinitionVisitor, VisitableDefinition, BlockBodyItem};
+use ast::{Expression, ExpressionVisitor, VisitableExpression, Definition, DefinitionVisitor, VisitableDefinition, BlockBodyItem, ListIndexing};
 use ast::typing::to_string;
 
 pub struct VisitorResult {
@@ -89,6 +89,7 @@ pub struct GeneratorVisitor {
     variable_ids: HashMap<String, u32>,
 
     type_members_ids: HashMap<(String,String), u32>,
+    function_member_names: HashMap<(String, String), String>,
 }
 
 impl GeneratorVisitor {
@@ -98,6 +99,7 @@ impl GeneratorVisitor {
             tmp_variable_id: 0,
             variable_ids: HashMap::new(),
             type_members_ids: HashMap::new(),
+            function_member_names: HashMap::new(),
         }
     }
 
@@ -105,6 +107,14 @@ impl GeneratorVisitor {
         for (i, data_member) in data_member_defs.iter().enumerate() {
             let member_id = data_member.identifier.id.clone();
             self.type_members_ids.insert((type_name.to_string(), member_id), i as u32);
+        }
+    }
+
+    fn save_function_member_names_from_defs(&mut self, type_name: &str, function_member_defs: &[ast::FunctionDef]) {
+        for func_def in function_member_defs.iter() {
+            let func_id = func_def.identifier.id.clone();
+            let llvm_func_name = format!("{}_{}", type_name, func_id);
+            self.function_member_names.insert((type_name.to_string(), func_id), llvm_func_name);
         }
     }
 }
@@ -317,11 +327,119 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
         &mut self,
         node: &mut ast::FunctionMemberAccess,
     ) -> VisitorResult {
-        todo!()
-    }
+        let mut preamble = String::new();
+    
+        let object_result = node.object.accept(self);
+        preamble += &object_result.preamble;
+        let object_handle = object_result.result_handle.expect("Object for method call must have a result");
+        let object_ptr_name = object_handle.llvm_name.clone();
 
-    fn visist_list_indexing(&mut self, node: &mut ast::ListIndexing) -> VisitorResult {
-        todo!()
+        let object_ast_type_name = match &node.obj_type {
+            Some(ty) => match ty {
+                ast::typing::Type::Defined(defined_type) => defined_type.id.clone(),
+                _ => panic!("Object type for method call must be a defined type name"),
+            }
+            None => panic!("Object type not found for function member access"),
+        };
+        
+        let vtable_type_name = format!("%{}_vtable_type", object_ast_type_name);
+        let object_llvm_type_name = format!("%{}_type", object_ast_type_name);
+
+        let object_typed_ptr = self.generate_tmp_variable();
+        preamble += &format!(
+            "  {} = bitcast i8* {} to {}*\n",
+            object_typed_ptr, object_ptr_name, object_llvm_type_name
+        );
+
+        let vtable_ptr_ptr = self.generate_tmp_variable();
+        preamble += &format!("  {} = getelementptr inbounds {}, {}* {}, i32 0, i32 0\n", 
+                             vtable_ptr_ptr, object_llvm_type_name, object_llvm_type_name, object_typed_ptr);
+        let vtable_ptr = self.generate_tmp_variable(); 
+        preamble += &format!("  {} = load {}*, {}** {}, align 8\n", 
+                             vtable_ptr, vtable_type_name, vtable_type_name, vtable_ptr_ptr);
+
+
+        let func_name_in_ast = node.member.identifier.id.clone();
+        let func_vtable_idx_str = self.function_member_names
+            .get(&(object_ast_type_name.clone(), func_name_in_ast.clone()))
+            .cloned()
+            .unwrap_or_else(|| panic!("Function member '{}' not found in vtable map for type '{}'", func_name_in_ast, object_ast_type_name));
+
+        let call_ret_type_str = match &node.member.identifier.info.ty {
+            Some(ty) => self.llvm_type_str_from_ast_type(ty),
+            None => "void".to_string(),
+        };
+        
+        let mut call_param_llvm_types_for_sig = vec!["i8*".to_string()];
+        let mut call_args_values_with_llvm_types = vec![format!("i8* {}", object_ptr_name)];
+
+        for arg_expr in node.member.arguments.iter_mut() {
+            let arg_result = arg_expr.accept(self);
+            preamble += &arg_result.preamble;
+            let arg_handle = arg_result.result_handle.expect("Function member argument must have a result");
+            
+            let arg_llvm_type_str = match arg_expr {
+                ast::Expression::NumberLiteral(_) => "double".to_string(),
+                ast::Expression::BooleanLiteral(_) => "i1".to_string(),
+                ast::Expression::StringLiteral(_) => "i8*".to_string(),
+                ast::Expression::Variable(id) => {
+                    match &id.info.ty {
+                        Some(ty) => match ty {
+                            ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Number) => "double".to_string(),
+                            ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Bool) => "i1".to_string(),
+                            ast::typing::Type::BuiltIn(ast::typing::BuiltInType::String) => "i8*".to_string(),
+                            ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Object) => "i8*".to_string(),
+                            ast::typing::Type::Defined(name) => format!("%{}_type*", name.id.clone()),
+                            _ => "i8*".to_string(),
+                        },
+                        None => "i8*".to_string(),
+                    }
+                }
+                _ => "i8*".to_string(),
+            };
+            call_param_llvm_types_for_sig.push(arg_llvm_type_str.clone());
+            call_args_values_with_llvm_types.push(format!("{} {}", arg_llvm_type_str, arg_handle.llvm_name));
+        }
+        
+        let func_signature_ptr_type_for_load = format!("{} ({})*", call_ret_type_str, call_param_llvm_types_for_sig.join(", "));
+
+        let func_ptr_location_in_vtable = self.generate_tmp_variable();
+        preamble += &format!("  {} = getelementptr inbounds {}, {}* {}, i32 0, i32 {}\n", 
+                             func_ptr_location_in_vtable,
+                             vtable_type_name,
+                             vtable_type_name,
+                             vtable_ptr,
+                             func_vtable_idx_str
+        );
+        let loaded_func_ptr = self.generate_tmp_variable();
+        preamble += &format!("  {} = load {}, {}* {}, align 8\n",
+                             loaded_func_ptr, func_signature_ptr_type_for_load, func_signature_ptr_type_for_load, func_ptr_location_in_vtable);
+    
+        let result_reg: String;
+        if call_ret_type_str != "void" {
+            result_reg = self.generate_tmp_variable();
+            preamble += &format!("  {} = call {} {}({})\n", 
+                                 result_reg, call_ret_type_str, loaded_func_ptr, call_args_values_with_llvm_types.join(", "));
+        } else {
+            result_reg = "".to_string();
+            preamble += &format!("  call void {}({})\n", 
+                                 loaded_func_ptr, call_args_values_with_llvm_types.join(", "));
+        }
+
+        let result_handle = if call_ret_type_str != "void" {
+            let ast_ret_type = node.member.identifier.info.ty.as_ref().expect("Return type must be known for non-void");
+            Some(LlvmHandle {
+                handle_type: HandleType::Register(self.llvm_type_from_ast_type(ast_ret_type)),
+                llvm_name: result_reg,
+            })
+        } else {
+            None
+        };
+
+        VisitorResult {
+            preamble,
+            result_handle,
+        }
     }
 
     fn visit_function_call(&mut self, node: &mut ast::FunctionCall) -> VisitorResult {
@@ -442,10 +560,7 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
     }
 
     fn visit_string_literal(&mut self, node: &mut ast::StringLiteral) -> VisitorResult {
-        VisitorResult {
-            preamble: String::new(),
-            result_handle: Some(LlvmHandle::new_string_literal(node.string.clone())),
-        }
+        todo!()
     }
 
     fn visit_list_literal(&mut self, node: &mut ast::ListLiteral) -> VisitorResult {
@@ -523,6 +638,10 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
             result_handle: Some(crate::llvm_types::LlvmHandle::new_object_register(result_var)),
         }
     }
+
+    fn visist_list_indexing(&mut self, node: &mut ListIndexing) -> VisitorResult {
+        todo!()
+    }
 }
 
 impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
@@ -531,120 +650,179 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
     }
 
     fn visit_type_def(&mut self, node: &mut ast::TypeDef) -> VisitorResult {
-        
         let mut preamble = String::new();
         let type_name = &node.name.id;
- 
-        preamble += &format!("%{}_type = type {{\n", type_name);
 
-        let mut field_types = Vec::new();
+        // --- VTable Type and Global VTable Instance ---
+        let vtable_type_name = format!("%{}_vtable_type", type_name);
+        let global_vtable_name = format!("@{}_vtable", type_name);
 
+        let mut vtable_fn_ptr_types = Vec::new();
+        let mut vtable_initializers = Vec::new();
+
+        preamble += &format!("{} = type {{", vtable_type_name);
+        for (i, func_def) in node.function_member_defs.iter().enumerate() {
+            let mangled_func_name = format!("{}_{}", type_name, func_def.identifier.id);
+            let ret_type_str = match &func_def.identifier.info.ty {
+                Some(ty) => self.llvm_type_str_from_ast_type(ty),
+                None => "void".to_string(), 
+            };
+             // for self
+            let mut param_llvm_types_for_sig = vec![format!("%{type_name}_type*",).to_string()];
+            for param_ast in &func_def.parameters {
+                param_llvm_types_for_sig.push(match &param_ast.info.ty {
+                    Some(ty) => self.llvm_type_str_from_ast_type(ty),
+                    None => "i8*".to_string(),
+                });
+            }
+            let fn_ptr_type_str = format!("{} ({})*", ret_type_str, param_llvm_types_for_sig.join(", "));
+            vtable_fn_ptr_types.push(fn_ptr_type_str.clone());
+            vtable_initializers.push(format!("{} @{}", fn_ptr_type_str, mangled_func_name));
+            self.function_member_names.insert((type_name.clone(), func_def.identifier.id.clone()), i.to_string());
+        }
+        if vtable_fn_ptr_types.is_empty() {
+            preamble += "}\n\n";
+            preamble += &format!("{} = private unnamed_addr constant {} {{}}, align 8\n\n", global_vtable_name, vtable_type_name);
+        } else {
+            preamble += &format!("\n  {}\n", vtable_fn_ptr_types.join(",\n  "));
+            preamble += "}\n\n";
+            preamble += &format!("{} = private unnamed_addr constant {} {{ {} }}, align 8\n\n",
+                                global_vtable_name, vtable_type_name, vtable_initializers.join(", "));
+        }
+
+        // --- Object Struct Type ---
+        preamble += &format!("%{}_type = type {{ \n  {}*,\n", type_name, vtable_type_name);
+        let mut field_llvm_types_str = Vec::new();
         for (i, data_member) in node.data_member_defs.iter().enumerate() {
-            let member_type = match data_member.identifier.info.ty.clone() {
-                Some(ty) => match ty {
-                    ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Number) => "double".to_string(),
-                    ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Bool) => "i1".to_string(),
-                    ast::typing::Type::BuiltIn(ast::typing::BuiltInType::String) => "i8*".to_string(),
-                    ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Object) => "i8*".to_string(),
-                    ast::typing::Type::Defined(ref name) => format!("%{}_type*", name.id.clone()),
-                    _ => "i8*".to_string(),
-                },
+            let member_llvm_type_str = match data_member.identifier.info.ty.clone() {
+                Some(ty) => self.llvm_type_str_from_ast_type(&ty),
                 None => {
-                    preamble += &format!(
-                        "  ; WARNING: missing type for member '{}', defaulting to i8*\n",
-                        data_member.identifier.id
-                    );
+                    preamble += &format!("  ; WARNING: missing type for member '{}', defaulting to i8*\n", data_member.identifier.id);
                     "i8*".to_string()
                 }
             };
-
-            field_types.push((data_member.identifier.id.clone(), member_type.clone()));
-            
-            preamble += &format!("  {}", member_type);
-            if i < node.data_member_defs.len() - 1 {
-                preamble += ",\n";
-            } else {
-                preamble += "\n";
-            }
+            field_llvm_types_str.push(format!("  {}", member_llvm_type_str));
+            self.type_members_ids.insert((type_name.to_string(), data_member.identifier.id.clone()), (i + 1) as u32);
         }
-        
+        if !field_llvm_types_str.is_empty() {
+             preamble += &format!("{}\n", field_llvm_types_str.join(",\n"));
+        }
         preamble += "}\n\n";
-        
-        preamble += &format!("define %{}_type* @{}_new(", type_name, type_name);
-        
-        for (i, param) in node.parameter_list.iter().enumerate() {
-            if i > 0 {
-                preamble += ", ";
-            }
 
-            let llvm_type = match param.info.ty.clone() {
-                Some(ty) => match ty {
-                    ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Number) => "double".to_string(),
-                    ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Bool) => "i1".to_string(),
-                    ast::typing::Type::BuiltIn(ast::typing::BuiltInType::String) => "i8*".to_string(),
-                    ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Object) => "i8*".to_string(),
-                    ast::typing::Type::Defined(ref name) => format!("%{}_type*", name.id.clone()),
-                    _ => "i8*".to_string(),
-                },
-                None => {
-                    preamble += &format!(
-                        "  ; WARNING: missing type for member '{}', defaulting to i8*\n",
-                        param.id
-                    );
-                    "i8*".to_string()
-                }
+        // --- Constructor (@TypeName_new) ---
+        preamble += &format!("define %{}_type* @{}_new(", type_name, type_name);
+        let mut ctor_param_defs = Vec::new();
+        for (i, param_ast) in node.parameter_list.iter().enumerate() {
+            let param_llvm_type = match &param_ast.info.ty {
+                Some(ty) => self.llvm_type_str_from_ast_type(ty),
+                None => "i8*".to_string(),
             };
-            
-            preamble += &format!("{} %{}", llvm_type, param.id);
+            ctor_param_defs.push(format!("{} %{}", param_llvm_type, param_ast.id));
         }
-        
-        preamble += ") {\n";
+        preamble += &format!("{}) {{\n", ctor_param_defs.join(", "));
         preamble += "entry:\n";
         
-        let struct_ptr = self.generate_tmp_variable();
-        let struct_cast = self.generate_tmp_variable();
-        
-        preamble += &format!("  {} = call i8* @malloc(i64 {})\n", struct_ptr, 8 * field_types.len());
-        preamble += &format!("  {} = bitcast i8* {} to %{}_type*\n", struct_cast, struct_ptr, type_name);
-        
-        let num_params = std::cmp::min(node.parameter_list.len(), field_types.len());
-        
-        for i in 0..num_params {
-            let param = &node.parameter_list[i];
-            let (field_name, field_type) = &field_types[i];
-            
-            let gep_var = self.generate_tmp_variable();
-            preamble += &format!(
-                "  {} = getelementptr inbounds %{}_type, %{}_type* {}, i32 0, i32 {}\n",
-                gep_var, type_name, type_name, struct_cast, i
-            );
-            
-            preamble += &format!(
-                "  store {} %{}, {}* {}, align 8\n",
-                field_type, param.id, field_type, gep_var
-            );
-        }
-        
-        preamble += &format!("  ret %{}_type* {}\n", type_name, struct_cast);
-        preamble += "}\n\n";
-        
-        for func_def in &mut node.function_member_defs {
-            let func_name = format!("{}_{}", type_name, func_def.identifier.id);
-            
-            preamble += &format!("define i8* @{}(i8* %self", func_name);
-            
-            for (i, param) in func_def.parameters.iter().enumerate() {
-                preamble += &format!(", double %{}", param.id);
-            }
-            preamble += ") {\n";
-            preamble += "entry:\n";
-            preamble += "  ret i8* null\n";
-            preamble += "}\n\n";
-        }
-        
-        
-        self.save_type_member_indices_from_defs(type_name, &node.data_member_defs);
+        let total_fields_count = 1 + node.data_member_defs.len();
+        let struct_size_bytes = 8 * total_fields_count;
+        let obj_raw_ptr = self.generate_tmp_variable();
+        preamble += &format!("  {} = call i8* @malloc(i64 {}) ; Approx size\n", obj_raw_ptr, struct_size_bytes);
+        let obj_typed_ptr = self.generate_tmp_variable();
+        preamble += &format!("  {} = bitcast i8* {} to %{}_type*\n", obj_typed_ptr, obj_raw_ptr, type_name);
 
+        // Store VTable Pointer
+        let vtable_field_ptr = self.generate_tmp_variable();
+        preamble += &format!("  {} = getelementptr inbounds %{}_type, %{}_type* {}, i32 0, i32 0\n", vtable_field_ptr, type_name, type_name, obj_typed_ptr);
+        preamble += &format!("  store {}* {}, {}** {}, align 8\n", vtable_type_name, global_vtable_name, vtable_type_name, vtable_field_ptr);
+
+        // Store Data Members from constructor params
+        let num_ctor_params = node.parameter_list.len();
+        let num_data_members = node.data_member_defs.len();
+        for i in 0..std::cmp::min(num_ctor_params, num_data_members) {
+            let param_ast = &node.parameter_list[i];
+            let data_member_ast = &node.data_member_defs[i];
+
+            let field_llvm_type_str = match &data_member_ast.identifier.info.ty {
+                 Some(ty) => self.llvm_type_str_from_ast_type(ty),
+                 None => "i8*".to_string(),
+            };
+            let param_llvm_name = format!("%{}", param_ast.id);
+            
+            let field_ptr = self.generate_tmp_variable();
+
+            preamble += &format!("  {} = getelementptr inbounds %{}_type, %{}_type* {}, i32 0, i32 {}\n", field_ptr, type_name, type_name, obj_typed_ptr, i + 1);
+            preamble += &format!("  store {} {}, {}* {}, align 8\n", field_llvm_type_str, param_llvm_name, field_llvm_type_str, field_ptr);
+        }
+        preamble += &format!("  ret %{}_type* {}\n", type_name, obj_typed_ptr);
+        preamble += "}\n\n";
+
+        // --- Method Definitions (@TypeName_methodName) ---
+        for func_def_ast in &mut node.function_member_defs {
+            let mangled_func_name = format!("{}_{}", type_name, func_def_ast.identifier.id);
+            let ret_type_str = match &func_def_ast.identifier.info.ty {
+                Some(ty) => self.llvm_type_str_from_ast_type(ty),
+                None => "void".to_string(),
+            };
+
+            let mut method_param_defs = vec!["i8* %self".to_string()];
+            for param_ast in &func_def_ast.parameters {
+                let param_llvm_type = match &param_ast.info.ty {
+                    Some(ty) => self.llvm_type_str_from_ast_type(ty),
+                    None => "i8*".to_string(),
+                };
+                method_param_defs.push(format!("{} %{}", param_llvm_type, param_ast.id));
+            }
+            preamble += &format!("define {} @{}({}) {{\n", ret_type_str, mangled_func_name, method_param_defs.join(", "));
+            preamble += "entry:\n";
+
+            let old_context = std::mem::replace(&mut self.context, Context::new_one_frame());
+
+            let self_alloca = self.generate_tmp_variable();
+            preamble += &self.alloca_statement(&self_alloca, &LlvmType::Object);
+            preamble += &self.store_statement(&"%self".to_string(), &self_alloca, &LlvmType::Object);
+            self.context.define("self".to_string(), Variable::new_object(self_alloca));
+
+            for param_ast in &func_def_ast.parameters {
+                let param_name = param_ast.id.clone();
+                let ast_param_type = param_ast.info.ty.as_ref().expect("Param type must be known");
+                let llvm_param_type_enum = self.llvm_type_from_ast_type(ast_param_type);
+                
+                let param_alloca = self.generate_tmp_variable();
+                preamble += &self.alloca_statement(&param_alloca, &llvm_param_type_enum);
+                preamble += &self.store_statement(&format!("%{}", param_name), &param_alloca, &llvm_param_type_enum);
+                
+                match llvm_param_type_enum {
+                    LlvmType::F64 => self.context.define(param_name, Variable::new_f64(param_alloca)),
+                    LlvmType::I1 => self.context.define(param_name, Variable::new_i1(param_alloca)),
+                    LlvmType::String => self.context.define(param_name, Variable::new_string(param_alloca)),
+                    LlvmType::Object => self.context.define(param_name, Variable::new_object(param_alloca)),
+                }
+            }
+
+            let body_result = match &mut func_def_ast.body {
+                ast::FunctionBody::ArrowExpression(arrow_exp) => arrow_exp.expression.accept(self),
+                ast::FunctionBody::Block(block) => self.visit_block(block),
+            };
+            preamble += &body_result.preamble;
+
+            if ret_type_str != "void" {
+                if let Some(res_handle) = body_result.result_handle {
+                    preamble += &format!("  ret {} {}\n", ret_type_str, res_handle.llvm_name);
+                } else {
+                    let default_ret_val = match ret_type_str.as_str() {
+                        "double" => "0.0",
+                        "i1" => "0",
+                        _ if ret_type_str.ends_with('*') => "null",
+                        _ => panic!("Unexpected return type {}", ret_type_str),
+                    };
+                    preamble += &format!("  ret {} {}\n", ret_type_str, default_ret_val);
+                }
+            } else {
+                preamble += "  ret void\n";
+            }
+            preamble += "}\n\n";
+            let _ = std::mem::replace(&mut self.context, old_context);
+        }
+        
         VisitorResult {
             preamble,
             result_handle: None,
@@ -662,7 +840,7 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
                 ast::typing::Type::BuiltIn(ast::typing::BuiltInType::String) => "i8*".to_string(),
                 ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Object) => "i8*".to_string(),
                 ast::typing::Type::Defined(name) => format!("%{}_type*", name.id.clone()),
-                _ => "i8*".to_string(),
+                _ => "void".to_string(),
             },
             None => "void".to_string(),
         };
@@ -828,6 +1006,40 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
         VisitorResult {
             preamble,
             result_handle: None,
+        }
+    }
+}
+
+impl GeneratorVisitor {
+    fn llvm_type_from_ast_type(&self, ast_type: &ast::typing::Type) -> LlvmType {
+        match ast_type {
+            ast::typing::Type::BuiltIn(bt) => match bt {
+                ast::typing::BuiltInType::Number => LlvmType::F64,
+                ast::typing::BuiltInType::Bool => LlvmType::I1,
+                ast::typing::BuiltInType::String => LlvmType::String,
+                ast::typing::BuiltInType::Object => LlvmType::Object,
+            },
+            ast::typing::Type::Defined(_type_name) => LlvmType::Object,
+            ast::typing::Type::Iterable(_inner_type_box) => LlvmType::Object,
+            ast::typing::Type::Functor(_functor_type) => LlvmType::Object,
+        }
+    }
+
+    fn llvm_type_str_from_ast_type(&self, ast_type: &ast::typing::Type) -> String {
+        match ast_type {
+            ast::typing::Type::BuiltIn(bt) => match bt {
+                ast::typing::BuiltInType::Number => "double".to_string(),
+                ast::typing::BuiltInType::Bool => "i1".to_string(),
+                ast::typing::BuiltInType::String => "i8*".to_string(),
+                ast::typing::BuiltInType::Object => "i8*".to_string(),
+            },
+            ast::typing::Type::Defined(type_name) => {
+                format!("%{}_type*", type_name.id)
+            }
+            ast::typing::Type::Iterable(inner_type_box) => {
+                format!("{}*", self.llvm_type_str_from_ast_type(inner_type_box.as_ref()))
+            }
+            _ => panic!("NO implemented type")
         }
     }
 }
