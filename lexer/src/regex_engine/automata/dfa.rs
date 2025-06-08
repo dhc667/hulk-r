@@ -1,7 +1,12 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::regex_engine::automata::{
-    marked_queue::MarkedQueue, nfa::NFA, transitionable::NDTransitionable,
+use crate::{
+    automata_utils::{
+        marked_queue::MarkedQueue,
+        representation::{to_set, to_str},
+        transitionable::NDTransitionable,
+    },
+    regex_engine::automata::nfa::NFA,
 };
 
 pub struct DFA {
@@ -35,18 +40,6 @@ impl DFA {
 
         self.qf.contains(&current_state) // Check if the final state is an accept state
     }
-}
-
-fn to_str(s: &HashSet<usize>) -> String {
-    let mut v: Vec<usize> = s.iter().cloned().collect();
-    v.sort_unstable();
-    let repr: Vec<String> = v.iter().map(|x| x.to_string()).collect();
-    repr.join(" ")
-}
-
-fn to_set(s: &String) -> HashSet<usize> {
-    let nums: HashSet<usize> = s.split(' ').map(|x| x.parse::<usize>().unwrap()).collect();
-    nums
 }
 
 impl From<NFA> for DFA {

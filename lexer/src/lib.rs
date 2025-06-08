@@ -8,6 +8,8 @@ pub mod regex_engine;
 
 pub mod lexer_generator;
 
+pub mod automata_utils;
+
 #[cfg(test)]
 pub mod test {
     pub mod char_matching;

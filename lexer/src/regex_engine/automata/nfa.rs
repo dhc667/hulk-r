@@ -1,6 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::regex_engine::{automata::transitionable::NDTransitionable, regex_ast::symbol::Symbol};
+use crate::{
+    automata_utils::transitionable::NDTransitionable, regex_engine::regex_ast::symbol::Symbol,
+};
 
 pub struct NFA {
     pub q0: usize,

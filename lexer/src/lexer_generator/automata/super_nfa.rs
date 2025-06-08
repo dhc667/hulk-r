@@ -3,9 +3,9 @@ use std::{
     collections::{HashMap, HashSet},
 };
 
-use crate::regex_engine::{
-    automata::{nfa::NFA, transitionable::NDTransitionable},
-    regex_ast::symbol::Symbol,
+use crate::{
+    automata_utils::transitionable::NDTransitionable,
+    regex_engine::{automata::nfa::NFA, regex_ast::symbol::Symbol},
 };
 
 pub struct SuperNFA<TokenKind>
