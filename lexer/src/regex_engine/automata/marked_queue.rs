@@ -42,6 +42,22 @@ where
     pub fn contains(&self, item: &T) -> bool {
         self.marked.contains(item)
     }
+
+    pub fn iter(&self) -> std::collections::hash_set::Iter<T> {
+        self.marked.iter()
+    }
+}
+
+impl<'a, T> IntoIterator for &'a MarkedQueue<T>
+where
+    T: Eq + Hash + Clone,
+{
+    type Item = &'a T;
+    type IntoIter = std::collections::hash_set::Iter<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.marked.iter()
+    }
 }
 
 impl<T> Index<&T> for MarkedQueue<T>

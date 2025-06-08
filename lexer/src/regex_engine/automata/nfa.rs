@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::regex_engine::regex_ast::symbol::Symbol;
+use crate::regex_engine::{automata::transitionable::NDTransitionable, regex_ast::symbol::Symbol};
 
 pub struct NFA {
     pub q0: usize,
@@ -13,37 +13,6 @@ impl NFA {
         NFA { q0, qf, d }
     }
 
-    pub fn e_closure(&self, t_set: &HashSet<usize>) -> HashSet<usize> {
-        let mut closure = t_set.clone();
-        let mut stack: Vec<usize> = t_set.iter().cloned().collect();
-
-        while let Some(state) = stack.pop() {
-            if let Some(next_states) = self.d.get(&(state, Symbol::Epsilon)) {
-                for &next_state in next_states {
-                    if closure.insert(next_state) {
-                        stack.push(next_state);
-                    }
-                }
-            }
-        }
-
-        closure
-    }
-
-    pub fn move_to(&self, t_set: &HashSet<usize>, symbol: &Symbol) -> HashSet<usize> {
-        let mut next_states = HashSet::new();
-
-        for &state in t_set {
-            if let Some(states) = self.d.get(&(state, symbol.clone())) {
-                for &next_state in states {
-                    next_states.insert(next_state);
-                }
-            }
-        }
-
-        next_states
-    }
-
     pub fn simulate(&self, input: Vec<char>) -> bool {
         let mut s = self.e_closure(&HashSet::from([self.q0]));
 
@@ -51,6 +20,12 @@ impl NFA {
             s = self.e_closure(&self.move_to(&s, &Symbol::from(c)));
         }
         s.contains(&self.qf)
+    }
+}
+
+impl NDTransitionable for NFA {
+    fn get_transitions(&self) -> &HashMap<(usize, Symbol), HashSet<usize>> {
+        &self.d
     }
 }
 

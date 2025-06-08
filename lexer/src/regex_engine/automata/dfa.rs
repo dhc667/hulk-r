@@ -1,8 +1,8 @@
-mod queue;
-
 use std::collections::{HashMap, HashSet};
 
-use crate::regex_engine::automata::{dfa::queue::MarkedQueue, nfa::NFA};
+use crate::regex_engine::automata::{
+    marked_queue::MarkedQueue, nfa::NFA, transitionable::NDTransitionable,
+};
 
 pub struct DFA {
     /// Start state
@@ -52,7 +52,6 @@ fn to_set(s: &String) -> HashSet<usize> {
 impl From<NFA> for DFA {
     fn from(nfa: NFA) -> Self {
         let q0: usize = 0;
-        let mut qf: HashSet<usize> = HashSet::new();
         let mut d: HashMap<(usize, char), usize> = HashMap::new();
 
         let mut queue = MarkedQueue::new();
@@ -60,9 +59,6 @@ impl From<NFA> for DFA {
         let e0_set = nfa.e_closure(&HashSet::from([nfa.q0]));
         let e0 = to_str(&e0_set);
         queue.add_unmarked(e0.clone());
-        if e0_set.contains(&nfa.qf) {
-            qf.insert(queue[&e0]);
-        }
         while let Some(t) = queue.pop_unmarked() {
             let t_set = to_set(&t);
             for c in 0..=255u8 {
@@ -74,13 +70,17 @@ impl From<NFA> for DFA {
                 let u = to_str(&u_set);
                 if !queue.contains(&u) {
                     queue.add_unmarked(u.clone());
-                    if u_set.contains(&nfa.qf) {
-                        qf.insert(queue[&u]);
-                    }
                 }
                 d.insert((queue[&t], a), queue[&u]);
             }
         }
+
+        let qf: HashSet<usize> = queue
+            .iter()
+            .map(|s| to_set(s))
+            .filter(|s| s.contains(&nfa.qf))
+            .map(|s| queue[&to_str(&s)])
+            .collect();
 
         DFA { q0, qf, d }
     }
