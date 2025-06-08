@@ -84,3 +84,47 @@ fn function_definition_with_type_parameter() {
 
     assert_eq!(lli_f64(&llvm).unwrap(), 10.0);
 }
+
+#[test]
+fn function_definition_in_type() {
+    let llvm = generate_code(
+        "
+            type Point (a:Number) {x=a; get(): Number { return self.x; } }
+
+            let a = new Point(4) in
+            let x = a.get() in print(x);
+            ",
+    );
+    println!("{}", llvm);
+
+    assert_eq!(lli_f64(&llvm).unwrap(), 4.0);
+}
+
+#[test]
+fn two_function_in_two_types_definitions() {
+    let llvm = generate_code(
+        "
+            type Point (a:Number) {x=a; get(): Number { return self.x; } gettimes(n:Number): Number {return self.x*n;} }
+            type Point2 (a:Number) {x=a; gettimes(): Number {return self.x*2;} }
+            let a = new Point2(4) in
+            let x = a.gettimes() in print(x);
+            ",
+    );
+    println!("{}", llvm);
+
+    assert_eq!(lli_f64(&llvm).unwrap(), 8.0);
+}
+#[test]
+fn shadow_to_self() {
+    let llvm = generate_code(
+        "
+            type Point (a:Number) {x=a; get(): Number { return let self = 4 in self; } }
+
+            let a = new Point(4) in
+            let x = a.get() in print(x);
+            ",
+    );
+    println!("{}", llvm);
+
+    assert_eq!(lli_f64(&llvm).unwrap(), 4.0);
+}
