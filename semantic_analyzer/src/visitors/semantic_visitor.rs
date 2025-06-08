@@ -4,6 +4,7 @@ mod function_call;
 mod function_def;
 mod print;
 mod find_member_info;
+mod find_method_info;
 mod get_conformable;
 
 use std::collections::HashMap;
@@ -16,7 +17,7 @@ use ast::{
 use generator::context::Context;
 
 use crate::{
-    def_info::{FuncInfo, TypeInfo, VarInfo}, typing::{TypeChecker}
+    def_info::{FuncInfo, TypeInfo, VarInfo}, typing::TypeChecker
 };
 
 /// # Description
@@ -237,14 +238,10 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
         let ty = node.object.accept(self);
 
         // Resolve the member info
-        let member_info = self.find_member_info(member_name.clone(), &ty, false);
-        let member_info = match member_info.and_then(|d| d.as_var()).cloned() {
-            Some(info) => info,
-            None => {
-                self.errors
-                    .push(format!("Could not find data member {}", member_name));
-                return None;
-            }
+        let member_info = self.find_member_info(member_name.clone(), &ty);
+        let Some(member_info) = member_info.cloned() else {
+            self.errors.push(format!("Could not find data member {}", member_name));
+            return None;
         };
 
         // Annotate identifier
@@ -274,13 +271,13 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
         // annotate object
         node.obj_type = ty.clone();
 
-        let func_info = self.find_member_info(func_name.clone(), &ty, true);
-        if let Some(member_info) = func_info.and_then(|d| d.as_func()).cloned() {
-            return self.handle_function_call(member_info, &mut node.member.identifier, &mut node.member.arguments)
-        }
-        self.errors
-            .push(format!("Could not find method {}", func_name));
-        None
+        let (func_info, resolved_type) = self.find_method_info(func_name.clone(), &ty);
+        let Some(func_info) = func_info else {
+            self.errors.push(format!("Could not find method {}", func_name));
+            return None;
+        };
+        node.resolved_type = resolved_type.clone();
+        return self.handle_function_call(func_info.clone(), &mut node.member.identifier, &mut node.member.arguments)
     }
 
     // Other
