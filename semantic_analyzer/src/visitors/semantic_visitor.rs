@@ -271,12 +271,11 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
         // annotate object
         node.obj_type = ty.clone();
 
-        let (func_info, resolved_type) = self.find_method_info(func_name.clone(), &ty);
+        let func_info = self.find_method_info(func_name.clone(), &ty);
         let Some(func_info) = func_info else {
             self.errors.push(format!("Could not find method {}", func_name));
             return None;
         };
-        node.resolved_type = resolved_type.clone();
         return self.handle_function_call(func_info.clone(), &mut node.member.identifier, &mut node.member.arguments)
     }
 

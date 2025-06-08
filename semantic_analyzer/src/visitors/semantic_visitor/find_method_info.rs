@@ -14,14 +14,12 @@ impl<'a> SemanticVisitor<'a> {
     /// - `ty`: The type annotation to start the search from.
     ///
     /// # Returns
-    /// A pair containing:
-    /// - `Option<&FuncInfo>`: A reference to the `FuncInfo` if the method is found, or `None` if it is not found.
-    /// - `TypeAnnotation`: The type where the method was found, or `None` if it was not found.
+    /// An `Option<&FuncInfo>`: A reference to the `FuncInfo` if the method is found, or `None` if it is not found.
     pub(crate) fn find_method_info(
         &self,
         member_name: String,
         ty: &TypeAnnotation,
-    ) -> (Option<&FuncInfo>, TypeAnnotation) {
+    ) -> Option<&FuncInfo> {
         let mut current_type = ty.clone();
         loop {
             let Some(ty) = &current_type else { break };
@@ -34,7 +32,7 @@ impl<'a> SemanticVisitor<'a> {
                 continue;
             }; 
             if let Some(info) = type_def.members.get(&member_name).and_then(|d| d.as_func()) {
-                return (Some(info), Some(ty.clone()));
+                return Some(info);
             }
             // Try parent type
             let parent_type = self.type_hierarchy.get(&type_name).cloned().expect(&format!(
@@ -43,7 +41,7 @@ impl<'a> SemanticVisitor<'a> {
             ));
             current_type = parent_type;
         }
-        (None, None)
+        None
     }
     
 }

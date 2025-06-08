@@ -1,4 +1,4 @@
-use ast::typing::{BuiltInType, Type, to_string};
+use ast::typing::{BuiltInType, Type};
 use parser::ProgramParser;
 
 use crate::semantic_analyzer::SemanticAnalyzer;
@@ -284,36 +284,4 @@ fn complicated_inheritance_cycle() {
     println!("{:?}", semantic_analyzer.errors);
 
     assert!(result.is_err(), "Errors: {:?}", result.err());
-}
-
-#[test]
-fn concrete_type_annotation() {
-    let p = ProgramParser::new();
-
-    let mut answ = p
-        .parse(
-            "
-        type A {
-            method():Number => 3;
-        }
-        type B inherits A {}
-        let b = new B() in b.method();
-    ",
-        )
-        .unwrap();
-
-    let mut semantic_analyzer = SemanticAnalyzer::new();
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
-
-    let resolved_annotation = answ.expressions[0]
-        .as_let_in()
-        .unwrap()
-        .body
-        .as_function_member_access()
-        .unwrap()
-        .resolved_type
-        .clone();
-
-    assert!(result.is_ok(), "Errors: {:?}", result.err());
-    assert_eq!(to_string(&resolved_annotation), "A");
 }
