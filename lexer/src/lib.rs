@@ -6,6 +6,8 @@ pub use grammar::RegexParser;
 
 pub mod regex_engine;
 
+pub mod lexer_generator;
+
 #[cfg(test)]
 pub mod test {
     pub mod char_matching;
