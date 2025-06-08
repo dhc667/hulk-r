@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use crate::regex_engine::regex_ast::symbol::CharSet;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Symbol {
     Char(char),
     Epsilon,

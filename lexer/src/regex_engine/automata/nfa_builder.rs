@@ -115,31 +115,44 @@ impl NFABuilder {
         let qf = self.current_state + 1;
         self.current_state += 2;
 
-        let mut transitions = HashMap::new();
-        transitions.insert((q0, Symbol::Epsilon), HashSet::from([nfa.q0, qf]));
-        transitions.insert((nfa.qf, Symbol::Epsilon), HashSet::from([nfa.q0, qf]));
+        let mut d = HashMap::new();
+        d.insert((q0, Symbol::Epsilon), HashSet::from([nfa.q0, qf]));
+        d.insert((nfa.qf, Symbol::Epsilon), HashSet::from([nfa.q0, qf]));
 
         for ((q, c), p) in nfa.d.iter() {
-            transitions.insert((*q, c.clone()), p.clone());
+            d.insert((*q, c.clone()), p.clone());
         }
 
-        NFA {
-            q0,
-            qf,
-            d: transitions,
-        }
+        NFA { q0, qf, d }
     }
 
     fn one_or_more(&mut self, nfa: &NFA) -> NFA {
-        let nfa2 = self.kleene_star(nfa);
-        return self.concat(nfa, &nfa2);
+        let q0 = self.current_state;
+        let qf = self.current_state + 1;
+        self.current_state += 2;
+
+        let mut d = HashMap::new();
+        d.insert((q0, Symbol::Epsilon), HashSet::from([nfa.q0]));
+        d.insert((nfa.qf, Symbol::Epsilon), HashSet::from([nfa.q0, qf]));
+
+        for ((q, c), p) in nfa.d.iter() {
+            d.insert((*q, c.clone()), p.clone());
+        }
+
+        NFA { q0, qf, d }
     }
 
     fn optional(&mut self, nfa: &NFA) -> NFA {
         let q0 = nfa.q0;
         let qf = nfa.qf;
         let mut d = nfa.d.clone();
-        d.insert((q0, Symbol::Epsilon), HashSet::from([qf]));
+
+        let states = d.get_mut(&(q0, Symbol::Epsilon));
+        if let Some(states) = states {
+            states.insert(qf);
+        } else {
+            d.insert((q0, Symbol::Epsilon), HashSet::from([qf]));
+        }
         NFA { q0, qf, d }
     }
 }

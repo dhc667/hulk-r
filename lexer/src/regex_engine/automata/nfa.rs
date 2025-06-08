@@ -53,3 +53,18 @@ impl NFA {
         s.contains(&self.qf)
     }
 }
+
+pub fn print_transition_table(nfa: &NFA) {
+    println!("Transition Table:");
+    let mut transitions: Vec<_> = nfa.d.iter().collect();
+    transitions.sort_by_key(|(key, _)| (key.0, key.1.clone()));
+    for (key, value) in transitions {
+        println!(
+            "State: {}, Symbol: {:?} -> States: {:?}",
+            key.0, key.1, value
+        );
+    }
+    println!("Start State: {}", nfa.q0);
+    println!("Accept State: {}", nfa.qf);
+    println!();
+}

@@ -11,5 +11,6 @@ pub mod test {
     pub mod char_matching;
     pub mod dfa_matching;
     pub mod nfa_matching;
+    pub mod regex_matching;
     pub mod regex_parsing;
 }
