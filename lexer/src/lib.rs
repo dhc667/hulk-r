@@ -17,4 +17,6 @@ pub mod test {
     pub mod nfa_matching;
     pub mod regex_matching;
     pub mod regex_parsing;
+
+    pub mod lexer;
 }

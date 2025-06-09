@@ -1,37 +1,31 @@
 use std::hash::Hash;
 
-pub struct Rule<TokenKind, TokenType>
+pub struct Rule<TokenKind>
 where
     TokenKind: Clone + PartialEq + Hash + Eq,
 {
     pub token_kind: TokenKind,
     pub pattern: String,
-    pub action: Option<Box<dyn Fn(&TokenKind, &str, usize, usize, usize) -> TokenType>>,
+    pub skip: bool,
 }
 
-impl<TokenKind, TokenType> Rule<TokenKind, TokenType>
+impl<TokenKind> Rule<TokenKind>
 where
     TokenKind: Clone + PartialEq + Hash + Eq,
 {
-    pub fn new<F>(token_kind: TokenKind, pattern: String, action: F) -> Self
-    where
-        F: Fn(&TokenKind, &str, usize, usize, usize) -> TokenType + 'static,
-    {
+    pub fn new(token_kind: TokenKind, pattern: String) -> Self {
         Rule {
             token_kind,
             pattern,
-            action: Some(Box::new(action)),
+            skip: false,
         }
     }
 
-    pub fn new_skip<F>(token_kind: TokenKind, pattern: String) -> Self
-    where
-        F: Fn(TokenKind, &str, usize, usize) -> TokenType + 'static,
-    {
+    pub fn new_skip(token_kind: TokenKind, pattern: String) -> Self {
         Rule {
             token_kind,
             pattern,
-            action: None,
+            skip: true,
         }
     }
 }

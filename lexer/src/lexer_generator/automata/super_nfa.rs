@@ -1,6 +1,7 @@
 use std::{
     cmp::max,
     collections::{HashMap, HashSet},
+    fmt::Debug,
 };
 
 use crate::{
@@ -21,7 +22,7 @@ where
 
 impl<TokenKind> SuperNFA<TokenKind>
 where
-    TokenKind: Clone + PartialEq,
+    TokenKind: Clone + PartialEq + Debug,
 {
     pub fn new(attributed_nfas: &Vec<(NFA, TokenKind)>) -> Self {
         let q0 = 0; // Initial state for the SuperNFA
@@ -41,16 +42,17 @@ where
 
             // Add transitions for the NFA
             for ((q, c), next) in &nfa.d {
-                max_state = max(max_state, q + offset);
-                max_state = max(max_state, next.iter().copied().max().unwrap_or(0));
-
                 let next: HashSet<usize> = next.iter().map(|&s| s + offset).collect();
+
+                max_state = max(max_state, q + offset);
+                max_state = max(max_state, next.iter().cloned().max().unwrap_or(0));
+
                 d.entry((q + offset, c.clone()))
                     .or_insert_with(HashSet::new)
                     .extend(next);
             }
             // Add final states and their associated token kind
-            qf.insert(nfa.qf, (kind.clone(), i));
+            qf.insert(nfa.qf + offset, (kind.clone(), i));
         }
 
         SuperNFA { q0, qf, d }
