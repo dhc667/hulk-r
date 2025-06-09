@@ -90,6 +90,8 @@ pub struct GeneratorVisitor {
 
     type_members_ids: HashMap<(String,String), u32>,
     function_member_names: HashMap<(String, String), String>,
+    inherits: HashMap<String, String>,
+    constructor_args_types: HashMap<String, Vec<String>>,
 }
 
 impl GeneratorVisitor {
@@ -100,6 +102,8 @@ impl GeneratorVisitor {
             variable_ids: HashMap::new(),
             type_members_ids: HashMap::new(),
             function_member_names: HashMap::new(),
+            inherits: HashMap::new(),
+            constructor_args_types: HashMap::new(),
         }
     }
 
@@ -245,75 +249,173 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
             },
             None => LlvmType::Object,
         };
-        
+        println!("{}",member_type.unwrap().to_string());
+        println!("{}",llvm_type.llvm_type_str());
+        println!("{}",node.member.id);
         let type_name = match &object_type {
             Some(ty) => to_string(&Some(ty.clone())),
             
             None => panic!("Object type not found for data member access"),
         };
         let member_id = node.member.id.clone();
-        let field_index = *self.type_members_ids.get(&(type_name.clone(), member_id.clone()))
-            .unwrap_or_else(|| panic!("Field '{}' not found in type '{}'", member_id, type_name));
+
+
         let result_var = self.generate_tmp_variable();
 
-        let gep_instr = match llvm_type {
-            LlvmType::F64 | LlvmType::I1 => {
-                format!(
-                    "  {} = getelementptr inbounds %{}_type, %{}_type* {}, i32 0, i32 {}\n",
-                    result_var,
-                    type_name,
-                    type_name,
-                    object_ptr,
-                    field_index
-                )
-            }
-            LlvmType::Object => {
-                format!(
-                    "  {} = getelementptr inbounds %{}_type, %{}_type* {}, i32 0, i32 {}\n",
-                    result_var,
-                    type_name,
-                    type_name,
-                    object_ptr,
-                    field_index
-                )
-            }
-            _ => panic!("Unsupported type for data member access: {}", llvm_type.llvm_type_str()),
-        };
-        preamble += &gep_instr;
+        if let Some(idx) = self.type_members_ids.get(&(type_name.clone(), member_id.clone())) {
+            let field_index = idx.clone();
+            
+            let gep_instr = match llvm_type {
+                LlvmType::F64 | LlvmType::I1 => {
+                    format!(
+                        "  {} = getelementptr inbounds %{}_type, %{}_type* {}, i32 0, i32 {}\n",
+                        result_var,
+                        type_name,
+                        type_name,
+                        object_ptr,
+                        field_index
+                    )
+                }
+                LlvmType::Object => {
+                    format!(
+                        "  {} = getelementptr inbounds %{}_type, %{}_type* {}, i32 0, i32 {}\n",
+                        result_var,
+                        type_name,
+                        type_name,
+                        object_ptr,
+                        field_index
+                    )
+                }
+                _ => panic!("Unsupported type for data member access: {}", llvm_type.llvm_type_str()),
+            };
+            preamble += &gep_instr;
 
-        if matches!(llvm_type, LlvmType::F64 | LlvmType::I1) {
-            let load_var = self.generate_tmp_variable();
-            let load_instr = format!(
-                "  {} = load {}, {}* {}, align 8\n",
-                load_var,
-                llvm_type.llvm_type_str(),
-                llvm_type.llvm_type_str(),
-                result_var
-            );
-            preamble += &load_instr;
-            return VisitorResult {
-                preamble,
-                result_handle: Some(LlvmHandle {
-                    handle_type: HandleType::Register(llvm_type),
-                    llvm_name: load_var,
-                }),
-            };
-        } else if matches!(llvm_type, LlvmType::Object) {
-            let load_var = self.generate_tmp_variable();
-            let load_instr = format!(
-                "  {} = load i8*, i8** {}, align 8\n",
-                load_var,
-                result_var
-            );
-            preamble += &load_instr;
-            return VisitorResult {
-                preamble,
-                result_handle: Some(LlvmHandle {
-                    handle_type: HandleType::Register(LlvmType::Object),
-                    llvm_name: load_var,
-                }),
-            };
-        }
+            if matches!(llvm_type, LlvmType::F64 | LlvmType::I1) {
+                let load_var = self.generate_tmp_variable();
+                let load_instr = format!(
+                    "  {} = load {}, {}* {}, align 8\n",
+                    load_var,
+                    llvm_type.llvm_type_str(),
+                    llvm_type.llvm_type_str(),
+                    result_var
+                );
+                preamble += &load_instr;
+                return VisitorResult {
+                    preamble,
+                    result_handle: Some(LlvmHandle {
+                        handle_type: HandleType::Register(llvm_type),
+                        llvm_name: load_var,
+                    }),
+                };
+            } else if matches!(llvm_type, LlvmType::Object) {
+                let load_var = self.generate_tmp_variable();
+                let load_instr = format!(
+                    "  {} = load i8*, i8** {}, align 8\n",
+                    load_var,
+                    result_var
+                );
+                preamble += &load_instr;
+                return VisitorResult {
+                    preamble,
+                    result_handle: Some(LlvmHandle {
+                        handle_type: HandleType::Register(LlvmType::Object),
+                        llvm_name: load_var,
+                    }),
+                };
+            }
+        } else {
+            let mut current_type = type_name.clone();
+            let mut current_object_ptr = object_ptr.clone();
+            loop {
+                let super_field_ptr = self.generate_tmp_variable();
+                let super_field_load = self.generate_tmp_variable();
+                if let Some(search_father) = self.inherits.get(&current_type) {
+                    if let Some(idx) = self.type_members_ids.get(&(search_father.clone(), member_id.clone())) {
+                        let field_index = idx.clone();
+
+                        let gep_instr = match llvm_type {
+                            LlvmType::F64 | LlvmType::I1 => {
+                                format!(
+                                    "  {} = getelementptr inbounds %{}_type, %{}_type* {}, i32 0, i32 {}\n",
+                                    result_var,
+                                    search_father,
+                                    search_father,
+                                    current_object_ptr,
+                                    field_index
+                                )
+                            }
+                            LlvmType::Object => {
+                                format!(
+                                    "  {} = getelementptr inbounds %{}_type, %{}_type* {}, i32 0, i32 {}\n",
+                                    result_var,
+                                    search_father,
+                                    search_father,
+                                    current_object_ptr,
+                                    field_index
+                                )
+                            }
+                            _ => panic!("Unsupported type for data member access: {}", llvm_type.llvm_type_str()),
+                        };
+                        preamble += &gep_instr;
+
+                        if matches!(llvm_type, LlvmType::F64 | LlvmType::I1) {
+                            let load_var = self.generate_tmp_variable();
+                            let load_instr = format!(
+                                "  {} = load {}, {}* {}, align 8\n",
+                                load_var,
+                                llvm_type.llvm_type_str(),
+                                llvm_type.llvm_type_str(),
+                                result_var
+                            );
+                            preamble += &load_instr;
+                            return VisitorResult {
+                                preamble,
+                                result_handle: Some(LlvmHandle {
+                                    handle_type: HandleType::Register(llvm_type),
+                                    llvm_name: load_var,
+                                }),
+                            };
+                        } else if matches!(llvm_type, LlvmType::Object) {
+                            let load_var = self.generate_tmp_variable();
+                            let load_instr = format!(
+                                "  {} = load i8*, i8** {}, align 8\n",
+                                load_var,
+                                result_var
+                            );
+                            preamble += &load_instr;
+                            return VisitorResult {
+                                preamble,
+                                result_handle: Some(LlvmHandle {
+                                    handle_type: HandleType::Register(LlvmType::Object),
+                                    llvm_name: load_var,
+                                }),
+                            };
+                        }
+                    } else {
+                        preamble += &format!(
+                            "  {} = getelementptr inbounds %{}_type, %{}_type* {}, i32 0, i32 1\n",
+                            super_field_ptr,
+                            current_type,
+                            current_type,
+                            current_object_ptr
+                        );
+                        preamble += &format!(
+                            "  {} = load %{}_type*, %{}_type** {}, align 8\n",
+                            super_field_load,
+                            search_father,
+                            search_father,
+                            super_field_ptr
+                        );
+                        current_type = search_father.clone();
+                        current_object_ptr = super_field_load;
+                    }
+                } else {
+                    panic!("Member '{}' not found in type '{}'", member_id, current_type);
+                }
+            }
+
+        };
+        
         VisitorResult {
             preamble,
             result_handle: Some(LlvmHandle {
@@ -328,11 +430,11 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
         node: &mut ast::FunctionMemberAccess,
     ) -> VisitorResult {
         let mut preamble = String::new();
-    
+
         let object_result = node.object.accept(self);
         preamble += &object_result.preamble;
         let object_handle = object_result.result_handle.expect("Object for method call must have a result");
-        let object_ptr_name = object_handle.llvm_name.clone();
+        let mut object_ptr_name = object_handle.llvm_name.clone();
 
         let object_ast_type_name = match &node.obj_type {
             Some(ty) => match ty {
@@ -341,43 +443,23 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
             }
             None => panic!("Object type not found for function member access"),
         };
-        
-        let vtable_type_name = format!("%{}_vtable_type", object_ast_type_name);
-        let object_llvm_type_name = format!("%{}_type", object_ast_type_name);
-
-        let object_typed_ptr = self.generate_tmp_variable();
-        preamble += &format!(
-            "  {} = bitcast i8* {} to {}*\n",
-            object_typed_ptr, object_ptr_name, object_llvm_type_name
-        );
-
-        let vtable_ptr_ptr = self.generate_tmp_variable();
-        preamble += &format!("  {} = getelementptr inbounds {}, {}* {}, i32 0, i32 0\n", 
-                             vtable_ptr_ptr, object_llvm_type_name, object_llvm_type_name, object_typed_ptr);
-        let vtable_ptr = self.generate_tmp_variable(); 
-        preamble += &format!("  {} = load {}*, {}** {}, align 8\n", 
-                             vtable_ptr, vtable_type_name, vtable_type_name, vtable_ptr_ptr);
-
 
         let func_name_in_ast = node.member.identifier.id.clone();
-        let func_vtable_idx_str = self.function_member_names
-            .get(&(object_ast_type_name.clone(), func_name_in_ast.clone()))
-            .cloned()
-            .unwrap_or_else(|| panic!("Function member '{}' not found in vtable map for type '{}'", func_name_in_ast, object_ast_type_name));
+        let mut current_type = object_ast_type_name.clone();
+        let mut current_object_ptr = object_ptr_name.clone();
 
+        // Prepare call signature and arguments
         let call_ret_type_str = match &node.member.identifier.info.ty {
             Some(ty) => self.llvm_type_str_from_ast_type(ty),
             None => "void".to_string(),
         };
-        
+
         let mut call_param_llvm_types_for_sig = vec!["i8*".to_string()];
         let mut call_args_values_with_llvm_types = vec![format!("i8* {}", object_ptr_name)];
-
         for arg_expr in node.member.arguments.iter_mut() {
             let arg_result = arg_expr.accept(self);
             preamble += &arg_result.preamble;
             let arg_handle = arg_result.result_handle.expect("Function member argument must have a result");
-            
             let arg_llvm_type_str = match arg_expr {
                 ast::Expression::NumberLiteral(_) => "double".to_string(),
                 ast::Expression::BooleanLiteral(_) => "i1".to_string(),
@@ -400,45 +482,102 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
             call_param_llvm_types_for_sig.push(arg_llvm_type_str.clone());
             call_args_values_with_llvm_types.push(format!("{} {}", arg_llvm_type_str, arg_handle.llvm_name));
         }
-        
         let func_signature_ptr_type_for_load = format!("{} ({})*", call_ret_type_str, call_param_llvm_types_for_sig.join(", "));
 
-        let func_ptr_location_in_vtable = self.generate_tmp_variable();
-        preamble += &format!("  {} = getelementptr inbounds {}, {}* {}, i32 0, i32 {}\n", 
-                             func_ptr_location_in_vtable,
-                             vtable_type_name,
-                             vtable_type_name,
-                             vtable_ptr,
-                             func_vtable_idx_str
-        );
-        let loaded_func_ptr = self.generate_tmp_variable();
-        preamble += &format!("  {} = load {}, {}* {}, align 8\n",
-                             loaded_func_ptr, func_signature_ptr_type_for_load, func_signature_ptr_type_for_load, func_ptr_location_in_vtable);
-    
-        let result_reg: String;
-        if call_ret_type_str != "void" {
-            result_reg = self.generate_tmp_variable();
-            preamble += &format!("  {} = call {} {}({})\n", 
-                                 result_reg, call_ret_type_str, loaded_func_ptr, call_args_values_with_llvm_types.join(", "));
-        } else {
-            result_reg = "".to_string();
-            preamble += &format!("  call void {}({})\n", 
-                                 loaded_func_ptr, call_args_values_with_llvm_types.join(", "));
-        }
+        // Inheritance-aware vtable lookup
+        loop {
+            let vtable_type_name = format!("%{}_vtable_type", current_type);
+            let object_llvm_type_name = format!("%{}_type", current_type);
 
-        let result_handle = if call_ret_type_str != "void" {
-            let ast_ret_type = node.member.identifier.info.ty.as_ref().expect("Return type must be known for non-void");
-            Some(LlvmHandle {
-                handle_type: HandleType::Register(self.llvm_type_from_ast_type(ast_ret_type)),
-                llvm_name: result_reg,
-            })
-        } else {
-            None
-        };
+            // Cast object pointer to current type if needed
+            let object_typed_ptr = self.generate_tmp_variable();
+            preamble += &format!(
+                "  {} = bitcast i8* {} to {}*\n",
+                object_typed_ptr, current_object_ptr, object_llvm_type_name
+            );
 
-        VisitorResult {
-            preamble,
-            result_handle,
+            // Get vtable pointer
+            let vtable_ptr_ptr = self.generate_tmp_variable();
+            preamble += &format!(
+                "  {} = getelementptr inbounds {}, {}* {}, i32 0, i32 0\n",
+                vtable_ptr_ptr, object_llvm_type_name, object_llvm_type_name, object_typed_ptr
+            );
+            let vtable_ptr = self.generate_tmp_variable();
+            preamble += &format!(
+                "  {} = load {}*, {}** {}, align 8\n",
+                vtable_ptr, vtable_type_name, vtable_type_name, vtable_ptr_ptr
+            );
+            let func_ptr_location_in_vtable = self.generate_tmp_variable();
+            let super_field_ptr = self.generate_tmp_variable();
+            let super_field_load = self.generate_tmp_variable();
+            // Try to find the function index in this type's vtable
+            if let Some(func_vtable_idx_str) = self.function_member_names.get(&(current_type.clone(), func_name_in_ast.clone())) {
+                // Found in this vtable
+                
+                preamble += &format!(
+                    "  {} = getelementptr inbounds {}, {}* {}, i32 0, i32 {}\n",
+                    func_ptr_location_in_vtable,
+                    vtable_type_name,
+                    vtable_type_name,
+                    vtable_ptr,
+                    func_vtable_idx_str
+                );
+                let loaded_func_ptr = self.generate_tmp_variable();
+                preamble += &format!(
+                    "  {} = load {}, {}* {}, align 8\n",
+                    loaded_func_ptr, func_signature_ptr_type_for_load, func_signature_ptr_type_for_load, func_ptr_location_in_vtable
+                );
+
+                let result_reg: String;
+                if call_ret_type_str != "void" {
+                    result_reg = self.generate_tmp_variable();
+                    preamble += &format!(
+                        "  {} = call {} {}({})\n",
+                        result_reg, call_ret_type_str, loaded_func_ptr, call_args_values_with_llvm_types.join(", ")
+                    );
+                } else {
+                    result_reg = "".to_string();
+                    preamble += &format!(
+                        "  call void {}({})\n",
+                        loaded_func_ptr, call_args_values_with_llvm_types.join(", ")
+                    );
+                }
+
+                let result_handle = if call_ret_type_str != "void" {
+                    let ast_ret_type = node.member.identifier.info.ty.as_ref().expect("Return type must be known for non-void");
+                    Some(LlvmHandle {
+                        handle_type: HandleType::Register(self.llvm_type_from_ast_type(ast_ret_type)),
+                        llvm_name: result_reg,
+                    })
+                } else {
+                    None
+                };
+
+                return VisitorResult {
+                    preamble,
+                    result_handle,
+                };
+            } else if let Some(parent_type) = self.inherits.get(&current_type) {
+                // Not found, walk up to parent
+                // Get super field pointer and load parent object pointer
+                
+                preamble += &format!(
+                    "  {} = getelementptr inbounds %{}_type, %{}_type* {}, i32 0, i32 1\n",
+                    super_field_ptr, current_type, current_type, object_typed_ptr
+                );
+                
+                preamble += &format!(
+                    "  {} = load %{}_type*, %{}_type** {}, align 8\n",
+                    super_field_load, parent_type, parent_type, super_field_ptr
+                );
+                // Update for next iteration
+                current_type = parent_type.clone();
+                current_object_ptr = super_field_load;
+                // Also update the first argument for the call (self pointer)
+                call_args_values_with_llvm_types[0] = format!("i8* {}", current_object_ptr);
+            } else {
+                panic!("Function member '{}' not found in type '{}' or its ancestors", func_name_in_ast, current_type);
+            }
         }
     }
 
@@ -522,7 +661,6 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
 
     fn visit_variable(&mut self, node: &mut ast::Identifier) -> VisitorResult {
         let register_name = self.generate_tmp_variable();
-
         let variable = self
             .context
             .get_value(&node.id)
@@ -652,6 +790,9 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
     fn visit_type_def(&mut self, node: &mut ast::TypeDef) -> VisitorResult {
         let mut preamble = String::new();
         let type_name = &node.name.id;
+        let constructor_args: Vec<String> = node.parameter_list.iter().map(|p| self.llvm_type_str_from_ast_type(&p.info.ty.clone().expect("Expected type"))).collect();
+            
+        self.constructor_args_types.insert(type_name.clone(), constructor_args);
 
         // --- VTable Type and Global VTable Instance ---
         let vtable_type_name = format!("%{}_vtable_type", type_name);
@@ -689,10 +830,26 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
             preamble += &format!("{} = private unnamed_addr constant {} {{ {} }}, align 8\n\n",
                                 global_vtable_name, vtable_type_name, vtable_initializers.join(", "));
         }
-
+        
         // --- Object Struct Type ---
         preamble += &format!("%{}_type = type {{ \n  {}*,\n", type_name, vtable_type_name);
         let mut field_llvm_types_str = Vec::new();
+        
+        // Add super field first if we have inheritance
+        let has_inheritance = node.inheritance_indicator.is_some();
+        let parent_type_name = if has_inheritance {
+            let parent = &node.inheritance_indicator.as_ref().unwrap().parent_name.id;
+            field_llvm_types_str.push(format!("  %{}_type*", parent));
+            // Register super as a member at index 1 (after vtable pointer at index 0)
+            self.type_members_ids.insert((type_name.to_string(), "super".to_string()), 1);
+            self.inherits.insert(type_name.to_string(), parent.clone());
+            Some(parent.clone())
+        } else {
+            None
+        };
+        
+        // Add regular data members after the super field (if present)
+        let member_offset = if has_inheritance { 1 } else { 0 };
         for (i, data_member) in node.data_member_defs.iter().enumerate() {
             let member_llvm_type_str = match data_member.identifier.info.ty.clone() {
                 Some(ty) => self.llvm_type_str_from_ast_type(&ty),
@@ -702,7 +859,7 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
                 }
             };
             field_llvm_types_str.push(format!("  {}", member_llvm_type_str));
-            self.type_members_ids.insert((type_name.to_string(), data_member.identifier.id.clone()), (i + 1) as u32);
+            self.type_members_ids.insert((type_name.to_string(), data_member.identifier.id.clone()), (i + member_offset + 1) as u32);
         }
         if !field_llvm_types_str.is_empty() {
              preamble += &format!("{}\n", field_llvm_types_str.join(",\n"));
@@ -722,6 +879,27 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
         preamble += &format!("{}) {{\n", ctor_param_defs.join(", "));
         preamble += "entry:\n";
         
+        let old_context = std::mem::replace(&mut self.context, Context::new_one_frame());
+
+        for param_ast in &node.parameter_list {
+            let param_llvm_type = match &param_ast.info.ty {
+                Some(ty) => self.llvm_type_from_ast_type(ty),
+                None => LlvmType::Object,
+            };
+            let param_name = param_ast.id.clone();
+]
+            let param_alloca = self.generate_tmp_variable();
+            preamble += &self.alloca_statement(&param_alloca, &param_llvm_type);
+            preamble += &self.store_statement(&format!("%{}", param_name), &param_alloca, &param_llvm_type);
+            
+            match param_llvm_type {
+                LlvmType::F64 => self.context.define(param_name, Variable::new_f64(param_alloca)),
+                LlvmType::I1 => self.context.define(param_name, Variable::new_i1(param_alloca)),
+                LlvmType::String => self.context.define(param_name, Variable::new_string(param_alloca)),
+                LlvmType::Object => self.context.define(param_name, Variable::new_object(param_alloca)),
+            }
+        }
+        
         let total_fields_count = 1 + node.data_member_defs.len();
         let struct_size_bytes = 8 * total_fields_count;
         let obj_raw_ptr = self.generate_tmp_variable();
@@ -734,9 +912,50 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
         preamble += &format!("  {} = getelementptr inbounds %{}_type, %{}_type* {}, i32 0, i32 0\n", vtable_field_ptr, type_name, type_name, obj_typed_ptr);
         preamble += &format!("  store {}* {}, {}** {}, align 8\n", vtable_type_name, global_vtable_name, vtable_type_name, vtable_field_ptr);
 
-        // Store Data Members from constructor params
+        if let Some(inheritance) = &mut node.inheritance_indicator {
+            let parent_name = &inheritance.parent_name.id;
+            
+            let mut arg_preambles = Vec::new();
+            let mut arg_handles = Vec::new();
+            let mut arg_types = Vec::new();
+
+
+            arg_types = self.constructor_args_types.get(&parent_name.clone()).unwrap_or_else(|| panic!("Expected args types")).clone();
+
+            for arg in &mut inheritance.argument_list {
+                let arg_result = arg.accept(self);
+                arg_preambles.push(arg_result.preamble);
+                let handle = arg_result.result_handle.expect("Parent constructor arg must not be null");
+                arg_handles.push(handle.llvm_name);
+
+            }
+
+            for preamble_str in arg_preambles {
+                preamble += &preamble_str;
+            }
+            
+            let call_args = arg_handles
+                .iter()
+                .zip(arg_types.iter())
+                .map(|(a, t)| format!("{} {}", t, a))
+                .collect::<Vec<_>>()
+                .join(", ");
+            
+            let super_var = self.generate_tmp_variable();
+            preamble += &format!("  {} = call %{}_type* @{}_new({})\n",
+                super_var, parent_name, parent_name, call_args);
+                
+            let super_field_ptr = self.generate_tmp_variable();
+            preamble += &format!("  {} = getelementptr inbounds %{}_type, %{}_type* {}, i32 0, i32 1\n", 
+                               super_field_ptr, type_name, type_name, obj_typed_ptr);
+            
+            preamble += &format!("  store %{}_type* {}, %{}_type** {}, align 8\n", 
+                               parent_name, super_var, parent_name, super_field_ptr);
+        }
+
         let num_ctor_params = node.parameter_list.len();
         let num_data_members = node.data_member_defs.len();
+        let field_offset = if node.inheritance_indicator.is_some() { 2 } else { 1 };
         for i in 0..std::cmp::min(num_ctor_params, num_data_members) {
             let param_ast = &node.parameter_list[i];
             let data_member_ast = &node.data_member_defs[i];
@@ -749,11 +968,15 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
             
             let field_ptr = self.generate_tmp_variable();
 
-            preamble += &format!("  {} = getelementptr inbounds %{}_type, %{}_type* {}, i32 0, i32 {}\n", field_ptr, type_name, type_name, obj_typed_ptr, i + 1);
-            preamble += &format!("  store {} {}, {}* {}, align 8\n", field_llvm_type_str, param_llvm_name, field_llvm_type_str, field_ptr);
+            preamble += &format!("  {} = getelementptr inbounds %{}_type, %{}_type* {}, i32 0, i32 {}\n", 
+                                field_ptr, type_name, type_name, obj_typed_ptr, i + field_offset);
+            preamble += &format!("  store {} {}, {}* {}, align 8\n", 
+                                field_llvm_type_str, param_llvm_name, field_llvm_type_str, field_ptr);
         }
         preamble += &format!("  ret %{}_type* {}\n", type_name, obj_typed_ptr);
         preamble += "}\n\n";
+        
+        let _ = std::mem::replace(&mut self.context, old_context);
 
         // --- Method Definitions (@TypeName_methodName) ---
         for func_def_ast in &mut node.function_member_defs {
@@ -763,7 +986,7 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
                 None => "void".to_string(),
             };
 
-            let mut method_param_defs = vec!["i8* %self".to_string()];
+            let mut method_param_defs = vec![format!("%{}_type* %self", type_name)];
             for param_ast in &func_def_ast.parameters {
                 let param_llvm_type = match &param_ast.info.ty {
                     Some(ty) => self.llvm_type_str_from_ast_type(ty),
