@@ -832,7 +832,7 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
         }
         
         // --- Object Struct Type ---
-        preamble += &format!("%{}_type = type {{ \n  {}*,\n", type_name, vtable_type_name);
+        preamble += &format!("%{}_type = type {{ \n  {}*", type_name, vtable_type_name);
         let mut field_llvm_types_str = Vec::new();
         
         // Add super field first if we have inheritance
@@ -862,7 +862,8 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
             self.type_members_ids.insert((type_name.to_string(), data_member.identifier.id.clone()), (i + member_offset + 1) as u32);
         }
         if !field_llvm_types_str.is_empty() {
-             preamble += &format!("{}\n", field_llvm_types_str.join(",\n"));
+            preamble += ",\n";
+            preamble += &format!("{}\n", field_llvm_types_str.join(",\n"));
         }
         preamble += "}\n\n";
 
