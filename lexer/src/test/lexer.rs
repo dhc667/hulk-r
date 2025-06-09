@@ -232,3 +232,204 @@ pub fn line_error() {
         ]
     );
 }
+
+#[test]
+pub fn lex_some_python() {
+    let rules = vec![
+        Rule::new("DEF", r"def".to_string()),
+        Rule::new("RETURN", r"return".to_string()),
+        Rule::new("LPAREN", r"\(".to_string()),
+        Rule::new("RPAREN", r"\)".to_string()),
+        Rule::new("COMMA", r",".to_string()),
+        Rule::new("COLON", r":".to_string()),
+        Rule::new("EQUAL", r"=".to_string()),
+        Rule::new("PLUS", r"\+".to_string()),
+        Rule::new("MINUS", r"\-".to_string()),
+        Rule::new(
+            "NUMBER",
+            r"(\+|\-)?([0-9]+(\.[0-9]*)?|[0-9]*\.[0-9]+)".to_string(),
+        ),
+        Rule::new("IDENTIFIER", r"(_|[a-zA-Z])(_|[a-z0-9A-Z])*".to_string()),
+        Rule::new_skip("WhiteSpace", r"(\s|\t|\n)+".to_string()),
+    ];
+
+    let input = r"
+        def f(x, y, z): 
+            result = x + y - z
+            return result
+    ";
+
+    let lexer = Lexer::new(rules);
+    let result = lexer.split(input);
+
+    assert!(result.is_ok(), "Errors: {:?}", result.err().unwrap());
+    let tokens = result.unwrap();
+    assert_eq!(
+        tokens.iter().map(|t| t.ty).collect::<Vec<_>>(),
+        vec![
+            "DEF",
+            "IDENTIFIER",
+            "LPAREN",
+            "IDENTIFIER",
+            "COMMA",
+            "IDENTIFIER",
+            "COMMA",
+            "IDENTIFIER",
+            "RPAREN",
+            "COLON",
+            "IDENTIFIER",
+            "EQUAL",
+            "IDENTIFIER",
+            "PLUS",
+            "IDENTIFIER",
+            "MINUS",
+            "IDENTIFIER",
+            "RETURN",
+            "IDENTIFIER"
+        ]
+    );
+}
+
+#[test]
+pub fn lex_some_python_2() {
+    let rules = vec![
+        Rule::new("DEF", r"def".to_string()),
+        Rule::new("RETURN", r"return".to_string()),
+        Rule::new("LPAREN", r"\(".to_string()),
+        Rule::new("RPAREN", r"\)".to_string()),
+        Rule::new("COMMA", r",".to_string()),
+        Rule::new("COLON", r":".to_string()),
+        Rule::new("EQUAL", r"=".to_string()),
+        Rule::new("PLUS", r"\+".to_string()),
+        Rule::new("MINUS", r"\-".to_string()),
+        Rule::new(
+            "NUMBER",
+            r"(\+|\-)?([0-9]+(\.[0-9]*)?|[0-9]*\.[0-9]+)".to_string(),
+        ),
+        Rule::new("IDENTIFIER", r"(_|[a-zA-Z])(_|[a-z0-9A-Z])*".to_string()),
+        Rule::new_skip("WhiteSpace", r"(\s|\t|\n)+".to_string()),
+    ];
+
+    let input = r"
+        def function_def(x, y, z): 
+            result = x + y - z
+            return result
+    ";
+
+    let lexer = Lexer::new(rules);
+    let result = lexer.split(input);
+
+    assert!(result.is_ok(), "Errors: {:?}", result.err().unwrap());
+    let tokens = result.unwrap();
+    assert_eq!(
+        tokens.iter().map(|t| t.ty).collect::<Vec<_>>(),
+        vec![
+            "DEF",
+            "IDENTIFIER",
+            "LPAREN",
+            "IDENTIFIER",
+            "COMMA",
+            "IDENTIFIER",
+            "COMMA",
+            "IDENTIFIER",
+            "RPAREN",
+            "COLON",
+            "IDENTIFIER",
+            "EQUAL",
+            "IDENTIFIER",
+            "PLUS",
+            "IDENTIFIER",
+            "MINUS",
+            "IDENTIFIER",
+            "RETURN",
+            "IDENTIFIER"
+        ]
+    );
+}
+
+#[test]
+pub fn lex_some_c_sharp() {
+    let rules = vec![
+        Rule::new("PUBLIC", r"public".to_string()),
+        Rule::new("STATIC", r"static".to_string()),
+        Rule::new("CLASS", r"class".to_string()),
+        Rule::new("RETURN", r"return".to_string()),
+        Rule::new("LPAREN", r"\(".to_string()),
+        Rule::new("RPAREN", r"\)".to_string()),
+        Rule::new("LBRACKET", r"{".to_string()),
+        Rule::new("RBRACKET", r"}".to_string()),
+        Rule::new("COMMA", r",".to_string()),
+        Rule::new("COLON", r":".to_string()),
+        Rule::new("SEMICOLON", r";".to_string()),
+        Rule::new("EQUAL", r"=".to_string()),
+        Rule::new("LAMBDA", r"=>".to_string()),
+        Rule::new("public", r"public".to_string()),
+        Rule::new("PLUS", r"\+".to_string()),
+        Rule::new("MINUS", r"\-".to_string()),
+        Rule::new("STIRNG", r#""[^"-"]*""#.to_string()),
+        Rule::new(
+            "NUMBER",
+            r"(\+|\-)?([0-9]+(\.[0-9]*)?|[0-9]*\.[0-9]+)".to_string(),
+        ),
+        Rule::new("IDENTIFIER", r"(_|[a-zA-Z])(_|[a-z0-9A-Z])*".to_string()),
+        Rule::new_skip("WhiteSpace", r"(\s|\t|\n)+".to_string()),
+    ];
+
+    let input = "
+        public static class Boniato: Hortaliza {
+            public string Nombre() => \"boniato\";
+        }
+    ";
+
+    let lexer = Lexer::new(rules);
+    let result = lexer.split(input);
+
+    assert!(result.is_ok(), "Errors: {:?}", result.err().unwrap());
+    let tokens = result.unwrap();
+    assert_eq!(
+        tokens.iter().map(|t| t.ty).collect::<Vec<_>>(),
+        vec![
+            "PUBLIC",
+            "STATIC",
+            "CLASS",
+            "IDENTIFIER",
+            "COLON",
+            "IDENTIFIER",
+            "LBRACKET",
+            "PUBLIC",
+            "IDENTIFIER",
+            "IDENTIFIER",
+            "LPAREN",
+            "RPAREN",
+            "LAMBDA",
+            "STIRNG",
+            "SEMICOLON",
+            "RBRACKET"
+        ]
+    );
+}
+
+#[test]
+pub fn empty_match() {
+    let rules = vec![Rule::new("EMPTY", "a*".to_string())];
+
+    let input = "bbbbbb";
+
+    let lexer = Lexer::new(rules);
+    let result = lexer.split(input);
+
+    assert!(result.is_err());
+    let errors = result.err().unwrap();
+    assert_eq!(errors.len(), 6);
+    assert_eq!(
+        errors,
+        vec![
+            "Lexical Error: Unexpected character 'b' at line: 0, column: 0",
+            "Lexical Error: Unexpected character 'b' at line: 0, column: 1",
+            "Lexical Error: Unexpected character 'b' at line: 0, column: 2",
+            "Lexical Error: Unexpected character 'b' at line: 0, column: 3",
+            "Lexical Error: Unexpected character 'b' at line: 0, column: 4",
+            "Lexical Error: Unexpected character 'b' at line: 0, column: 5",
+        ]
+    );
+}

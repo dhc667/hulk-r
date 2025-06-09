@@ -167,3 +167,48 @@ pub fn match_float() {
     assert!(!nfa_matcher.matches("123.456.789.0"));
     assert!(!nfa_matcher.matches("123.456.789.0.1"));
 }
+
+#[test]
+pub fn match_float_2() {
+    let regex = r"(\+|\-)?([0-9]+(\.[0-9]*)?|[0-9]*\.[0-9]+)";
+    let dfa_matcher = DFAMatcher::new(regex);
+    let nfa_matcher = NFAMatcher::new(regex);
+
+    assert!(dfa_matcher.matches("123"));
+    assert!(dfa_matcher.matches("123.456"));
+    assert!(dfa_matcher.matches("123."));
+    assert!(dfa_matcher.matches("-123.456"));
+    assert!(dfa_matcher.matches("+123."));
+    assert!(dfa_matcher.matches(".456"));
+    assert!(!dfa_matcher.matches("abc"));
+    assert!(!dfa_matcher.matches("123abc"));
+    assert!(!dfa_matcher.matches("123.456.789"));
+    assert!(!dfa_matcher.matches("."));
+    assert!(!dfa_matcher.matches(""));
+    assert!(dfa_matcher.matches("123."));
+    assert!(dfa_matcher.matches(".456"));
+    assert!(!dfa_matcher.matches("abc.123"));
+    assert!(!dfa_matcher.matches("123.abc"));
+    assert!(!dfa_matcher.matches("123.456.789"));
+    assert!(!dfa_matcher.matches("123.456.789.0"));
+    assert!(!dfa_matcher.matches("123.456.789.0.1"));
+
+    assert!(nfa_matcher.matches("123"));
+    assert!(nfa_matcher.matches("123.456"));
+    assert!(nfa_matcher.matches("123."));
+    assert!(nfa_matcher.matches("-123.456"));
+    assert!(nfa_matcher.matches("+123."));
+    assert!(nfa_matcher.matches(".456"));
+    assert!(!nfa_matcher.matches("abc"));
+    assert!(!nfa_matcher.matches("123abc"));
+    assert!(!nfa_matcher.matches("123.456.789"));
+    assert!(!nfa_matcher.matches("."));
+    assert!(!nfa_matcher.matches(""));
+    assert!(nfa_matcher.matches("123."));
+    assert!(nfa_matcher.matches(".456"));
+    assert!(!nfa_matcher.matches("abc.123"));
+    assert!(!nfa_matcher.matches("123.abc"));
+    assert!(!nfa_matcher.matches("123.456.789"));
+    assert!(!nfa_matcher.matches("123.456.789.0"));
+    assert!(!nfa_matcher.matches("123.456.789.0.1"));
+}
