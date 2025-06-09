@@ -887,7 +887,7 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
                 None => LlvmType::Object,
             };
             let param_name = param_ast.id.clone();
-]
+
             let param_alloca = self.generate_tmp_variable();
             preamble += &self.alloca_statement(&param_alloca, &param_llvm_type);
             preamble += &self.store_statement(&format!("%{}", param_name), &param_alloca, &param_llvm_type);
