@@ -128,3 +128,61 @@ fn shadow_to_self() {
 
     assert_eq!(lli_f64(&llvm).unwrap(), 4.0);
 }
+
+#[test]
+fn inherits_test() {
+    let llvm = crate::test::generate_code(
+        "
+        type Point1 (a:Number,b:Number) {x=a;y=b; get(): Number { return self.y; }}
+        type Point2 (c:Number,d:Number) inherits Point1(c,d*2) { get3(): Number { return 3; } get2(): Number { return 2; } }
+        type Point3 (e:Number,f:Number) inherits Point2(e,f) {get(): Number { return 12; } }
+        let p = new Point3(1,5) in
+        print(
+           p.get()
+        );",
+    );
+    println!("{}", llvm);
+
+    let result = lli_f64(&llvm).unwrap();
+    let expected = 12.0;
+
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn inherits_3_test() {
+    let llvm = crate::test::generate_code(
+        "
+        type Point1 (a:Number,b:Number) {x=a;y=b; get(): Number { return self.y; }}
+        type Point2 (c:Number,d:Number) inherits Point1(c,d*2) {z=c; get3(): Number { return 3; } }
+        let p = new Point2(1,5) in
+        print(
+           p.get()
+        );",
+    );
+    println!("{}", llvm);
+
+    let result = lli_f64(&llvm).unwrap();
+    let expected = 10.0;
+
+    assert_eq!(result, expected);
+}
+#[test]
+fn inherits_2_test() {
+    let llvm = crate::test::generate_code(
+        "
+        type Animal() {talk(): Number { return 10; }}
+        type Dog() inherits Animal() { talk(): Number { return 20; } }
+        type Cat() inherits Animal() { talk(): Number { return 30; } }
+        let p = new Dog() in
+        print(
+           p.talk()
+        );",
+    );
+    println!("{}", llvm);
+
+    let result = lli_f64(&llvm).unwrap();
+    let expected = 20.0;
+
+    assert_eq!(result, expected);
+}
