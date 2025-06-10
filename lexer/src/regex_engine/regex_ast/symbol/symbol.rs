@@ -2,6 +2,12 @@ use std::fmt::Display;
 
 use crate::regex_engine::regex_ast::symbol::CharSet;
 
+/// # Description
+/// An enum representing a symbol in a regular expression.
+/// It can be a character or an epsilon (empty string).
+/// ## Variants
+/// - `Char(char)`: Represents a single character.
+/// - `Epsilon`: Represents the empty string (epsilon).
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Symbol {
     Char(char),
@@ -33,6 +39,12 @@ impl Display for Symbol {
     }
 }
 
+/// # Description
+/// An enum representing a set of symbols in a regular expression.
+/// It can be a character set or a dot (which matches any character).
+/// ## Variants
+/// - `CharSet(CharSet)`: Represents a set of characters.
+/// - `Dot`: Represents a dot, which matches any character.
 pub enum SymbolSet {
     CharSet(CharSet),
     Dot,
@@ -59,6 +71,12 @@ impl Display for SymbolSet {
     }
 }
 
+/// # Description
+/// An enum representing a matchable symbol in a regular expression.
+/// It can be a single symbol or a set of symbols.
+/// ## Variants
+/// - `Symbol(Symbol)`: Represents a single symbol.
+/// - `SymbolSet(SymbolSet)`: Represents a set of symbols.
 pub enum MatchableSymbol {
     Symbol(Symbol),
     SymbolSet(SymbolSet),

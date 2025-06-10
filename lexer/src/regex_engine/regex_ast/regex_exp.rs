@@ -2,6 +2,12 @@ use std::fmt::Display;
 
 use crate::regex_engine::regex_ast::{bin_op::BinOp, symbol::symbol::MatchableSymbol, un_op::UnOp};
 
+/// Represents a regular expression expression, which can be an atom (a matchable symbol),
+/// a binary operation, or a unary operation.
+/// # Variants
+/// - `Atom`: Represents a matchable symbol, such as a character or a set of characters.
+/// - `BinOp`: Represents a binary operation, such as concatenation or alternation.
+/// - `UnOp`: Represents a unary operation, such as Kleene star, plus, or optional.
 pub enum RegexExp {
     Atom(MatchableSymbol),
     BinOp(BinOp),

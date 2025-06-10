@@ -2,6 +2,12 @@ use std::fmt::Display;
 
 use crate::regex_engine::regex_ast::regex_exp::RegexExp;
 
+/// Represents a unary operator in a regular expression, such as Kleene star, plus, or optional.
+/// This enum is used to define operations that can be applied to a regular expression operand.
+/// # Variants
+/// - `KleeneStar`: Represents the Kleene star operator (`*`), which matches zero or more occurrences of the operand.
+/// - `Plus`: Represents the plus operator (`+`), which matches one or more occurrences of the operand.
+/// - `Optional`: Represents the optional operator (`?`), which matches zero or one occurrence of the operand.
 pub enum UnaryOperator {
     KleeneStar,
     Plus,
@@ -19,6 +25,11 @@ impl From<char> for UnaryOperator {
     }
 }
 
+/// Represents a unary operation in a regular expression, which consists of an operand and a unary operator.
+/// This struct is used to encapsulate the operation applied to a regular expression operand.
+/// # Fields
+/// - `operand`: A boxed `RegexExp` representing the operand of the unary operation.
+/// - `op`: A `UnaryOperator` that specifies the type of unary operation to be performed on the operand.
 pub struct UnOp {
     pub operand: Box<RegexExp>,
     pub op: UnaryOperator,

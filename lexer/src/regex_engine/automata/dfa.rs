@@ -9,6 +9,15 @@ use crate::{
     regex_engine::automata::nfa::NFA,
 };
 
+/// # Description
+/// This module defines a `DFA` struct that represents a Deterministic Finite Automaton (DFA).
+/// ## Fields:
+/// - `q0`: The initial state of the DFA.
+/// - `qf`: A set of accept states.
+/// - `d`: A mapping of transitions, where each key is a tuple of (state, character) and the value is the next state.
+/// ## Methods:
+/// - `new`: Constructs a new `DFA` with a given start state and accept states.
+/// - `simulate`: Simulates the DFA on a given input string and returns whether it accepts the input.
 pub struct DFA {
     /// Start state
     pub q0: usize,
@@ -19,6 +28,10 @@ pub struct DFA {
 }
 
 impl DFA {
+    /// Constructs a new `DFA` with a given start state and accept states.
+    /// # Arguments
+    /// - `q0`: The initial state of the DFA.
+    /// - `qf`: A set of accept states.
     pub fn new(q0: usize, qf: HashSet<usize>) -> Self {
         DFA {
             q0,
@@ -27,6 +40,11 @@ impl DFA {
         }
     }
 
+    /// Simulates the DFA on a given input string and returns whether it accepts the input.
+    /// # Arguments
+    /// - `input`: A vector of characters representing the input string to be processed by the DFA.
+    /// # Returns
+    /// A boolean indicating whether the DFA accepts the input string.
     pub fn simulate(&self, input: Vec<char>) -> bool {
         let mut current_state = self.q0;
 
@@ -43,6 +61,11 @@ impl DFA {
 }
 
 impl From<NFA> for DFA {
+    /// Constructs a `DFA` from a given `NFA`.
+    /// # Arguments
+    /// - `nfa`: An instance of `NFA` from which the DFA will be constructed.
+    /// # Returns
+    /// A new `DFA` instance that represents the equivalent DFA of the provided NFA.
     fn from(nfa: NFA) -> Self {
         let q0: usize = 0;
         let mut d: HashMap<(usize, char), usize> = HashMap::new();

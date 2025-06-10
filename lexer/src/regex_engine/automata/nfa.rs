@@ -4,6 +4,12 @@ use crate::{
     automata_utils::transitionable::NDTransitionable, regex_engine::regex_ast::symbol::Symbol,
 };
 
+/// # Description
+/// A Non-deterministic Finite Automaton (NFA).
+/// ## Fields:
+/// - `q0`: The initial state of the NFA.
+/// - `qf`: The final state of the NFA.
+/// - `d`: A mapping of transitions, where each key is a tuple of (state, symbol) and the value is a set of next states.
 pub struct NFA {
     pub q0: usize,
     pub qf: usize,
@@ -11,10 +17,22 @@ pub struct NFA {
 }
 
 impl NFA {
+    /// Constructs a new `NFA` with the given initial state, final state, and transition map.
+    /// # Arguments
+    /// - `q0`: The initial state of the NFA.
+    /// - `qf`: The final state of the NFA.
+    /// - `d`: A mapping of transitions, where each key is a tuple of (state, symbol) and the value is a set of next states.
+    /// # Returns
+    /// A new `NFA` instance.
     pub fn new(q0: usize, qf: usize, d: HashMap<(usize, Symbol), HashSet<usize>>) -> Self {
         NFA { q0, qf, d }
     }
 
+    /// Simulates the NFA on a given input string.
+    /// # Arguments
+    /// - `input`: A vector of characters representing the input string to be processed by the NFA.
+    /// # Returns
+    /// A boolean indicating whether the NFA accepts the input string (i.e., whether it reaches the final state).
     pub fn simulate(&self, input: Vec<char>) -> bool {
         let mut s = self.e_closure(&HashSet::from([self.q0]));
 
@@ -31,6 +49,9 @@ impl NDTransitionable for NFA {
     }
 }
 
+/// A function to print the transition table of an NFA. For debugging and visualization purposes.
+/// # Arguments
+/// - `nfa`: A reference to the `NFA` instance whose transition table is to be printed.
 pub fn print_transition_table(nfa: &NFA) {
     println!("Transition Table:");
     let mut transitions: Vec<_> = nfa.d.iter().collect();

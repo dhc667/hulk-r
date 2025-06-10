@@ -10,6 +10,8 @@ use crate::regex_engine::{
     },
 };
 
+/// # Description
+/// A builder for constructing a Non-deterministic Finite Automaton (NFA) from a regular expression.
 pub struct NFABuilder {
     current_state: usize,
 }
@@ -19,6 +21,11 @@ impl NFABuilder {
         NFABuilder { current_state: 0 }
     }
 
+    /// Constructs an NFA from a given regular expression.
+    /// # Arguments
+    /// - `regex`: A reference to a `RegexExp` instance representing the regular expression to be converted into an NFA.
+    /// # Returns
+    /// A new `NFA` instance that represents the equivalent NFA of the provided regular expression.
     pub fn build_from_regex(&mut self, regex: &RegexExp) -> NFA {
         match regex {
             RegexExp::Atom(symbol) => self.symbol(symbol),
@@ -27,6 +34,11 @@ impl NFABuilder {
         }
     }
 
+    /// Constructs an NFA from a given matchable symbol.
+    /// # Arguments
+    /// - `symbol`: A reference to a `MatchableSymbol` instance representing the symbol to be converted into an NFA.
+    /// # Returns
+    /// A new `NFA` instance that represents the equivalent NFA of the provided matchable symbol.
     fn symbol(&mut self, symbol: &MatchableSymbol) -> NFA {
         let q0 = self.current_state;
         let qf = self.current_state + 1;
@@ -50,6 +62,11 @@ impl NFABuilder {
         NFA { q0, qf, d }
     }
 
+    /// Builds an NFA from a binary or unary operation in a regular expression.
+    /// # Arguments
+    /// - `regex`: A reference to a `RegexExp` instance representing the operation to be converted into an NFA.
+    /// # Returns
+    /// A new `NFA` instance that represents the equivalent NFA of the provided operation.
     fn bin_op(&mut self, bin_op: &BinOp) -> NFA {
         let op = &bin_op.op;
         let nfa1 = self.build_from_regex(&bin_op.left);
@@ -60,6 +77,11 @@ impl NFABuilder {
         }
     }
 
+    /// Builds an NFA from a unary operation in a regular expression.
+    /// # Arguments
+    /// - `un_op`: A reference to a `UnOp` instance representing the unary operation to be converted into an NFA.
+    /// # Returns
+    /// A new `NFA` instance that represents the equivalent NFA of the provided unary operation.
     fn un_op(&mut self, un_op: &UnOp) -> NFA {
         let op = &un_op.op;
         let nfa = self.build_from_regex(&un_op.operand);
@@ -70,6 +92,12 @@ impl NFABuilder {
         }
     }
 
+    /// Constructs an NFA for concatenation of two NFAs.
+    /// # Arguments
+    /// - `nfa1`: A reference to the first `NFA` instance.
+    /// - `nfa2`: A reference to the second `NFA` instance.
+    /// # Returns
+    /// A new `NFA` instance that represents the concatenation of the two NFAs.
     fn concat(&mut self, nfa1: &NFA, nfa2: &NFA) -> NFA {
         let q0 = nfa1.q0;
         let qf = nfa2.qf;
@@ -86,6 +114,12 @@ impl NFABuilder {
         NFA { q0, qf, d }
     }
 
+    /// Constructs an NFA for the union of two NFAs.
+    /// # Arguments
+    /// - `nfa1`: A reference to the first `NFA` instance.
+    /// - `nfa2`: A reference to the second `NFA` instance.
+    /// # Returns
+    /// A new `NFA` instance that represents the union of the two NFAs.
     fn union(&mut self, nfa1: &NFA, nfa2: &NFA) -> NFA {
         let q0 = self.current_state;
         let qf = self.current_state + 1;
@@ -110,6 +144,12 @@ impl NFABuilder {
         }
     }
 
+    /// Constructs an NFA for the Kleene star operation on a given NFA.
+    /// # Arguments
+    /// - `nfa`: A reference to the `NFA` instance to which the Kleene star operation will be applied.
+    /// # Returns
+    /// A new `NFA` instance that represents the Kleene star of the provided NFA.
+    /// This operation allows the NFA to accept zero or more occurrences of the input string defined by the original NFA.
     fn kleene_star(&mut self, nfa: &NFA) -> NFA {
         let q0 = self.current_state;
         let qf = self.current_state + 1;
@@ -126,6 +166,11 @@ impl NFABuilder {
         NFA { q0, qf, d }
     }
 
+    /// Constructs an NFA for the one or more operation on a given NFA.
+    /// # Arguments
+    /// - `nfa`: A reference to the `NFA` instance to which the one or more operation will be applied.
+    /// # Returns
+    /// A new `NFA` instance that represents the one or more operation of the provided NFA.
     fn one_or_more(&mut self, nfa: &NFA) -> NFA {
         let q0 = self.current_state;
         let qf = self.current_state + 1;
@@ -142,6 +187,12 @@ impl NFABuilder {
         NFA { q0, qf, d }
     }
 
+    /// Constructs an NFA for the optional operation on a given NFA.
+    /// # Arguments
+    /// - `nfa`: A reference to the `NFA` instance to which the optional operation will be applied.
+    /// # Returns
+    /// A new `NFA` instance that represents the optional operation of the provided NFA.
+    /// This operation allows the NFA to accept either the input string defined by the original NFA or an empty string.
     fn optional(&mut self, nfa: &NFA) -> NFA {
         let q0 = nfa.q0;
         let qf = nfa.qf;

@@ -29,7 +29,7 @@ use crate::{
 /// * `var_definitions` - A mutable reference to a context that holds the variable definitions.
 /// * `func_definitions` - A mutable reference to a context that holds the function definitions.
 /// * `errors` - A mutable reference to a vector that holds the errors encountered during the visit.
-/// /// # Note
+/// # Note
 /// This visitor assumes that the type definitions and variable definitions are already defined in the context.
 /// It does not define types or variables, it only checks for their correctness.
 pub struct SemanticVisitor<'a> {

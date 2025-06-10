@@ -2,6 +2,15 @@ use std::collections::{HashMap, HashSet};
 
 use crate::regex_engine::regex_ast::symbol::Symbol;
 
+/// # Description
+/// This trait defines the behavior of a non-deterministic automata.
+/// It provides methods to retrieve transitions, compute epsilon closures, and move to next states based on input symbols.
+///
+/// ## Methods:
+/// - `get_transitions`: Returns a reference to the transitions of the automata.
+/// - `e_closure`: Computes the epsilon closure of a set of states.
+/// - `move_to`: Computes the next set of states given a set of states and an input symbol.
+///
 pub trait NDTransitionable {
     fn get_transitions(&self) -> &HashMap<(usize, Symbol), HashSet<usize>>;
 

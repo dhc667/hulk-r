@@ -13,6 +13,16 @@ use crate::{
     lexer_generator::{automata::super_nfa::SuperNFA, lexer_chunk::LexerChunk},
 };
 
+/// # Description
+/// This module defines a `SuperDFA` struct that represents a Deterministic Finite Automaton (DFA)
+/// constructed from a Non-deterministic Finite Automaton (NFA).
+/// ## Fields:
+/// - `q0`: The initial state of the DFA.
+/// - `qf`: A mapping of final states to their corresponding token kinds.
+/// - `d`: A mapping of transitions, where each key is a tuple of (state, character) and the value is the next state.
+/// ## Methods:
+/// - `new`: Constructs a new `SuperDFA` from a given `SuperNFA`.
+/// - `scan`: Scans an input string and returns a vector of `LexerChunk` instances representing recognized tokens, or a vector of error messages.
 pub struct SuperDFA<TokenKind>
 where
     TokenKind: Clone + PartialEq,
@@ -26,10 +36,22 @@ impl<TokenKind> SuperDFA<TokenKind>
 where
     TokenKind: Clone + PartialEq + Hash + Eq + Debug,
 {
+    /// Constructs a new `SuperDFA` from a given `SuperNFA`.
+    /// # Arguments
+    /// - `nfa`: A reference to a `SuperNFA` instance from which the DFA will be constructed.
+    /// # Returns
+    /// A new `SuperDFA` instance that represents the equivalent DFA of the provided NFA.
     pub fn new(nfa: &SuperNFA<TokenKind>) -> Self {
         SuperDFA::from(nfa)
     }
 
+    /// Scans an input string and returns a vector of `LexerChunk` instances representing recognized tokens,
+    /// or a vector of error messages if any lexical errors are encountered.
+    /// # Arguments
+    /// - `input`: A string slice that contains the input to be scanned.
+    /// # Returns
+    /// A `Result` containing a vector of `LexerChunk`s representing the tokens found in the input string,
+    /// or an array with error messages if tokenization fails.
     pub fn scan<'a>(&self, input: &'a str) -> Result<Vec<LexerChunk<'a, TokenKind>>, Vec<String>> {
         let mut tokens = Vec::new();
         let mut errors = Vec::new();
@@ -93,6 +115,13 @@ impl<TokenKind> From<&SuperNFA<TokenKind>> for SuperDFA<TokenKind>
 where
     TokenKind: Clone + PartialEq + Hash + Eq + Debug,
 {
+    /// # Description
+    /// Constructs a `SuperDFA` from a given `SuperNFA`.
+    /// # Arguments
+    /// - `nfa`: A reference to a `SuperNFA` instance from which the DFA will be constructed.
+    /// # Returns
+    /// A new `SuperDFA` instance that represents the equivalent DFA of the provided NFA.
+    /// This method uses the subset construction algorithm to convert the NFA into a DFA.
     fn from(nfa: &SuperNFA<TokenKind>) -> Self {
         let q0: usize = 0;
         let mut d: HashMap<(usize, char), usize> = HashMap::new();
@@ -133,6 +162,8 @@ where
     }
 }
 
+/// # Description
+/// This function prints the structure of a `SuperDFA` to the console. For debugging purposes.
 pub fn print_dfa<TokenKind>(dfa: &SuperDFA<TokenKind>)
 where
     TokenKind: Clone + PartialEq + Hash + Eq + std::fmt::Debug,
@@ -153,6 +184,8 @@ where
     println!();
 }
 
+/// # Description
+/// This function prints the structure of a `SuperNFA` to the console. For debugging purposes.
 pub fn print_nfa<TokenKind>(nfa: &SuperNFA<TokenKind>)
 where
     TokenKind: Clone + PartialEq + std::fmt::Debug,

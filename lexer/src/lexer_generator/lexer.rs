@@ -10,18 +10,26 @@ use crate::{
     regex_engine::automata::{nfa::NFA, nfa_builder::NFABuilder},
 };
 
+/// # Description
+/// This module defines a `Lexer` struct that represents a lexer for tokenizing input strings based on defined rules.
+/// It uses a deterministic finite automata (DFA) as engine to efficiently tokenize input strings.
 pub struct Lexer<TokenKind>
 where
     TokenKind: Clone + PartialEq + Hash + Eq + Debug,
 {
-    pub rules: HashMap<TokenKind, Rule<TokenKind>>,
-    pub engine: SuperDFA<TokenKind>,
+    rules: HashMap<TokenKind, Rule<TokenKind>>,
+    engine: SuperDFA<TokenKind>,
 }
 
 impl<TokenKind> Lexer<TokenKind>
 where
     TokenKind: Clone + PartialEq + Hash + Eq + Debug,
 {
+    /// Creates a new `Lexer` instance from a vector of `Rule`s.
+    /// # Arguments
+    /// * `rules`: A vector of `Rule` instances that define the tokenization rules.
+    /// # Returns
+    /// A new `Lexer` instance that can tokenize input strings based on the provided rules.
     pub fn new(rules: Vec<Rule<TokenKind>>) -> Self {
         let parser = RegexParser::new();
         let attributed_nfas: Vec<(NFA, TokenKind)> = rules
@@ -43,6 +51,12 @@ where
         Lexer { rules, engine }
     }
 
+    /// Splits the input string into tokens based on the defined rules.
+    /// # Arguments
+    /// * `input`: The input string to be tokenized.
+    /// # Returns
+    /// A `Result` containing a vector of `LexerChunk`s representing the tokens found in the input string,
+    /// or an array with error messages if tokenization fails.
     pub fn split<'a>(&self, input: &'a str) -> Result<Vec<LexerChunk<'a, TokenKind>>, Vec<String>> {
         let result = self.engine.scan(input);
         let Ok(tokens) = result else {
