@@ -1,5 +1,5 @@
 use crate::test::lli_interface::lli_f64;
-
+use crate::test::lli_interface::lli_string;
 use super::generate_code;
 
 #[test]
@@ -118,10 +118,10 @@ fn two_function_in_two_types_definitions() {
 fn shadow_to_self() {
     let llvm = generate_code(
         "
-            type Point (a:Number) {x=a; get(): Number { return let self = 4 in self; } }
+            type Point (a:Number) {x=a; get(n:Number): Number { return let self = n in self; } }
 
             let a = new Point(4) in
-            let x = a.get() in print(x);
+            let x = a.get(4) in print(x);
             ",
     );
     println!("{}", llvm);
@@ -133,10 +133,10 @@ fn shadow_to_self() {
 fn inherits_test() {
     let llvm = crate::test::generate_code(
         "
-        type Point1 (a:Number,b:Number) {x=a;y=b; get(): Number { return self.y; }}
-        type Point2 (c:Number,d:Number) inherits Point1(c,d*2) { get3(): Number { return 3; } get2(): Number { return 2; } }
-        type Point3 (e:Number,f:Number) inherits Point2(e,f) {get(): Number { return 12; } }
-        let p = new Point3(1,5) in
+        type Point1 (a:Number,b:Number) {x=a;y=b; get(): Number { return self.x; }}
+        type Point2 (c:Number,d:Number) inherits Point1(c*2,d) { get3(): Number { return 3; } get2(): Number { return 2; } }
+        type Point3 (e:Number,f:Number) inherits Point2(e,f) { a = e;}
+        let p = new Point3(5,1) in
         print(
            p.get()
         );",
@@ -144,7 +144,7 @@ fn inherits_test() {
     println!("{}", llvm);
 
     let result = lli_f64(&llvm).unwrap();
-    let expected = 12.0;
+    let expected = 10.0;
 
     assert_eq!(result, expected);
 }
@@ -171,10 +171,10 @@ fn inherits_3_test() {
 fn inherits_2_test() {
     let llvm = crate::test::generate_code(
         "
-        type Animal() {talk(): Number { return 10; }}
-        type Dog() inherits Animal() { talk(): Number { return 20; } }
+        type Animal() { g(): Number { return 20; } talk(): Number { return 10; }}
+        type Dog() inherits Animal() { g(): Number { return 20; } }
         type Cat() inherits Animal() { talk(): Number { return 30; } }
-        let p = new Dog() in
+        let p = new Cat() in
         print(
            p.talk()
         );",
@@ -182,7 +182,50 @@ fn inherits_2_test() {
     println!("{}", llvm);
 
     let result = lli_f64(&llvm).unwrap();
-    let expected = 20.0;
+    let expected = 30.0;
+
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn function_definition_with_return_type_test() {
+    let llvm = generate_code(
+        "
+            type Animal() {talk(): Number { return 10; }}
+            type Dog() inherits Animal() { y=7; }
+            type Cat() inherits Animal() { x=200; y=300; talk(): Number { return self.talk2(); } talk2(): Number { return 300; } }
+            function f(): Animal {
+                return new Cat();
+            }
+            let a = f() in print(a.talk());
+            ",
+    );
+    println!("{}", llvm);
+
+    assert_eq!(lli_f64(&llvm).unwrap(), 300.0);
+}
+
+#[test]
+fn abc() {
+    let llvm = generate_code(
+        r#"
+            type A() { x=10; f(): Number { return 10; } }
+            type B() inherits A() {  h(): Number { return 20; } }
+            type C() inherits B() { f(): Number { return 30; } }
+
+            function g(): B {
+                if (true)  {
+                return new C();
+                } else { return new B(); };
+            }
+
+            let a = g() in print(a.f());
+        "#,
+    );
+    println!("{}", llvm);
+
+    let result = lli_f64(&llvm).unwrap();
+    let expected = 30.0;
 
     assert_eq!(result, expected);
 }
