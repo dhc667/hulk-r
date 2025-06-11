@@ -2,14 +2,12 @@ use crate::{llvm_types::{LlvmHandle, LlvmType}, GeneratorVisitor};
 
 
 impl GeneratorVisitor {
-    pub(crate) fn generate_tmp_variable(&mut self) -> String {
-        // we use the . after % to get around llvm's requirement that %N names
-        // be sequential starting at 0 within the same context
-        let tmp_variable = format!("%.{}", self.tmp_variable_id);
-        self.tmp_variable_id += 1;
-
-        tmp_variable
+    pub fn generate_tmp_variable(&self) -> String {
+        let current = self.tmp_counter.get();
+        self.tmp_counter.set(current + 1);
+        format!("%tmp{}", current)
     }
+
 
     pub(crate) fn alloca_statement(&self, var_register_name: &str, var_type: &LlvmType) -> String {
         let (type_name, align_size) = self.type_name_and_align_size(var_type);

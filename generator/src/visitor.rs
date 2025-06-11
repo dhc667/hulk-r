@@ -5,12 +5,15 @@ mod if_else;
 mod print;
 mod un_op;
 mod while_exp;
+mod type_def;
 
 mod helpers {
     pub mod control_flow;
     pub mod variables;
 }
+use std::cell::Cell;
 
+use std::string::String;
 use std::any::Any;
 use std::collections::HashMap;
 
@@ -25,17 +28,21 @@ pub struct VisitorResult {
 }
 
 impl VisitorResult {
+    /// Returns true if the result handle is None (i.e., the node does not produce a value).
     pub fn has_null_result(&self) -> bool {
         matches!(self.result_handle, None)
     }
 }
 
+/// Represents a variable in the code generation context.
+/// Holds its LLVM type and the name of the LLVM register or pointer.
 struct Variable {
     var_type: LlvmType,
     llvm_name: String,
 }
 
 impl Variable {
+    /// Creates a new variable of type f64 (double).
     pub fn new_f64(llvm_name: String) -> Variable {
         Variable {
             var_type: LlvmType::F64,
@@ -43,6 +50,7 @@ impl Variable {
         }
     }
 
+    /// Creates a new variable of type i1 (boolean).
     pub fn new_i1(llvm_name: String) -> Variable {
         Variable {
             var_type: LlvmType::I1,
@@ -50,6 +58,7 @@ impl Variable {
         }
     }
     
+    /// Creates a new variable of type string (i8*).
     pub fn new_string(llvm_name: String) -> Variable {
         Variable {
             var_type: LlvmType::String,
@@ -57,6 +66,7 @@ impl Variable {
         }
     }
     
+    /// Creates a new variable of type object (pointer to struct or i8*).
     pub fn new_object(llvm_name: String) -> Variable {
         Variable {
             var_type: LlvmType::Object,
@@ -65,48 +75,70 @@ impl Variable {
     }
 }
 
+/// The main code generation visitor for the Hulk language.
+///
+/// This struct is responsible for traversing the AST and generating LLVM IR code.
+/// It maintains context for variables, type members, function members, inheritance, and string constants.
 pub struct GeneratorVisitor {
-    /// # Description
-    ///
-    /// This will store the names of the llvm registers that store the
-    /// pointers to the values of the variables defined in a given context
+    /// Stores the names of the LLVM registers that store the pointers to the values of the variables defined in a given context.
     ///
     /// ## Warning
     /// To define variables, use the define_or_shadow method of this class
     context: Context<Variable>,
 
-    /// # Description
-    ///
-    /// Used to generate unique ids for temporary variables, irrespective
-    /// of context, this way we don't need to worry about llvm's requirement
-    /// that %N names be sequential starting at 0 within the same context
+    /// Used to generate unique ids for temporary variables, irrespective of context.
+    /// This way we don't need to worry about LLVM's requirement that %N names be sequential starting at 0 within the same context.
     tmp_variable_id: u32,
+    tmp_counter: Cell<usize>,
 
-    /// # Description
-    ///
-    /// We need this in order to be able to shadow variables, or define
-    /// variables with the same name in different contexts
+    /// Allows shadowing variables or defining variables with the same name in different contexts.
     variable_ids: HashMap<String, u32>,
 
+    /// Maps (type_name, member_name) to the member index in the struct.
     type_members_ids: HashMap<(String,String), u32>,
+    /// Maps (type_name, member_name) to the member's type as a string.
+    type_members_types: HashMap<(String, String), String>,
+    /// Maps (type_name, function_name) to the LLVM function name in the vtable.
     function_member_names: HashMap<(String, String), String>,
+    /// Maps type_name to its parent type (for inheritance).
     inherits: HashMap<String, String>,
+    /// Maps type_name to the types of its constructor arguments.
     constructor_args_types: HashMap<String, Vec<String>>,
+    /// Maps string literals to their LLVM global names.
+    string_constants: HashMap<String, String>,
+    /// Counter for generating unique string constant names.
+    string_counter: u32,
+    /// Maps (type_name, function_name) to the argument types for the function member.
+    function_member_def_from_type_and_name: HashMap<(String, String), Vec<String>>,
+    /// Stores global string definitions for emission at the top of the LLVM IR.
+    global_string_definitions: Vec<String>,
+    /// Maps (type_name, member_name) to the original type for the definition (for type resolution).
+    original_type_for_definition : HashMap<(String,String),String>,
 }
 
 impl GeneratorVisitor {
+    /// Creates a new `GeneratorVisitor` with empty context and all maps initialized.
     pub fn new() -> Self {
         GeneratorVisitor {
             context: Context::new_one_frame(),
             tmp_variable_id: 0,
             variable_ids: HashMap::new(),
             type_members_ids: HashMap::new(),
+            type_members_types: HashMap::new(),
             function_member_names: HashMap::new(),
             inherits: HashMap::new(),
             constructor_args_types: HashMap::new(),
+            string_constants: HashMap::new(),
+            string_counter: 0,
+            global_string_definitions: Vec::new(),
+            function_member_def_from_type_and_name: HashMap::new(),
+            original_type_for_definition : HashMap::new(),
+            tmp_counter: Cell::new(0),
         }
     }
 
+    /// Saves the mapping from member names to their indices for a given type.
+    /// Used for struct field access in LLVM IR.
     fn save_type_member_indices_from_defs(&mut self, type_name: &str, data_member_defs: &[ast::DataMemberDef]) {
         for (i, data_member) in data_member_defs.iter().enumerate() {
             let member_id = data_member.identifier.id.clone();
@@ -114,6 +146,8 @@ impl GeneratorVisitor {
         }
     }
 
+    /// Saves the mapping from function member names to their LLVM names for a given type.
+    /// Used for vtable method lookup.
     fn save_function_member_names_from_defs(&mut self, type_name: &str, function_member_defs: &[ast::FunctionDef]) {
         for func_def in function_member_defs.iter() {
             let func_id = func_def.identifier.id.clone();
@@ -123,6 +157,9 @@ impl GeneratorVisitor {
     }
 }
 
+// === ExpressionVisitor Implementation ===
+// Implements code generation for all expression AST nodes.
+// Each method emits LLVM IR for the corresponding AST node and returns a VisitorResult.
 impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
     fn visit_block(&mut self, node: &mut ast::Block) -> VisitorResult {
         self.context.push_open_frame();
@@ -236,9 +273,14 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
         let mut preamble = object_result.preamble;
         let object_ptr = object_result.result_handle.expect("Object must have a result").llvm_name;
         let object_type = node.obj_type.clone();
+        
+        println!("Object type: {:?}", object_type);
+        println!("Object pointer: {}", object_ptr);
+        println!("Member access: {}", node.member.id);
 
+    
         let member_type = node.member.info.ty.clone();
-
+        
         let llvm_type = match &member_type {
             Some(ty) => match ty {
                 ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Number) => LlvmType::F64,
@@ -262,32 +304,19 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
 
         let result_var = self.generate_tmp_variable();
 
+        println!("Looking for member '{}' in type '{}'", member_id, type_name);
+
         if let Some(idx) = self.type_members_ids.get(&(type_name.clone(), member_id.clone())) {
             let field_index = idx.clone();
-            
-            let gep_instr = match llvm_type {
-                LlvmType::F64 | LlvmType::I1 => {
-                    format!(
-                        "  {} = getelementptr inbounds %{}_type, %{}_type* {}, i32 0, i32 {}\n",
-                        result_var,
-                        type_name,
-                        type_name,
-                        object_ptr,
-                        field_index
-                    )
-                }
-                LlvmType::Object => {
-                    format!(
-                        "  {} = getelementptr inbounds %{}_type, %{}_type* {}, i32 0, i32 {}\n",
-                        result_var,
-                        type_name,
-                        type_name,
-                        object_ptr,
-                        field_index
-                    )
-                }
-                _ => panic!("Unsupported type for data member access: {}", llvm_type.llvm_type_str()),
-            };
+            println!("Found member in index'{}'",field_index);
+            let gep_instr = format!(
+                "  {} = getelementptr inbounds %{}_type, %{}_type* {}, i32 0, i32 {}\n",
+                result_var,
+                type_name,
+                type_name,
+                object_ptr,
+                field_index
+            );
             preamble += &gep_instr;
 
             if matches!(llvm_type, LlvmType::F64 | LlvmType::I1) {
@@ -324,98 +353,13 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
                 };
             }
         } else {
-            let mut current_type = type_name.clone();
-            let mut current_object_ptr = object_ptr.clone();
-            loop {
-                let super_field_ptr = self.generate_tmp_variable();
-                let super_field_load = self.generate_tmp_variable();
-                if let Some(search_father) = self.inherits.get(&current_type) {
-                    if let Some(idx) = self.type_members_ids.get(&(search_father.clone(), member_id.clone())) {
-                        let field_index = idx.clone();
+            panic!(
+                "Data member '{}' not found in type '{}'",
+                member_id,
+                type_name
+            );
+        }
 
-                        let gep_instr = match llvm_type {
-                            LlvmType::F64 | LlvmType::I1 => {
-                                format!(
-                                    "  {} = getelementptr inbounds %{}_type, %{}_type* {}, i32 0, i32 {}\n",
-                                    result_var,
-                                    search_father,
-                                    search_father,
-                                    current_object_ptr,
-                                    field_index
-                                )
-                            }
-                            LlvmType::Object => {
-                                format!(
-                                    "  {} = getelementptr inbounds %{}_type, %{}_type* {}, i32 0, i32 {}\n",
-                                    result_var,
-                                    search_father,
-                                    search_father,
-                                    current_object_ptr,
-                                    field_index
-                                )
-                            }
-                            _ => panic!("Unsupported type for data member access: {}", llvm_type.llvm_type_str()),
-                        };
-                        preamble += &gep_instr;
-
-                        if matches!(llvm_type, LlvmType::F64 | LlvmType::I1) {
-                            let load_var = self.generate_tmp_variable();
-                            let load_instr = format!(
-                                "  {} = load {}, {}* {}, align 8\n",
-                                load_var,
-                                llvm_type.llvm_type_str(),
-                                llvm_type.llvm_type_str(),
-                                result_var
-                            );
-                            preamble += &load_instr;
-                            return VisitorResult {
-                                preamble,
-                                result_handle: Some(LlvmHandle {
-                                    handle_type: HandleType::Register(llvm_type),
-                                    llvm_name: load_var,
-                                }),
-                            };
-                        } else if matches!(llvm_type, LlvmType::Object) {
-                            let load_var = self.generate_tmp_variable();
-                            let load_instr = format!(
-                                "  {} = load i8*, i8** {}, align 8\n",
-                                load_var,
-                                result_var
-                            );
-                            preamble += &load_instr;
-                            return VisitorResult {
-                                preamble,
-                                result_handle: Some(LlvmHandle {
-                                    handle_type: HandleType::Register(LlvmType::Object),
-                                    llvm_name: load_var,
-                                }),
-                            };
-                        }
-                    } else {
-                        preamble += &format!(
-                            "  {} = getelementptr inbounds %{}_type, %{}_type* {}, i32 0, i32 1\n",
-                            super_field_ptr,
-                            current_type,
-                            current_type,
-                            current_object_ptr
-                        );
-                        preamble += &format!(
-                            "  {} = load %{}_type*, %{}_type** {}, align 8\n",
-                            super_field_load,
-                            search_father,
-                            search_father,
-                            super_field_ptr
-                        );
-                        current_type = search_father.clone();
-                        current_object_ptr = super_field_load;
-                    }
-                } else {
-                    panic!("Member '{}' not found in type '{}'", member_id, current_type);
-                }
-            }
-
-        };
-        
         VisitorResult {
             preamble,
             result_handle: Some(LlvmHandle {
@@ -454,34 +398,34 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
             None => "void".to_string(),
         };
 
-        let mut call_param_llvm_types_for_sig = vec!["i8*".to_string()];
-        let mut call_args_values_with_llvm_types = vec![format!("i8* {}", object_ptr_name)];
-        for arg_expr in node.member.arguments.iter_mut() {
-            let arg_result = arg_expr.accept(self);
-            preamble += &arg_result.preamble;
-            let arg_handle = arg_result.result_handle.expect("Function member argument must have a result");
-            let arg_llvm_type_str = match arg_expr {
-                ast::Expression::NumberLiteral(_) => "double".to_string(),
-                ast::Expression::BooleanLiteral(_) => "i1".to_string(),
-                ast::Expression::StringLiteral(_) => "i8*".to_string(),
-                ast::Expression::Variable(id) => {
-                    match &id.info.ty {
-                        Some(ty) => match ty {
-                            ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Number) => "double".to_string(),
-                            ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Bool) => "i1".to_string(),
-                            ast::typing::Type::BuiltIn(ast::typing::BuiltInType::String) => "i8*".to_string(),
-                            ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Object) => "i8*".to_string(),
-                            ast::typing::Type::Defined(name) => format!("%{}_type*", name.id.clone()),
-                            _ => "i8*".to_string(),
-                        },
-                        None => "i8*".to_string(),
-                    }
-                }
-                _ => "i8*".to_string(),
-            };
-            call_param_llvm_types_for_sig.push(arg_llvm_type_str.clone());
-            call_args_values_with_llvm_types.push(format!("{} {}", arg_llvm_type_str, arg_handle.llvm_name));
-        }
+        let mut call_param_llvm_types_for_sig = Vec::new();
+        let mut call_args_values_with_llvm_types = Vec::new();
+        // Always push the self pointer as i8*
+        call_param_llvm_types_for_sig.push("i8*".to_string());
+        call_args_values_with_llvm_types.push(format!("i8* {}", object_ptr_name));
+        
+        // Look up argument types from the context map
+        let arg_types = if let Some(arg_types) = self.function_member_def_from_type_and_name.get(&(current_type.clone(), func_name_in_ast.clone())) {
+            arg_types.clone()
+        } else {
+            panic!(
+                "Function argument types for method '{}' in type '{}' not found in context",
+                func_name_in_ast,
+                current_type
+            );
+        };
+
+        // Now `arg_types` is a Vec<String> available without borrowing `self`
+
+        // Iterate and call methods that require `&mut self`
+            for (arg_expr, arg_llvm_type_str) in node.member.arguments.iter_mut().zip(arg_types.iter()) {
+                let arg_result = arg_expr.accept(self);
+                preamble += &arg_result.preamble;
+                let arg_handle = arg_result.result_handle.expect("Function member argument must have a result");
+                call_param_llvm_types_for_sig.push(arg_llvm_type_str.clone());
+                call_args_values_with_llvm_types.push(format!("{} {}", arg_llvm_type_str, arg_handle.llvm_name));
+            }
+
         let func_signature_ptr_type_for_load = format!("{} ({})*", call_ret_type_str, call_param_llvm_types_for_sig.join(", "));
 
         // Inheritance-aware vtable lookup
@@ -782,271 +726,34 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
     }
 }
 
+// === DefinitionVisitor Implementation ===
+// Implements code generation for all definition AST nodes (types, functions, constants, protocols).
 impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
     fn visit_definition(&mut self, node: &mut Definition) -> VisitorResult {
         node.accept(self)
     }
 
     fn visit_type_def(&mut self, node: &mut ast::TypeDef) -> VisitorResult {
+        use crate::visitor::type_def::{generate_vtable_type, generate_object_struct_type, generate_constructor, generate_method_definitions};
         let mut preamble = String::new();
+        // VTable
+        preamble += &generate_vtable_type(self, node);
+        // Struct
+        let struct_str = generate_object_struct_type(self, node);
+        preamble += &struct_str;
+        // Collect field types for constructor
         let type_name = &node.name.id;
-        let constructor_args: Vec<String> = node.parameter_list.iter().map(|p| self.llvm_type_str_from_ast_type(&p.info.ty.clone().expect("Expected type"))).collect();
-            
-        self.constructor_args_types.insert(type_name.clone(), constructor_args);
-
-        // --- VTable Type and Global VTable Instance ---
-        let vtable_type_name = format!("%{}_vtable_type", type_name);
-        let global_vtable_name = format!("@{}_vtable", type_name);
-
-        let mut vtable_fn_ptr_types = Vec::new();
-        let mut vtable_initializers = Vec::new();
-
-        preamble += &format!("{} = type {{", vtable_type_name);
-        for (i, func_def) in node.function_member_defs.iter().enumerate() {
-            let mangled_func_name = format!("{}_{}", type_name, func_def.identifier.id);
-            let ret_type_str = match &func_def.identifier.info.ty {
-                Some(ty) => self.llvm_type_str_from_ast_type(ty),
-                None => "void".to_string(), 
-            };
-             // for self
-            let mut param_llvm_types_for_sig = vec![format!("%{type_name}_type*",).to_string()];
-            for param_ast in &func_def.parameters {
-                param_llvm_types_for_sig.push(match &param_ast.info.ty {
-                    Some(ty) => self.llvm_type_str_from_ast_type(ty),
-                    None => "i8*".to_string(),
-                });
-            }
-            let fn_ptr_type_str = format!("{} ({})*", ret_type_str, param_llvm_types_for_sig.join(", "));
-            vtable_fn_ptr_types.push(fn_ptr_type_str.clone());
-            vtable_initializers.push(format!("{} @{}", fn_ptr_type_str, mangled_func_name));
-            self.function_member_names.insert((type_name.clone(), func_def.identifier.id.clone()), i.to_string());
-        }
-        if vtable_fn_ptr_types.is_empty() {
-            preamble += "}\n\n";
-            preamble += &format!("{} = private unnamed_addr constant {} {{}}, align 8\n\n", global_vtable_name, vtable_type_name);
-        } else {
-            preamble += &format!("\n  {}\n", vtable_fn_ptr_types.join(",\n  "));
-            preamble += "}\n\n";
-            preamble += &format!("{} = private unnamed_addr constant {} {{ {} }}, align 8\n\n",
-                                global_vtable_name, vtable_type_name, vtable_initializers.join(", "));
-        }
         
-        // --- Object Struct Type ---
-        preamble += &format!("%{}_type = type {{ \n  {}*", type_name, vtable_type_name);
-        let mut field_llvm_types_str = Vec::new();
-        
-        // Add super field first if we have inheritance
-        let has_inheritance = node.inheritance_indicator.is_some();
-        let parent_type_name = if has_inheritance {
-            let parent = &node.inheritance_indicator.as_ref().unwrap().parent_name.id;
-            field_llvm_types_str.push(format!("  %{}_type*", parent));
-            // Register super as a member at index 1 (after vtable pointer at index 0)
-            self.type_members_ids.insert((type_name.to_string(), "super".to_string()), 1);
-            self.inherits.insert(type_name.to_string(), parent.clone());
-            Some(parent.clone())
-        } else {
-            None
-        };
-        
-        // Add regular data members after the super field (if present)
-        let member_offset = if has_inheritance { 1 } else { 0 };
-        for (i, data_member) in node.data_member_defs.iter().enumerate() {
-            let member_llvm_type_str = match data_member.identifier.info.ty.clone() {
-                Some(ty) => self.llvm_type_str_from_ast_type(&ty),
-                None => {
-                    preamble += &format!("  ; WARNING: missing type for member '{}', defaulting to i8*\n", data_member.identifier.id);
-                    "i8*".to_string()
-                }
-            };
-            field_llvm_types_str.push(format!("  {}", member_llvm_type_str));
-            self.type_members_ids.insert((type_name.to_string(), data_member.identifier.id.clone()), (i + member_offset + 1) as u32);
-        }
-        if !field_llvm_types_str.is_empty() {
-            preamble += ",\n";
-            preamble += &format!("{}\n", field_llvm_types_str.join(",\n"));
-        }
-        preamble += "}\n\n";
+        // Constructor
+        preamble += &generate_constructor(self, node);
+        // Methods
+        preamble += &generate_method_definitions(self, node);
 
-        // --- Constructor (@TypeName_new) ---
-        preamble += &format!("define %{}_type* @{}_new(", type_name, type_name);
-        let mut ctor_param_defs = Vec::new();
-        for (i, param_ast) in node.parameter_list.iter().enumerate() {
-            let param_llvm_type = match &param_ast.info.ty {
-                Some(ty) => self.llvm_type_str_from_ast_type(ty),
-                None => "i8*".to_string(),
-            };
-            ctor_param_defs.push(format!("{} %{}", param_llvm_type, param_ast.id));
-        }
-        preamble += &format!("{}) {{\n", ctor_param_defs.join(", "));
-        preamble += "entry:\n";
-        
-        let old_context = std::mem::replace(&mut self.context, Context::new_one_frame());
-
-        for param_ast in &node.parameter_list {
-            let param_llvm_type = match &param_ast.info.ty {
-                Some(ty) => self.llvm_type_from_ast_type(ty),
-                None => LlvmType::Object,
-            };
-            let param_name = param_ast.id.clone();
-
-            let param_alloca = self.generate_tmp_variable();
-            preamble += &self.alloca_statement(&param_alloca, &param_llvm_type);
-            preamble += &self.store_statement(&format!("%{}", param_name), &param_alloca, &param_llvm_type);
-            
-            match param_llvm_type {
-                LlvmType::F64 => self.context.define(param_name, Variable::new_f64(param_alloca)),
-                LlvmType::I1 => self.context.define(param_name, Variable::new_i1(param_alloca)),
-                LlvmType::String => self.context.define(param_name, Variable::new_string(param_alloca)),
-                LlvmType::Object => self.context.define(param_name, Variable::new_object(param_alloca)),
-            }
-        }
-        
-        let total_fields_count = 1 + node.data_member_defs.len();
-        let struct_size_bytes = 8 * total_fields_count;
-        let obj_raw_ptr = self.generate_tmp_variable();
-        preamble += &format!("  {} = call i8* @malloc(i64 {}) ; Approx size\n", obj_raw_ptr, struct_size_bytes);
-        let obj_typed_ptr = self.generate_tmp_variable();
-        preamble += &format!("  {} = bitcast i8* {} to %{}_type*\n", obj_typed_ptr, obj_raw_ptr, type_name);
-
-        // Store VTable Pointer
-        let vtable_field_ptr = self.generate_tmp_variable();
-        preamble += &format!("  {} = getelementptr inbounds %{}_type, %{}_type* {}, i32 0, i32 0\n", vtable_field_ptr, type_name, type_name, obj_typed_ptr);
-        preamble += &format!("  store {}* {}, {}** {}, align 8\n", vtable_type_name, global_vtable_name, vtable_type_name, vtable_field_ptr);
-
-        if let Some(inheritance) = &mut node.inheritance_indicator {
-            let parent_name = &inheritance.parent_name.id;
-            
-            let mut arg_preambles = Vec::new();
-            let mut arg_handles = Vec::new();
-            let mut arg_types = Vec::new();
-
-
-            arg_types = self.constructor_args_types.get(&parent_name.clone()).unwrap_or_else(|| panic!("Expected args types")).clone();
-
-            for arg in &mut inheritance.argument_list {
-                let arg_result = arg.accept(self);
-                arg_preambles.push(arg_result.preamble);
-                let handle = arg_result.result_handle.expect("Parent constructor arg must not be null");
-                arg_handles.push(handle.llvm_name);
-
-            }
-
-            for preamble_str in arg_preambles {
-                preamble += &preamble_str;
-            }
-            
-            let call_args = arg_handles
-                .iter()
-                .zip(arg_types.iter())
-                .map(|(a, t)| format!("{} {}", t, a))
-                .collect::<Vec<_>>()
-                .join(", ");
-            
-            let super_var = self.generate_tmp_variable();
-            preamble += &format!("  {} = call %{}_type* @{}_new({})\n",
-                super_var, parent_name, parent_name, call_args);
-                
-            let super_field_ptr = self.generate_tmp_variable();
-            preamble += &format!("  {} = getelementptr inbounds %{}_type, %{}_type* {}, i32 0, i32 1\n", 
-                               super_field_ptr, type_name, type_name, obj_typed_ptr);
-            
-            preamble += &format!("  store %{}_type* {}, %{}_type** {}, align 8\n", 
-                               parent_name, super_var, parent_name, super_field_ptr);
+        println!("Type members IDs map contents:");
+        for ((type_name, member_name), index) in &self.type_members_ids {
+            println!("Type: {}, Member: {}, Index: {}", type_name, member_name, index);
         }
 
-        let num_ctor_params = node.parameter_list.len();
-        let num_data_members = node.data_member_defs.len();
-        let field_offset = if node.inheritance_indicator.is_some() { 2 } else { 1 };
-        for i in 0..std::cmp::min(num_ctor_params, num_data_members) {
-            let param_ast = &node.parameter_list[i];
-            let data_member_ast = &node.data_member_defs[i];
-
-            let field_llvm_type_str = match &data_member_ast.identifier.info.ty {
-                 Some(ty) => self.llvm_type_str_from_ast_type(ty),
-                 None => "i8*".to_string(),
-            };
-            let param_llvm_name = format!("%{}", param_ast.id);
-            
-            let field_ptr = self.generate_tmp_variable();
-
-            preamble += &format!("  {} = getelementptr inbounds %{}_type, %{}_type* {}, i32 0, i32 {}\n", 
-                                field_ptr, type_name, type_name, obj_typed_ptr, i + field_offset);
-            preamble += &format!("  store {} {}, {}* {}, align 8\n", 
-                                field_llvm_type_str, param_llvm_name, field_llvm_type_str, field_ptr);
-        }
-        preamble += &format!("  ret %{}_type* {}\n", type_name, obj_typed_ptr);
-        preamble += "}\n\n";
-        
-        let _ = std::mem::replace(&mut self.context, old_context);
-
-        // --- Method Definitions (@TypeName_methodName) ---
-        for func_def_ast in &mut node.function_member_defs {
-            let mangled_func_name = format!("{}_{}", type_name, func_def_ast.identifier.id);
-            let ret_type_str = match &func_def_ast.identifier.info.ty {
-                Some(ty) => self.llvm_type_str_from_ast_type(ty),
-                None => "void".to_string(),
-            };
-
-            let mut method_param_defs = vec![format!("%{}_type* %self", type_name)];
-            for param_ast in &func_def_ast.parameters {
-                let param_llvm_type = match &param_ast.info.ty {
-                    Some(ty) => self.llvm_type_str_from_ast_type(ty),
-                    None => "i8*".to_string(),
-                };
-                method_param_defs.push(format!("{} %{}", param_llvm_type, param_ast.id));
-            }
-            preamble += &format!("define {} @{}({}) {{\n", ret_type_str, mangled_func_name, method_param_defs.join(", "));
-            preamble += "entry:\n";
-
-            let old_context = std::mem::replace(&mut self.context, Context::new_one_frame());
-
-            let self_alloca = self.generate_tmp_variable();
-            preamble += &self.alloca_statement(&self_alloca, &LlvmType::Object);
-            preamble += &self.store_statement(&"%self".to_string(), &self_alloca, &LlvmType::Object);
-            self.context.define("self".to_string(), Variable::new_object(self_alloca));
-
-            for param_ast in &func_def_ast.parameters {
-                let param_name = param_ast.id.clone();
-                let ast_param_type = param_ast.info.ty.as_ref().expect("Param type must be known");
-                let llvm_param_type_enum = self.llvm_type_from_ast_type(ast_param_type);
-                
-                let param_alloca = self.generate_tmp_variable();
-                preamble += &self.alloca_statement(&param_alloca, &llvm_param_type_enum);
-                preamble += &self.store_statement(&format!("%{}", param_name), &param_alloca, &llvm_param_type_enum);
-                
-                match llvm_param_type_enum {
-                    LlvmType::F64 => self.context.define(param_name, Variable::new_f64(param_alloca)),
-                    LlvmType::I1 => self.context.define(param_name, Variable::new_i1(param_alloca)),
-                    LlvmType::String => self.context.define(param_name, Variable::new_string(param_alloca)),
-                    LlvmType::Object => self.context.define(param_name, Variable::new_object(param_alloca)),
-                }
-            }
-
-            let body_result = match &mut func_def_ast.body {
-                ast::FunctionBody::ArrowExpression(arrow_exp) => arrow_exp.expression.accept(self),
-                ast::FunctionBody::Block(block) => self.visit_block(block),
-            };
-            preamble += &body_result.preamble;
-
-            if ret_type_str != "void" {
-                if let Some(res_handle) = body_result.result_handle {
-                    preamble += &format!("  ret {} {}\n", ret_type_str, res_handle.llvm_name);
-                } else {
-                    let default_ret_val = match ret_type_str.as_str() {
-                        "double" => "0.0",
-                        "i1" => "0",
-                        _ if ret_type_str.ends_with('*') => "null",
-                        _ => panic!("Unexpected return type {}", ret_type_str),
-                    };
-                    preamble += &format!("  ret {} {}\n", ret_type_str, default_ret_val);
-                }
-            } else {
-                preamble += "  ret void\n";
-            }
-            preamble += "}\n\n";
-            let _ = std::mem::replace(&mut self.context, old_context);
-        }
-        
         VisitorResult {
             preamble,
             result_handle: None,
@@ -1234,6 +941,8 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
     }
 }
 
+// === GeneratorVisitor Helper Methods ===
+// Provides helpers for type conversion, LLVM type string generation, and type size/alignment.
 impl GeneratorVisitor {
     fn llvm_type_from_ast_type(&self, ast_type: &ast::typing::Type) -> LlvmType {
         match ast_type {
@@ -1264,6 +973,29 @@ impl GeneratorVisitor {
                 format!("{}*", self.llvm_type_str_from_ast_type(inner_type_box.as_ref()))
             }
             _ => panic!("NO implemented type")
+        }
+    }
+
+    // Helper to get LLVM type size (for struct size calculation)
+    fn llvm_type_size(&self, llvm_type: &str) -> usize {
+        match llvm_type {
+            "double" => 8,
+            "i32" => 4,
+            "i1" => 1,
+            "i8*" => 8,
+            _ if llvm_type.ends_with("*") => 8,
+            _ => 8,
+        }
+    }
+    // Helper to get LLVM type alignment
+    fn llvm_type_align(&self, llvm_type: &str) -> usize {
+        match llvm_type {
+            "double" => 8,
+            "i32" => 4,
+            "i1" => 1,
+            "i8*" => 8,
+            _ if llvm_type.ends_with("*") => 8,
+            _ => 8,
         }
     }
 }

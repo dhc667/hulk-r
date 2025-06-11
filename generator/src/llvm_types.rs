@@ -1,8 +1,9 @@
 #[derive(Copy, Clone)]
+#[derive(Debug)]
 pub enum LlvmType {
     F64,
     I1,
-    String,
+    String, // Now represents %string_type*
     Object
 }
 
@@ -11,7 +12,7 @@ impl LlvmType {
         match self {
             LlvmType::F64 => "double",
             LlvmType::I1 => "i1",
-            LlvmType::String => "i8*",
+            LlvmType::String => "%string_type*",
             LlvmType::Object => "i8*",
         }
     }
