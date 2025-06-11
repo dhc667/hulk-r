@@ -48,7 +48,7 @@ impl NFABuilder {
 
         match symbol {
             MatchableSymbol::SymbolSet(char_set) => {
-                for a in 0u8..=127u8 {
+                for a in 0u8..=255u8 {
                     let a = a as char;
                     if *char_set == a {
                         d.insert((q0, Symbol::Char(a)), HashSet::from([qf]));
