@@ -3,6 +3,7 @@ use ast::{
     typing::{BuiltInType, FunctorType, Type},
 };
 
+
 /// # Description
 /// Returns the `FunctorType` for a given binary operator.
 /// # Arguments
@@ -63,6 +64,15 @@ pub fn get_binary_op_functor_type(op: &BinaryOperator) -> FunctorType {
             ],
             Some(Type::BuiltIn(BuiltInType::Object)),
         ),
+        
+        // Strings
+        BinaryOperator::Concat(_) => FunctorType::new(
+            vec![
+                Some(Type::BuiltIn(BuiltInType::String)),
+                Some(Type::BuiltIn(BuiltInType::String)),
+            ],
+            Some(Type::BuiltIn(BuiltInType::String)),
+        )
     }
 }
 
