@@ -212,3 +212,19 @@ pub fn match_float_2() {
     assert!(!nfa_matcher.matches("123.456.789.0"));
     assert!(!nfa_matcher.matches("123.456.789.0.1"));
 }
+
+#[test]
+pub fn match_string_escape() {
+    let regex = r#""([^\\-\\"-"]|(\\"))*""#;
+    let dfa = DFAMatcher::new(regex);
+    let nfa = NFAMatcher::new(regex);
+
+    assert!(dfa.matches(r#""hello""#));
+    assert!(nfa.matches(r#""hello""#));
+
+    assert!(dfa.matches(r#""hello \" escaped""#));
+    assert!(nfa.matches(r#""hello \" escaped""#));
+
+    assert!(dfa.matches(r#""hello \" lots \" escaped""#));
+    assert!(nfa.matches(r#""hello \" lots \" escaped""#));
+}
