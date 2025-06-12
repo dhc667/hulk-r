@@ -14,8 +14,7 @@ pub fn lex_some_tokens() {
 
     let result = lexer.split("aab bba");
 
-    assert!(result.is_ok());
-    let tokens = result.unwrap();
+    let tokens = result.tokens;
     assert_eq!(tokens.len(), 6);
     assert_eq!(
         tokens.iter().map(|t| t.ty.clone()).collect::<Vec<_>>(),
@@ -43,8 +42,7 @@ pub fn lex_some_tokens2() {
 
     let result = lexer.split("aab bba ccc");
 
-    assert!(result.is_ok());
-    let tokens = result.unwrap();
+    let tokens = result.tokens;
     assert_eq!(tokens.len(), 9);
     assert_eq!(
         tokens.iter().map(|t| t.ty.clone()).collect::<Vec<_>>(),
@@ -75,8 +73,7 @@ pub fn resolve_ambiguity() {
 
     let result = lexer.split("aab ab");
 
-    assert!(result.is_ok());
-    let tokens = result.unwrap();
+    let tokens = result.tokens;
     assert_eq!(tokens.len(), 2);
     assert_eq!(
         tokens.iter().map(|t| t.ty.clone()).collect::<Vec<_>>(),
@@ -95,8 +92,7 @@ pub fn resolve_ambiguity2() {
     let lexer = Lexer::new(rules);
     let result = lexer.split("aab ab abb");
 
-    assert!(result.is_ok());
-    let tokens = result.unwrap();
+    let tokens = result.tokens;
     assert_eq!(tokens.len(), 3);
     assert_eq!(
         tokens.iter().map(|t| t.ty.clone()).collect::<Vec<_>>(),
@@ -115,8 +111,7 @@ pub fn edge_case() {
     let lexer = Lexer::new(rules);
     let result = lexer.split(str);
 
-    assert!(result.is_ok());
-    let tokens = result.unwrap();
+    let tokens = result.tokens;
     assert_eq!(tokens.len(), str.len());
     assert_eq!(
         tokens.iter().map(|t| t.ty.clone()).collect::<Vec<_>>(),
@@ -137,16 +132,12 @@ pub fn unrecognized_character() {
 
     let lexer = Lexer::new(rules);
 
-    let result = lexer.split("aab bba ccc").err().unwrap();
+    let errors = lexer.split("aab bba ccc").errors;
 
-    assert_eq!(result.len(), 3);
+    assert_eq!(errors.len(), 1);
     assert_eq!(
-        result,
-        vec![
-            "Lexical Error: Unexpected character 'c' at line: 0, column: 8",
-            "Lexical Error: Unexpected character 'c' at line: 0, column: 9",
-            "Lexical Error: Unexpected character 'c' at line: 0, column: 10"
-        ]
+        errors,
+        vec!["Lexical Error: Unexpected character 'c' at line: 0, column: 8",]
     );
 }
 
@@ -162,8 +153,7 @@ pub fn error_recovery() {
 
     let result = lexer.split("aab bba caac");
 
-    assert!(result.is_err());
-    let errors = result.err().unwrap();
+    let errors = result.errors;
     assert_eq!(errors.len(), 2);
     assert_eq!(
         errors,
@@ -193,8 +183,7 @@ pub fn lex_hulk_line() {
     let lexer = Lexer::new(rules);
     let result = lexer.split("let let_var: Number = 5 in x;");
 
-    assert!(result.is_ok());
-    let tokens = result.unwrap();
+    let tokens = result.tokens;
     assert_eq!(tokens.len(), 9);
     assert_eq!(
         tokens.iter().map(|t| t.ty.clone()).collect::<Vec<_>>(),
@@ -221,8 +210,8 @@ pub fn line_error() {
 
     let lexer = Lexer::new(rules);
     let result = lexer.split("a\nb\nc");
-    assert!(result.is_err());
-    let errors = result.err().unwrap();
+
+    let errors = result.errors;
     assert_eq!(errors.len(), 2);
     assert_eq!(
         errors,
@@ -262,8 +251,7 @@ pub fn lex_some_python() {
     let lexer = Lexer::new(rules);
     let result = lexer.split(input);
 
-    assert!(result.is_ok(), "Errors: {:?}", result.err().unwrap());
-    let tokens = result.unwrap();
+    let tokens = result.tokens;
     assert_eq!(
         tokens.iter().map(|t| t.ty).collect::<Vec<_>>(),
         vec![
@@ -318,11 +306,8 @@ pub fn lex_some_python_2() {
 
     let lexer = Lexer::new(rules);
     let result = lexer.split(input);
-
-    assert!(result.is_ok(), "Errors: {:?}", result.err().unwrap());
-    let tokens = result.unwrap();
     assert_eq!(
-        tokens.iter().map(|t| t.ty).collect::<Vec<_>>(),
+        result.tokens.iter().map(|t| t.ty).collect::<Vec<_>>(),
         vec![
             "DEF",
             "IDENTIFIER",
@@ -384,8 +369,7 @@ pub fn lex_some_c_sharp() {
     let lexer = Lexer::new(rules);
     let result = lexer.split(input);
 
-    assert!(result.is_ok(), "Errors: {:?}", result.err().unwrap());
-    let tokens = result.unwrap();
+    let tokens = result.tokens;
     assert_eq!(
         tokens.iter().map(|t| t.ty).collect::<Vec<_>>(),
         vec![
@@ -418,18 +402,10 @@ pub fn empty_match() {
     let lexer = Lexer::new(rules);
     let result = lexer.split(input);
 
-    assert!(result.is_err());
-    let errors = result.err().unwrap();
-    assert_eq!(errors.len(), 6);
+    let errors = result.errors;
+    assert_eq!(errors.len(), 1);
     assert_eq!(
         errors,
-        vec![
-            "Lexical Error: Unexpected character 'b' at line: 0, column: 0",
-            "Lexical Error: Unexpected character 'b' at line: 0, column: 1",
-            "Lexical Error: Unexpected character 'b' at line: 0, column: 2",
-            "Lexical Error: Unexpected character 'b' at line: 0, column: 3",
-            "Lexical Error: Unexpected character 'b' at line: 0, column: 4",
-            "Lexical Error: Unexpected character 'b' at line: 0, column: 5",
-        ]
+        vec!["Lexical Error: Unexpected character 'b' at line: 0, column: 0",]
     );
 }

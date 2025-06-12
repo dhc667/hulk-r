@@ -10,7 +10,9 @@ use crate::{
         representation::{to_set, to_str},
         transitionable::NDTransitionable,
     },
-    lexer_generator::{automata::super_nfa::SuperNFA, lexer_chunk::LexerChunk},
+    lexer_generator::{
+        automata::super_nfa::SuperNFA, lexer_chunk::LexerChunk, lexer_result::LexerResult,
+    },
 };
 
 /// # Description
@@ -50,15 +52,15 @@ where
     /// # Arguments
     /// - `input`: A string slice that contains the input to be scanned.
     /// # Returns
-    /// A `Result` containing a vector of `LexerChunk`s representing the tokens found in the input string,
-    /// or an array with error messages if tokenization fails.
-    pub fn scan<'a>(&self, input: &'a str) -> Result<Vec<LexerChunk<'a, TokenKind>>, Vec<String>> {
+    /// A LexerResult object containing errors and tokens recognized.
+    pub fn scan<'a>(&self, input: &'a str) -> LexerResult<'a, TokenKind> {
         let mut tokens = Vec::new();
         let mut errors = Vec::new();
         let mut pos = 0;
         let chars: Vec<char> = input.chars().collect();
         let len = chars.len();
         let mut line = (0, 0); // (line number, line start)
+
         while pos < len {
             let mut state = self.q0;
             let mut last_accepting: Option<(usize, &TokenKind)> = None;
@@ -93,21 +95,19 @@ where
                 line = current_line;
                 pos = end;
             } else {
-                errors.push(format!(
-                    "Lexical Error: Unexpected character '{}' at line: {}, column: {}",
-                    chars[pos],
-                    line.0,
-                    (pos - line.1)
-                ));
+                if pos == 0 || chars[pos - 1] != chars[pos] {
+                    errors.push(format!(
+                        "Lexical Error: Unexpected character '{}' at line: {}, column: {}",
+                        chars[pos],
+                        line.0,
+                        pos - line.1
+                    ));
+                }
                 line = current_line;
                 pos += 1;
             }
         }
-        if errors.is_empty() {
-            Ok(tokens)
-        } else {
-            Err(errors)
-        }
+        LexerResult { tokens, errors }
     }
 }
 

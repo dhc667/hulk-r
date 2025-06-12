@@ -4,7 +4,7 @@ use crate::{
     RegexParser,
     lexer_generator::{
         automata::{super_dfa::SuperDFA, super_nfa::SuperNFA},
-        lexer_chunk::LexerChunk,
+        lexer_result::LexerResult,
         rule::Rule,
     },
     regex_engine::automata::{nfa::NFA, nfa_builder::NFABuilder},
@@ -55,17 +55,15 @@ where
     /// # Arguments
     /// * `input`: The input string to be tokenized.
     /// # Returns
-    /// A `Result` containing a vector of `LexerChunk`s representing the tokens found in the input string,
-    /// or an array with error messages if tokenization fails.
-    pub fn split<'a>(&self, input: &'a str) -> Result<Vec<LexerChunk<'a, TokenKind>>, Vec<String>> {
-        let result = self.engine.scan(input);
-        let Ok(tokens) = result else {
-            return Err(result.err().unwrap());
-        };
+    /// A `LexerResult` containing the tokens recognized in the input string and the errors encountered.
+    pub fn split<'a>(&self, input: &'a str) -> LexerResult<'a, TokenKind> {
+        let mut result = self.engine.scan(input);
 
-        Ok(tokens
+        result.tokens = result
+            .tokens
             .into_iter()
             .filter(|token| self.rules.get(&token.ty).map_or(false, |rule| !rule.skip))
-            .collect())
+            .collect();
+        result
     }
 }
