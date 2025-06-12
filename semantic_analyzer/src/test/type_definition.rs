@@ -1158,3 +1158,54 @@ fn reassign_nonexisting_property() {
         vec!["Could not find data member y".to_string()]
     );
 }
+
+#[test]
+fn use_field_without_self() {
+    let p = ProgramParser::new();
+
+    let mut answ = p
+        .parse(
+            "
+            type A {
+                x=3;
+                method(): Number {
+                    x;
+                }
+            }
+        ",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    assert_eq!(
+        result.err().unwrap(),
+        vec!["Variable x is not defined".to_string()]
+    );
+}
+
+#[test]
+fn field_with_same_name_as_param() {
+    let p = ProgramParser::new();
+
+    let mut answ = p
+        .parse(
+            "
+            type A(x: Number) {
+                x= x;
+                method(x: Number): Number {
+                    self.x + x;
+                }
+            }
+        ",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    assert!(result.is_ok(), "Errors: {:?}", result.err());
+}

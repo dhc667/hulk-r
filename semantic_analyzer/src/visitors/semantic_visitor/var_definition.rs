@@ -51,4 +51,25 @@ impl<'a> SemanticVisitor<'a> {
         identifier.info.definition_pos = Some(identifier.position.clone());
         None
     }
+
+    pub(crate) fn handle_field_definition(
+        &mut self,
+        identifier: &mut Identifier,
+        right_type: TypeAnnotation,
+    ) -> TypeAnnotation {
+        let is_asignable = self.type_checker.conforms(&right_type, &identifier.info.ty);
+
+        if !is_asignable {
+            let message = format!(
+                "Type mismatch: Cannot assign {} to {}",
+                to_string(&right_type),
+                to_string(&identifier.info.ty)
+            );
+            self.errors.push(message);
+        }
+
+        identifier.set_type_if_none(right_type.clone());
+        identifier.info.definition_pos = Some(identifier.position.clone());
+        None
+    }
 }

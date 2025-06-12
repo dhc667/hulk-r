@@ -411,10 +411,9 @@ impl<'a> DefinitionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
         for member in &mut node.data_member_defs {
             let member_type = member.default_value.accept(self);
             
-            self.handle_var_definition(
+            self.handle_field_definition(
                 &mut member.identifier,
                 member_type.clone(),
-                true,
             );
 
             let member_info = self.type_definitions
