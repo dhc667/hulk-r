@@ -52,7 +52,6 @@ Atom: RegexExp = {
     "[" <neg:Negation?> <elems:RangeElems> "]" => RegexExp::Atom(MatchableSymbol::SymbolSet(
         SymbolSet::CharSet(CharSet::new(elems, neg.is_some()))
     )),
-    <c:Escapable> => RegexExp::Atom(MatchableSymbol::Symbol(Symbol::from(c))),
     "(" <r:Regex> ")" => r,
     "." => RegexExp::Atom(MatchableSymbol::SymbolSet(SymbolSet::Dot)),
 };
@@ -73,7 +72,7 @@ Escapable: char = {
     "\\-" => '-',
     "\\(" => '(',
     "\\)" => ')',
-    "\\" => '\\',
+    "\\\\" => '\\',
     "\\." => '.',
     "\\*" => '*',
     "\\+" => '+',
@@ -90,6 +89,7 @@ Negation: () = {
 }
 
 Char: char = {
+    <c:Escapable> => c,
     <c:r"."> => c.chars().next().unwrap(),
 };
 
