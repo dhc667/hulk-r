@@ -33,7 +33,7 @@ impl GeneratorVisitor {
             }
             HandleType::Literal(LlvmType::Object) | HandleType::Register(LlvmType::Object) => {
                 return self.get_object_bin_op_visitor_result(op, lhs_result, rhs_result);
-            }            
+            }
         };
     }
 
@@ -178,10 +178,8 @@ impl GeneratorVisitor {
         let result_handle = match op {
             EqualEqual(_) | NotEqual(_) | Less(_) | LessEqual(_) | Greater(_) | GreaterEqual(_) => {
                 Some(LlvmHandle::new_i1_register(result_handle))
-            },
-            Plus(_) => {
-                Some(LlvmHandle::new_string_register(result_handle))
-            },
+            }
+            Plus(_) => Some(LlvmHandle::new_string_register(result_handle)),
             Equal(_) => panic!("= found in non-assignment, parser problem"),
             ColonEqual(_) => panic!(":= found in non-destructive assignment, parser problem"),
             _ => panic!("Unsupported string operator"),
@@ -204,7 +202,7 @@ impl GeneratorVisitor {
 
         let preamble = lhs.preamble + &rhs.preamble;
         let result_handle = self.generate_tmp_variable();
-        
+
         let operation = match op {
             EqualEqual(_) => format!(
                 "{} = fcmp oeq double {}, {}",
@@ -214,9 +212,7 @@ impl GeneratorVisitor {
         } + "\n";
 
         let result_handle = match op {
-            EqualEqual(_) | NotEqual(_) => {
-                Some(LlvmHandle::new_i1_register(result_handle))
-            },
+            EqualEqual(_) | NotEqual(_) => Some(LlvmHandle::new_i1_register(result_handle)),
             Equal(_) => panic!("= found in non-assignment, parser problem"),
             ColonEqual(_) => panic!(":= found in non-destructive assignment, parser problem"),
             _ => panic!("Unsupported object operator"),
