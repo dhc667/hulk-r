@@ -114,6 +114,23 @@ impl TypeChecker {
         true
     }
 
+    pub fn implements_variant(&self, func_a: &FuncInfo, func_b: &FuncInfo) -> bool {
+        if func_a.name.id != func_b.name.id {
+            return false;
+        }
+        if func_a.parameters.len() != func_b.parameters.len() {
+            return false;
+        }
+        for (a_param, b_param) in func_a.parameters.iter().zip(&func_b.parameters) {
+            // arguments are contravariant i.e b <= a
+            if !self.conforms(&b_param.info.ty, &a_param.info.ty) {
+                return false;
+            }
+        }
+        // return types are covariant i.e a <= b
+        self.conforms(&func_a.name.info.ty, &func_b.name.info.ty)
+    }
+
     /// # Description
     /// Returns the lowest common supertype of two type annotations using LCA with sparse table algorithm
     /// # Parameters
