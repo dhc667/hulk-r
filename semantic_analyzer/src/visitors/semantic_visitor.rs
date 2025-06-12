@@ -6,6 +6,7 @@ mod print;
 mod find_member_info;
 mod find_method_info;
 mod get_conformable;
+mod check_override;
 
 use std::collections::HashMap;
 
@@ -411,6 +412,13 @@ impl<'a> DefinitionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
         for member in &mut node.data_member_defs {
             let member_type = member.default_value.accept(self);
             
+            if !self.check_field_override(&member.identifier.id, &node.name.id) {
+                self.errors.push(format!(
+                    "Semantic Error: Cannot declare field {} in type {}, as it overrides parent definition.",
+                    &member.identifier.id,
+                    &node.name.id
+                ));
+            }
             self.handle_field_definition(
                 &mut member.identifier,
                 member_type.clone(),
@@ -432,6 +440,7 @@ impl<'a> DefinitionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
                     &node.name.id
                 ));
 
+
             if member_info.ty.is_none() {
                 member_info.ty = member_type.clone();
             }
@@ -440,6 +449,13 @@ impl<'a> DefinitionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
         //Define the methods
         for method in &mut node.function_member_defs {
             self.var_definitions.push_open_frame();
+            if !self.check_method_override(&method.identifier.id, &node.name.id) {
+                self.errors.push(format!(
+                    "Semantic Error: Method {} in type {}, does not properly overrides parent definition.",
+                    &method.identifier.id,
+                    &node.name.id
+                ));
+            }
             self.handle_fn_def(method, Some(&node.name));
             self.var_definitions.pop_frame();
         }
