@@ -1,6 +1,6 @@
-use super::generate_code;
 use crate::test::lli_interface::lli_f64;
 use crate::test::lli_interface::lli_string;
+use super::generate_code;
 
 #[test]
 fn data_access() {
@@ -48,6 +48,7 @@ fn data_access_bool() {
 
     assert_eq!(lli_f64(&llvm).unwrap(), 5.0);
 }
+
 
 #[test]
 fn function_definition() {
@@ -233,7 +234,7 @@ fn abc() {
 fn test_string() {
     let llvm = generate_code(
         r#"
-            
+
 
             let a = "hello world" in print(a);
         "#,
@@ -242,6 +243,51 @@ fn test_string() {
 
     let result = lli_string(&llvm).unwrap();
     let expected = "hello world";
+
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_josue_name() {
+    let llvm = generate_code(
+        r#"
+            type Person ( name: String,age: Number){
+                age=age*2;
+                name=name;
+                getAge(): Number { return self.age; }
+                getName(): String { return self.name; }
+            }
+            let p = new Person("josue",20) in print(p.getName());
+
+        "#,
+    );
+    println!("{}", llvm);
+
+    let result = lli_string(&llvm).unwrap();
+    let expected = "josue";
+
+    assert_eq!(result, expected);
+}
+
+
+#[test]
+fn test_josue_age() {
+    let llvm = generate_code(
+        r#"
+            type Person ( name: String,age: Number){
+                age=age*2;
+                name=name;
+                getAge(): Number { return self.age; }
+                getName(): String { return self.name; }
+            }
+            let p = new Person("josue",20) in print(p.getAge());
+
+        "#,
+    );
+    println!("{}", llvm);
+
+    let result = lli_f64(&llvm).unwrap();
+    let expected = 40.0;
 
     assert_eq!(result, expected);
 }

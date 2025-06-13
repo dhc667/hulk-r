@@ -516,49 +516,40 @@ pub fn generate_constructor(visitor: &mut GeneratorVisitor, node: &mut ast::Type
         0
     };
     // For each data member defined in this type, initialize it from the corresponding constructor parameter
-    for (i, data_member) in node.data_member_defs.iter().enumerate() {
+    for (i, data_member) in node.data_member_defs.iter_mut().enumerate() {
         let param_index = parent_member_count + i;
-        if param_index < node.parameter_list.len() {
-            let param_name = &node.parameter_list[param_index].id;
-            let param_var = visitor
-                .context
-                .get_value(param_name)
-                .expect(&format!("Parameter {} not found in context", param_name));
-            // Load parameter value into a register
-            let loaded_param = visitor.generate_tmp_variable();
-            let (load_preamble, load_handle) = visitor.extract_variable_value_to_register(
-                loaded_param.clone(),
-                &param_var.llvm_name,
-                &param_var.var_type,
-            );
-            preamble += &load_preamble;
-            // Get child member index
-            let child_member_index = visitor
-                .type_members_ids
-                .get(&(type_name.clone(), data_member.identifier.id.clone()))
-                .expect(&format!(
-                    "Child member index for {}.{} not found",
-                    type_name, data_member.identifier.id
-                ));
-            // Get pointer to child member
-            let child_member_ptr = visitor.generate_tmp_variable();
-            preamble += &format!(
-                "  {} = getelementptr inbounds %{}_type, %{}_type* {}, i32 0, i32 {}\n",
-                child_member_ptr, type_name, type_name, obj_typed_ptr, child_member_index
-            );
-            // Store parameter value in child member
-            let member_type = visitor
-                .type_members_types
-                .get(&(type_name.clone(), data_member.identifier.id.clone()))
-                .expect(&format!(
-                    "Member type for {}.{} not found",
-                    type_name, data_member.identifier.id
-                ));
-            preamble += &format!(
-                "  store {} {}, {}* {}, align 8\n",
-                member_type, load_handle.llvm_name, member_type, child_member_ptr
-            );
-        }
+        let child_member_index = visitor
+            .type_members_ids
+            .get(&(type_name.clone(), data_member.identifier.id.clone()))
+            .expect(&format!(
+                "Child member index for {}.{} not found",
+                type_name, data_member.identifier.id
+            ));
+        // Get pointer to child member
+        let child_member_ptr = visitor.generate_tmp_variable();
+        preamble += &format!(
+            "  {} = getelementptr inbounds %{}_type, %{}_type* {}, i32 0, i32 {}\n",
+            child_member_ptr, type_name, type_name, obj_typed_ptr, child_member_index
+        );
+
+        // Use default value expression
+        let default_result = data_member.default_value.accept(visitor);
+        preamble += &default_result.preamble;
+        let default_handle = default_result.result_handle.expect("Default value must produce a result");
+
+        let member_type = visitor
+            .type_members_types
+            .get(&(type_name.clone(), data_member.identifier.id.clone()))
+            .expect(&format!(
+                "Member type for {}.{} not found",
+                type_name, data_member.identifier.id
+            ));
+        preamble += &format!(
+            "  store {} {}, {}* {}, align 8\n",
+            member_type, default_handle.llvm_name, member_type, child_member_ptr
+        );
+
+        
     }
     // Restore the previous context frame
     let _ = std::mem::replace(&mut visitor.context, old_context);
