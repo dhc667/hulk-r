@@ -1,10 +1,10 @@
-use parser::ProgramParser;
+use parser::parser::Parser;
 
 use crate::semantic_analyzer::SemanticAnalyzer;
 
 #[test]
 fn test_define_type() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p.parse("type Point {x = 0; y = 0; }").unwrap();
 
@@ -18,7 +18,7 @@ fn test_define_type() {
 
 #[test]
 fn test_define_type_twice() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse("type Point {x = 0; y = 0; } type Point {a = 0; b = 0; }")
@@ -37,7 +37,7 @@ fn test_define_type_twice() {
 
 #[test]
 fn test_define_several_types() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -73,7 +73,7 @@ fn test_define_several_types() {
 
 #[test]
 fn define_global_variable() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p.parse("constant x: Number = 0;").unwrap();
 
@@ -87,7 +87,7 @@ fn define_global_variable() {
 
 #[test]
 fn define_global_variable_twice() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse("constant x: Number = 0; constant x: Number = 1;")
@@ -108,7 +108,7 @@ fn define_global_variable_twice() {
 
 #[test]
 fn define_global_function() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse("function f(x: Number): Number { return x; }")
@@ -124,7 +124,7 @@ fn define_global_function() {
 
 #[test]
 fn define_global_function_twice() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse("function f(x: Number): Number { return x; } function f(x: Number): Number { return x; }")
@@ -143,7 +143,7 @@ fn define_global_function_twice() {
 
 #[test]
 fn define_global_function_with_same_name_as_type() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse("type f {x = 0; y = 0; } function f(x: Number): Number { return x; }")
@@ -159,7 +159,7 @@ fn define_global_function_with_same_name_as_type() {
 
 #[test]
 fn define_global_function_with_same_name_as_variable() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse("constant f: Number = 0; function f(x: Number): Number { return x; }")
@@ -175,7 +175,7 @@ fn define_global_function_with_same_name_as_variable() {
 
 #[test]
 fn define_global_function_and_use_it() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse("function f(x: Number): Number { return x; } function g(x: Number): Number { return f(x); }")
@@ -192,7 +192,7 @@ fn define_global_function_and_use_it() {
 
 #[test]
 fn define_global_function_and_check_type() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse("function f(x: Number): Number { return x; } 2 + f(2);")
@@ -208,7 +208,7 @@ fn define_global_function_and_check_type() {
 
 #[test]
 fn define_global_function_and_use_it_wrong_type() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse("function f(x: Number): Number { return x; } f(true);")
@@ -227,7 +227,7 @@ fn define_global_function_and_use_it_wrong_type() {
 
 #[test]
 fn define_global_function_and_use_it_wrong_type2() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse("function f(x: Number): Number { return x; } f(1, 2);")
@@ -246,7 +246,7 @@ fn define_global_function_and_use_it_wrong_type2() {
 
 #[test]
 fn define_global_function_and_use_it_wrong3() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse("function f(): Number { return 3; } f(1, 2);")
@@ -265,7 +265,7 @@ fn define_global_function_and_use_it_wrong3() {
 
 #[test]
 fn define_global_arrow_function() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p.parse("function f(x: Number): Number => x;").unwrap();
 
@@ -279,7 +279,7 @@ fn define_global_arrow_function() {
 
 #[test]
 fn try_dassign_constant() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p.parse("constant zero: Number = 0; zero:= 2;").unwrap();
 
@@ -296,7 +296,7 @@ fn try_dassign_constant() {
 
 #[test]
 fn shadowed_dassignment_to_constant() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -319,7 +319,7 @@ fn shadowed_dassignment_to_constant() {
 
 #[test]
 fn unknown_annotation_in_global_function_param() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -341,7 +341,7 @@ fn unknown_annotation_in_global_function_param() {
 
 #[test]
 fn unknown_annotation_in_constant_definition() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(

@@ -15,7 +15,9 @@ fn test_invalid_token() {
     let errors = parse_and_get_errors("@invalid");
     assert_eq!(
         errors,
-        vec!["Sintactic Error: Invalid token at location: 0"]
+        vec![
+            "Sintactic Error: Unrecognized token at location: 0, token: `@`, expected: r#``(?:[^`]|.)*``#, r#`[0-9]+(.[0-9]+)?`#, r#`[A-Za-z][A-Za-z_0-9]*`#, `!`, `(`, `+`, `-`, `[`, `constant`, `false`, `for`, `function`, `if`, `let`, `new`, `protocol`, `true`, `type`, `while`, `{`"
+        ]
     );
 }
 
@@ -47,7 +49,7 @@ fn test_extra_token() {
     assert_eq!(
         errors,
         vec![
-            "Sintactic Error: Unrecognized EOF at location: 17, expected: `!=`, `%`, `&&`, `(`, `*`, `+`, `-`, `.`, `/`, `:=`, `;`, `<`, `<=`, `==`, `>`, `>=`, `[`, `||`"
+            "Sintactic Error: Unrecognized EOF at location: 17, expected: `!=`, `%`, `&&`, `(`, `*`, `+`, `-`, `.`, `/`, `:=`, `;`, `<`, `<=`, `==`, `>`, `>=`, `@`, `@@`, `[`, `||`"
         ]
     );
 }

@@ -1,11 +1,11 @@
 use ast::typing::{BuiltInType, Type, to_string};
-use parser::ProgramParser;
+use parser::parser::Parser;
 
 use crate::semantic_analyzer::SemanticAnalyzer;
 
 #[test]
 pub fn simple_typing() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
     let mut answ = p.parse("let x = 1 in { x + 1 ;};").unwrap();
 
     let mut semantic_analyzer = SemanticAnalyzer::new();
@@ -36,7 +36,7 @@ pub fn simple_typing() {
 
 #[test]
 pub fn binary_op_error() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
     let mut answ = p.parse("let x = 1 in { x + true ;};").unwrap();
 
     let mut semantic_analyzer = SemanticAnalyzer::new();
@@ -52,7 +52,7 @@ pub fn binary_op_error() {
 
 #[test]
 pub fn unary_op_error() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
     let mut answ = p.parse("let x = true in { -x ;};").unwrap();
 
     let mut semantic_analyzer = SemanticAnalyzer::new();
@@ -68,7 +68,7 @@ pub fn unary_op_error() {
 
 #[test]
 pub fn dassing_error() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
     let mut answ = p.parse("let x = true in { x:=3 ;};").unwrap();
 
     let mut semantic_analyzer = SemanticAnalyzer::new();
@@ -84,7 +84,7 @@ pub fn dassing_error() {
 
 #[test]
 pub fn simple_inference_test() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
     let mut answ = p
         .parse("let x = if (true) true else 3 in { x + 1 ;};")
         .unwrap();
@@ -109,7 +109,7 @@ pub fn simple_inference_test() {
 
 #[test]
 pub fn nested_inference() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
     let mut answ = p
         .parse(
             "
@@ -151,7 +151,7 @@ pub fn nested_inference() {
 
 #[test]
 pub fn string_typing() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
     let mut answ = p.parse("let x = \"boniato\" in { x ;};").unwrap();
 
     let mut semantic_analyzer = SemanticAnalyzer::new();
@@ -169,7 +169,7 @@ pub fn string_typing() {
 
 #[test]
 pub fn list_typing() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
     let mut answ = p.parse("let x = [1, 2, 3] in { x ;};").unwrap();
 
     let mut semantic_analyzer = SemanticAnalyzer::new();
@@ -190,7 +190,7 @@ pub fn list_typing() {
 
 #[test]
 pub fn list_typing_with_different_types() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
     let mut answ = p.parse("let x = [1, 2, \"3\"] in { x ;};").unwrap();
 
     let mut semantic_analyzer = SemanticAnalyzer::new();
@@ -211,7 +211,7 @@ pub fn list_typing_with_different_types() {
 
 #[test]
 pub fn list_indexing_typing() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
     let mut answ = p
         .parse(
             "
@@ -236,7 +236,7 @@ pub fn list_indexing_typing() {
 
 #[test]
 pub fn list_indexing_typing_error() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
     let mut answ = p
         .parse(
             "
@@ -259,7 +259,7 @@ pub fn list_indexing_typing_error() {
 
 #[test]
 pub fn list_indexing_typing_error_2() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
     let mut answ = p
         .parse(
             "
@@ -282,7 +282,7 @@ pub fn list_indexing_typing_error_2() {
 
 #[test]
 pub fn call_var_with_method_name() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
     let mut answ = p
         .parse(
             "
@@ -303,7 +303,7 @@ pub fn call_var_with_method_name() {
 
 #[test]
 pub fn iterate_non_iterable() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
     let mut answ = p
         .parse(
             "
@@ -325,7 +325,7 @@ pub fn iterate_non_iterable() {
 
 #[test]
 pub fn annotate_field_accessed_object() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
     let mut answ = p
         .parse(
             "
@@ -358,7 +358,7 @@ pub fn annotate_field_accessed_object() {
 
 #[test]
 pub fn annotate_function_accessed_object() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
     let mut answ = p
         .parse(
             "
@@ -387,7 +387,7 @@ pub fn annotate_function_accessed_object() {
 
 #[test]
 pub fn unknown_annotation_in_constructor_called() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
     let mut answ = p
         .parse(
             "
@@ -413,7 +413,7 @@ pub fn unknown_annotation_in_constructor_called() {
 
 #[test]
 pub fn unknown_annotation_in_func_called() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
     let mut answ = p
         .parse(
             "
@@ -437,7 +437,7 @@ pub fn unknown_annotation_in_func_called() {
 
 #[test]
 pub fn unknown_annotation_in_method_called() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
     let mut answ = p
         .parse(
             "
@@ -464,7 +464,7 @@ pub fn unknown_annotation_in_method_called() {
 
 #[test]
 fn concat_checks1() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
     let mut answ = p
         .parse(
             r#"
@@ -484,7 +484,7 @@ fn concat_checks1() {
 
 #[test]
 fn concat_checks2() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
     let mut answ = p
         .parse(
             r#"
@@ -504,7 +504,7 @@ fn concat_checks2() {
 
 #[test]
 fn concat_checks3() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
     let mut answ = p
         .parse(
             r#"
@@ -524,7 +524,7 @@ fn concat_checks3() {
 
 #[test]
 fn concat_checks4() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
     let mut answ = p
         .parse(
             r#"
@@ -544,7 +544,7 @@ fn concat_checks4() {
 
 #[test]
 fn concat_checks5() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
     let mut answ = p
         .parse(
             r#"
@@ -564,7 +564,7 @@ fn concat_checks5() {
 
 #[test]
 fn concat_checks6() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
     let mut answ = p
         .parse(
             r#"
