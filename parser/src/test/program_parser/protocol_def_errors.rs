@@ -4,9 +4,12 @@ use crate::ProgramParser;
 #[should_panic]
 fn empty_protocol() {
     let p = ProgramParser::new();
-    p.parse("
+    p.parse(
+        "
 protocol P {}
 
 42;
-").unwrap();
+",
+    )
+    .unwrap();
 }

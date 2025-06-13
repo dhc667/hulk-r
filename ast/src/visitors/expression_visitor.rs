@@ -1,5 +1,7 @@
 use crate::{
-    ast::*, tokens::{Identifier, NumberLiteral}, BooleanLiteral, StringLiteral
+    BooleanLiteral, StringLiteral,
+    ast::*,
+    tokens::{Identifier, NumberLiteral},
 };
 
 pub trait ExpressionVisitor<R> {

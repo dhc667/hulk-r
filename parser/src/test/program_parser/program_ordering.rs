@@ -158,7 +158,37 @@ let a = new BullDog() in {a.sound();};
         .unwrap();
 
     assert_eq!(answ.expressions.len(), 3);
-    assert_eq!(answ.expressions[0].as_let_in().unwrap().assignment.rhs.as_new_expression().unwrap().type_name, "Dog");
-    assert_eq!(answ.expressions[1].as_let_in().unwrap().assignment.rhs.as_new_expression().unwrap().type_name, "Cat");
-    assert_eq!(answ.expressions[2].as_let_in().unwrap().assignment.rhs.as_new_expression().unwrap().type_name, "BullDog");
+    assert_eq!(
+        answ.expressions[0]
+            .as_let_in()
+            .unwrap()
+            .assignment
+            .rhs
+            .as_new_expression()
+            .unwrap()
+            .type_name,
+        "Dog"
+    );
+    assert_eq!(
+        answ.expressions[1]
+            .as_let_in()
+            .unwrap()
+            .assignment
+            .rhs
+            .as_new_expression()
+            .unwrap()
+            .type_name,
+        "Cat"
+    );
+    assert_eq!(
+        answ.expressions[2]
+            .as_let_in()
+            .unwrap()
+            .assignment
+            .rhs
+            .as_new_expression()
+            .unwrap()
+            .type_name,
+        "BullDog"
+    );
 }

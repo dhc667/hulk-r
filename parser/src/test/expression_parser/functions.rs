@@ -51,7 +51,12 @@ fn operated_function_calls() {
     let answ = p.parse("a() + b() * (f(x) - a * 4)/2").unwrap();
 
     let mut v = EchoVisitor::new();
-    println!("{}", p.parse("a() + b() * (f(x) - a * 4)/2").unwrap().accept(&mut v));
+    println!(
+        "{}",
+        p.parse("a() + b() * (f(x) - a * 4)/2")
+            .unwrap()
+            .accept(&mut v)
+    );
 
     assert_eq!(
         answ.as_bin_op()
@@ -65,10 +70,10 @@ fn operated_function_calls() {
             .lhs // b()
             .as_function_call()
             .unwrap()
-            .identifier.id,
+            .identifier
+            .id,
         "b"
     );
-
 
     assert_eq!(
         answ.as_bin_op()

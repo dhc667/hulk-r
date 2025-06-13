@@ -5,11 +5,11 @@ mod keywords;
 pub use keywords::Keyword;
 
 mod operators;
+pub use operators::ArrowOperator;
 pub use operators::BinaryOperator;
+pub use operators::DotOperator;
 pub use operators::GroupingOperator;
 pub use operators::UnaryOperator;
-pub use operators::ArrowOperator;
-pub use operators::DotOperator;
 
 mod literals;
 pub use literals::BooleanLiteral;

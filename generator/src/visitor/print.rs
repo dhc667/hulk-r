@@ -1,12 +1,12 @@
-use std::str;
 use crate::llvm_types::{self, HandleType, LlvmType};
+use std::str;
 
 use super::{GeneratorVisitor, VisitorResult};
 
 impl GeneratorVisitor {
     pub fn instantiate_global_print_helpers(&self) -> String {
         // Add string_type struct, constructor, and helper
-        let string_type_helpers = r#"
+        let _string_type_helpers = r#"
             %string_type = type { i8*, i64 }
 
             define void @string_type_constructor(%string_type* %this, i8* %data, i64 %len) {
@@ -62,7 +62,6 @@ impl GeneratorVisitor {
 
         "#;
 
-
         "@.fstr = private constant [4 x i8] c\"%f\\0A\\00\", align 1\n".to_string()
             + "@.true_str = private constant [6 x i8] c\"true\\0A\\00\", align 1\n"
             + "@.false_str = private constant [7 x i8] c\"false\\0A\\00\", align 1\n"
@@ -74,35 +73,32 @@ impl GeneratorVisitor {
             + "declare i8* @malloc(i64)\n"
             + "@.fmt = private unnamed_addr constant [5 x i8] c\"%.*s\\00\", align 1 \n"
             + "\n"
-
     }
 
     pub(crate) fn handle_print(&mut self, inner_result: VisitorResult) -> VisitorResult {
         let preamble = inner_result.preamble
             + &match inner_result.result_handle {
-            Some(handle) => match handle.handle_type {
-                HandleType::Register(LlvmType::F64) | HandleType::Literal(LlvmType::F64) => {
-                    self.print_double(&handle.llvm_name)
-                }
-                HandleType::Literal(LlvmType::I1) => {
-                    if handle.llvm_name == llvm_types::TRUE_LITERAL_STR {
-                        self.print_true()
-                    } else {
-                        self.print_false()
+                Some(handle) => match handle.handle_type {
+                    HandleType::Register(LlvmType::F64) | HandleType::Literal(LlvmType::F64) => {
+                        self.print_double(&handle.llvm_name)
                     }
-                }
-                HandleType::Register(LlvmType::I1) => {
-                    self.print_boolean_register(&handle.llvm_name)
-                }
-                HandleType::Register(LlvmType::String) | HandleType::Literal(LlvmType::String) => {
-                    self.print_string(&handle.llvm_name)
-                }
-                HandleType::Register(LlvmType::Object) | HandleType::Literal(LlvmType::Object) => {
-                    self.print_object(&handle.llvm_name)
-                }
-            },
-            None => self.print_none(),
-        };
+                    HandleType::Literal(LlvmType::I1) => {
+                        if handle.llvm_name == llvm_types::TRUE_LITERAL_STR {
+                            self.print_true()
+                        } else {
+                            self.print_false()
+                        }
+                    }
+                    HandleType::Register(LlvmType::I1) => {
+                        self.print_boolean_register(&handle.llvm_name)
+                    }
+                    HandleType::Register(LlvmType::String)
+                    | HandleType::Literal(LlvmType::String) => self.print_string(&handle.llvm_name),
+                    HandleType::Register(LlvmType::Object)
+                    | HandleType::Literal(LlvmType::Object) => self.print_object(&handle.llvm_name),
+                },
+                None => self.print_none(),
+            };
 
         VisitorResult {
             preamble,

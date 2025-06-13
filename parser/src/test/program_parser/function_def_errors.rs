@@ -49,5 +49,6 @@ fn parameter_missing_type_annotation() {
 fn some_parameter_missing_type_annotation() {
     let p = ProgramParser::new();
 
-    p.parse("function(x: number, y, z: Dog): number => x;").unwrap();
+    p.parse("function(x: number, y, z: Dog): number => x;")
+        .unwrap();
 }

@@ -3,9 +3,9 @@ mod bin_op;
 mod block;
 mod if_else;
 mod print;
+mod type_def;
 mod un_op;
 mod while_exp;
-mod type_def;
 
 mod helpers {
     pub mod control_flow;
@@ -13,14 +13,16 @@ mod helpers {
 }
 use std::cell::Cell;
 
-use std::string::String;
-use std::any::Any;
 use std::collections::HashMap;
+use std::string::String;
 
 use crate::context::Context;
-use crate::llvm_types::{LlvmHandle, LlvmType, HandleType};
-use ast::{Expression, ExpressionVisitor, VisitableExpression, Definition, DefinitionVisitor, VisitableDefinition, BlockBodyItem, ListIndexing};
+use crate::llvm_types::{HandleType, LlvmHandle, LlvmType};
 use ast::typing::to_string;
+use ast::{
+    Definition, DefinitionVisitor, Expression, ExpressionVisitor, ListIndexing,
+    VisitableDefinition, VisitableExpression,
+};
 
 pub struct VisitorResult {
     pub result_handle: Option<LlvmHandle>,
@@ -57,7 +59,7 @@ impl Variable {
             llvm_name,
         }
     }
-    
+
     /// Creates a new variable of type string (i8*).
     pub fn new_string(llvm_name: String) -> Variable {
         Variable {
@@ -65,7 +67,7 @@ impl Variable {
             llvm_name,
         }
     }
-    
+
     /// Creates a new variable of type object (pointer to struct or i8*).
     pub fn new_object(llvm_name: String) -> Variable {
         Variable {
@@ -95,7 +97,7 @@ pub struct GeneratorVisitor {
     variable_ids: HashMap<String, u32>,
 
     /// Maps (type_name, member_name) to the member index in the struct.
-    type_members_ids: HashMap<(String,String), u32>,
+    type_members_ids: HashMap<(String, String), u32>,
     /// Maps (type_name, member_name) to the member's type as a string.
     type_members_types: HashMap<(String, String), String>,
     /// Maps (type_name, function_name) to the LLVM function name in the vtable.
@@ -107,13 +109,13 @@ pub struct GeneratorVisitor {
     /// Maps string literals to their LLVM global names.
     pub(crate) string_constants: Vec<String>,
     /// Counter for generating unique string constant names.
-    string_counter: u32,
+    _string_counter: u32,
     /// Maps (type_name, function_name) to the argument types for the function member.
-    function_member_def_from_type_and_name: HashMap<(String, String, i32 ), Vec<String>>,
+    function_member_def_from_type_and_name: HashMap<(String, String, i32), Vec<String>>,
     /// Stores global string definitions for emission at the top of the LLVM IR.
-    global_string_definitions: Vec<String>,
+    _global_string_definitions: Vec<String>,
     /// Maps (type_name, member_name) to the original type for the definition (for type resolution).
-    original_type_for_definition : HashMap<(String,String),String>,
+    original_type_for_definition: HashMap<(String, String), String>,
 }
 
 impl GeneratorVisitor {
@@ -129,30 +131,40 @@ impl GeneratorVisitor {
             inherits: HashMap::new(),
             constructor_args_types: HashMap::new(),
             string_constants: Vec::new(),
-            string_counter: 0,
-            global_string_definitions: Vec::new(),
+            _string_counter: 0,
+            _global_string_definitions: Vec::new(),
             function_member_def_from_type_and_name: HashMap::new(),
-            original_type_for_definition : HashMap::new(),
+            original_type_for_definition: HashMap::new(),
             tmp_counter: Cell::new(0),
         }
     }
 
     /// Saves the mapping from member names to their indices for a given type.
     /// Used for struct field access in LLVM IR.
-    fn save_type_member_indices_from_defs(&mut self, type_name: &str, data_member_defs: &[ast::DataMemberDef]) {
+    fn _save_type_member_indices_from_defs(
+        &mut self,
+        type_name: &str,
+        data_member_defs: &[ast::DataMemberDef],
+    ) {
         for (i, data_member) in data_member_defs.iter().enumerate() {
             let member_id = data_member.identifier.id.clone();
-            self.type_members_ids.insert((type_name.to_string(), member_id), i as u32);
+            self.type_members_ids
+                .insert((type_name.to_string(), member_id), i as u32);
         }
     }
 
     /// Saves the mapping from function member names to their LLVM names for a given type.
     /// Used for vtable method lookup.
-    fn save_function_member_names_from_defs(&mut self, type_name: &str, function_member_defs: &[ast::FunctionDef]) {
+    fn _save_function_member_names_from_defs(
+        &mut self,
+        type_name: &str,
+        function_member_defs: &[ast::FunctionDef],
+    ) {
         for func_def in function_member_defs.iter() {
             let func_id = func_def.identifier.id.clone();
             let llvm_func_name = format!("{}_{}", type_name, func_id);
-            self.function_member_names.insert((type_name.to_string(), func_id), llvm_func_name);
+            self.function_member_names
+                .insert((type_name.to_string(), func_id), llvm_func_name);
         }
     }
 }
@@ -187,7 +199,7 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
 
         let variable = match node.lhs.as_ref() {
             Expression::Variable(var) => var,
-            _ => todo!()
+            _ => todo!(),
         };
 
         let var_llvm_name = &self
@@ -258,7 +270,7 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
         self.handle_while(condition_result, body_result)
     }
 
-    fn visit_for(&mut self, node: &mut ast::For) -> VisitorResult {
+    fn visit_for(&mut self, _node: &mut ast::For) -> VisitorResult {
         todo!()
     }
 
@@ -271,16 +283,18 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
     fn visit_data_member_access(&mut self, node: &mut ast::DataMemberAccess) -> VisitorResult {
         let object_result = node.object.accept(self);
         let mut preamble = object_result.preamble;
-        let object_ptr = object_result.result_handle.expect("Object must have a result").llvm_name;
+        let object_ptr = object_result
+            .result_handle
+            .expect("Object must have a result")
+            .llvm_name;
         let object_type = node.obj_type.clone();
-        
+
         println!("Object type: {:?}", object_type);
         println!("Object pointer: {}", object_ptr);
         println!("Member access: {}", node.member.id);
 
-    
         let member_type = node.member.info.ty.clone();
-        
+
         let llvm_type = match &member_type {
             Some(ty) => match ty {
                 ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Number) => LlvmType::F64,
@@ -291,31 +305,29 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
             },
             None => LlvmType::Object,
         };
-        println!("{}",member_type.unwrap().to_string());
-        println!("{}",llvm_type.llvm_type_str());
-        println!("{}",node.member.id);
+        println!("{}", member_type.unwrap().to_string());
+        println!("{}", llvm_type.llvm_type_str());
+        println!("{}", node.member.id);
         let type_name = match &object_type {
             Some(ty) => to_string(&Some(ty.clone())),
-            
+
             None => panic!("Object type not found for data member access"),
         };
         let member_id = node.member.id.clone();
-
 
         let result_var = self.generate_tmp_variable();
 
         println!("Looking for member '{}' in type '{}'", member_id, type_name);
 
-        if let Some(idx) = self.type_members_ids.get(&(type_name.clone(), member_id.clone())) {
+        if let Some(idx) = self
+            .type_members_ids
+            .get(&(type_name.clone(), member_id.clone()))
+        {
             let field_index = idx.clone();
-            println!("Found member in index'{}'",field_index);
+            println!("Found member in index'{}'", field_index);
             let gep_instr = format!(
                 "  {} = getelementptr inbounds %{}_type, %{}_type* {}, i32 0, i32 {}\n",
-                result_var,
-                type_name,
-                type_name,
-                object_ptr,
-                field_index
+                result_var, type_name, type_name, object_ptr, field_index
             );
             preamble += &gep_instr;
 
@@ -338,11 +350,8 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
                 };
             } else if matches!(llvm_type, LlvmType::Object) {
                 let load_var = self.generate_tmp_variable();
-                let load_instr = format!(
-                    "  {} = load i8*, i8** {}, align 8\n",
-                    load_var,
-                    result_var
-                );
+                let load_instr =
+                    format!("  {} = load i8*, i8** {}, align 8\n", load_var, result_var);
                 preamble += &load_instr;
                 return VisitorResult {
                     preamble,
@@ -355,8 +364,7 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
         } else {
             panic!(
                 "Data member '{}' not found in type '{}'",
-                member_id,
-                type_name
+                member_id, type_name
             );
         }
 
@@ -377,14 +385,16 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
 
         let object_result = node.object.accept(self);
         preamble += &object_result.preamble;
-        let object_handle = object_result.result_handle.expect("Object for method call must have a result");
-        let mut object_ptr_name = object_handle.llvm_name.clone();
+        let object_handle = object_result
+            .result_handle
+            .expect("Object for method call must have a result");
+        let object_ptr_name = object_handle.llvm_name.clone();
 
         let object_ast_type_name = match &node.obj_type {
             Some(ty) => match ty {
                 ast::typing::Type::Defined(defined_type) => defined_type.id.clone(),
                 _ => panic!("Object type for method call must be a defined type name"),
-            }
+            },
             None => panic!("Object type not found for function member access"),
         };
 
@@ -403,25 +413,35 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
         // Always push the self pointer as i8*
         call_param_llvm_types_for_sig.push("i8*".to_string());
         call_args_values_with_llvm_types.push(format!("i8* {}", object_ptr_name));
-        
+
         // Look up argument types from the context map
         let mut arg_types: Vec<String> = Vec::new();
-        for ((type_name, method_name, index), arg_types_value) in &self.function_member_def_from_type_and_name {
+        for ((type_name, method_name, _index), arg_types_value) in
+            &self.function_member_def_from_type_and_name
+        {
             if type_name == &current_type && method_name == &func_name_in_ast {
-                arg_types =  arg_types_value.clone();
+                arg_types = arg_types_value.clone();
             }
         }
 
         // Iterate and call methods that require `&mut self`
-            for (arg_expr, arg_llvm_type_str) in node.member.arguments.iter_mut().zip(arg_types.iter()) {
-                let arg_result = arg_expr.accept(self);
-                preamble += &arg_result.preamble;
-                let arg_handle = arg_result.result_handle.expect("Function member argument must have a result");
-                call_param_llvm_types_for_sig.push(arg_llvm_type_str.clone());
-                call_args_values_with_llvm_types.push(format!("{} {}", arg_llvm_type_str, arg_handle.llvm_name));
-            }
+        for (arg_expr, arg_llvm_type_str) in node.member.arguments.iter_mut().zip(arg_types.iter())
+        {
+            let arg_result = arg_expr.accept(self);
+            preamble += &arg_result.preamble;
+            let arg_handle = arg_result
+                .result_handle
+                .expect("Function member argument must have a result");
+            call_param_llvm_types_for_sig.push(arg_llvm_type_str.clone());
+            call_args_values_with_llvm_types
+                .push(format!("{} {}", arg_llvm_type_str, arg_handle.llvm_name));
+        }
 
-        let func_signature_ptr_type_for_load = format!("{} ({})*", call_ret_type_str, call_param_llvm_types_for_sig.join(", "));
+        let func_signature_ptr_type_for_load = format!(
+            "{} ({})*",
+            call_ret_type_str,
+            call_param_llvm_types_for_sig.join(", ")
+        );
 
         // Inheritance-aware vtable lookup
         loop {
@@ -450,9 +470,12 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
             let super_field_ptr = self.generate_tmp_variable();
             let super_field_load = self.generate_tmp_variable();
             // Try to find the function index in this type's vtable
-            if let Some(func_vtable_idx_str) = self.function_member_names.get(&(current_type.clone(), func_name_in_ast.clone())) {
+            if let Some(func_vtable_idx_str) = self
+                .function_member_names
+                .get(&(current_type.clone(), func_name_in_ast.clone()))
+            {
                 // Found in this vtable
-                
+
                 preamble += &format!(
                     "  {} = getelementptr inbounds {}, {}* {}, i32 0, i32 {}\n",
                     func_ptr_location_in_vtable,
@@ -464,7 +487,10 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
                 let loaded_func_ptr = self.generate_tmp_variable();
                 preamble += &format!(
                     "  {} = load {}, {}* {}, align 8\n",
-                    loaded_func_ptr, func_signature_ptr_type_for_load, func_signature_ptr_type_for_load, func_ptr_location_in_vtable
+                    loaded_func_ptr,
+                    func_signature_ptr_type_for_load,
+                    func_signature_ptr_type_for_load,
+                    func_ptr_location_in_vtable
                 );
 
                 let result_reg: String;
@@ -472,20 +498,32 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
                     result_reg = self.generate_tmp_variable();
                     preamble += &format!(
                         "  {} = call {} {}({})\n",
-                        result_reg, call_ret_type_str, loaded_func_ptr, call_args_values_with_llvm_types.join(", ")
+                        result_reg,
+                        call_ret_type_str,
+                        loaded_func_ptr,
+                        call_args_values_with_llvm_types.join(", ")
                     );
                 } else {
                     result_reg = "".to_string();
                     preamble += &format!(
                         "  call void {}({})\n",
-                        loaded_func_ptr, call_args_values_with_llvm_types.join(", ")
+                        loaded_func_ptr,
+                        call_args_values_with_llvm_types.join(", ")
                     );
                 }
 
                 let result_handle = if call_ret_type_str != "void" {
-                    let ast_ret_type = node.member.identifier.info.ty.as_ref().expect("Return type must be known for non-void");
+                    let ast_ret_type = node
+                        .member
+                        .identifier
+                        .info
+                        .ty
+                        .as_ref()
+                        .expect("Return type must be known for non-void");
                     Some(LlvmHandle {
-                        handle_type: HandleType::Register(self.llvm_type_from_ast_type(ast_ret_type)),
+                        handle_type: HandleType::Register(
+                            self.llvm_type_from_ast_type(ast_ret_type),
+                        ),
                         llvm_name: result_reg,
                     })
                 } else {
@@ -499,12 +537,12 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
             } else if let Some(parent_type) = self.inherits.get(&current_type) {
                 // Not found, walk up to parent
                 // Get super field pointer and load parent object pointer
-                
+
                 preamble += &format!(
                     "  {} = getelementptr inbounds %{}_type, %{}_type* {}, i32 0, i32 1\n",
                     super_field_ptr, current_type, current_type, object_typed_ptr
                 );
-                
+
                 preamble += &format!(
                     "  {} = load %{}_type*, %{}_type** {}, align 8\n",
                     super_field_load, parent_type, parent_type, super_field_ptr
@@ -515,7 +553,10 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
                 // Also update the first argument for the call (self pointer)
                 call_args_values_with_llvm_types[0] = format!("i8* {}", current_object_ptr);
             } else {
-                panic!("Function member '{}' not found in type '{}' or its ancestors", func_name_in_ast, current_type);
+                panic!(
+                    "Function member '{}' not found in type '{}' or its ancestors",
+                    func_name_in_ast, current_type
+                );
             }
         }
     }
@@ -532,26 +573,34 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
         for arg in node.arguments.iter_mut() {
             let arg_result = arg.accept(self);
             preamble += &arg_result.preamble;
-            let handle = arg_result.result_handle.expect("Function argument must have a result");
+            let handle = arg_result
+                .result_handle
+                .expect("Function argument must have a result");
             arg_values.push(handle.llvm_name);
 
             let arg_type = match arg {
                 ast::Expression::NumberLiteral(_) => "double".to_string(),
                 ast::Expression::BooleanLiteral(_) => "i1".to_string(),
                 ast::Expression::StringLiteral(_) => "i8*".to_string(),
-                ast::Expression::Variable(id) => {
-                    match &id.info.ty {
-                        Some(ty) => match ty {
-                            ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Number) => "double".to_string(),
-                            ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Bool) => "i1".to_string(),
-                            ast::typing::Type::BuiltIn(ast::typing::BuiltInType::String) => "i8*".to_string(),
-                            ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Object) => "i8*".to_string(),
-                            ast::typing::Type::Defined(name) => format!("%{}_type*", name.id.clone()),
-                            _ => "i8*".to_string(),
-                        },
-                        None => "i8*".to_string(),
-                    }
-                }
+                ast::Expression::Variable(id) => match &id.info.ty {
+                    Some(ty) => match ty {
+                        ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Number) => {
+                            "double".to_string()
+                        }
+                        ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Bool) => {
+                            "i1".to_string()
+                        }
+                        ast::typing::Type::BuiltIn(ast::typing::BuiltInType::String) => {
+                            "i8*".to_string()
+                        }
+                        ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Object) => {
+                            "i8*".to_string()
+                        }
+                        ast::typing::Type::Defined(name) => format!("%{}_type*", name.id.clone()),
+                        _ => "i8*".to_string(),
+                    },
+                    None => "i8*".to_string(),
+                },
                 _ => "i8*".to_string(),
             };
             arg_types.push(arg_type);
@@ -559,7 +608,9 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
 
         let ret_type = match &node.identifier.info.ty {
             Some(ty) => match ty {
-                ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Number) => "double".to_string(),
+                ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Number) => {
+                    "double".to_string()
+                }
                 ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Bool) => "i1".to_string(),
                 ast::typing::Type::BuiltIn(ast::typing::BuiltInType::String) => "i8*".to_string(),
                 ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Object) => "i8*".to_string(),
@@ -688,8 +739,7 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
         // Copy the string to local variable using strcpy
         let strcpy_code = format!(
             "call i8* @strcpy(i8* {}, i8* {})\n",
-            local_ptr_var,
-            global_ptr_var
+            local_ptr_var, global_ptr_var
         );
 
         VisitorResult {
@@ -697,7 +747,7 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
             result_handle: Some(LlvmHandle::new_string_register(local_ptr_var)), // Return pointer to local string
         }
     }
-    fn visit_list_literal(&mut self, node: &mut ast::ListLiteral) -> VisitorResult {
+    fn visit_list_literal(&mut self, _node: &mut ast::ListLiteral) -> VisitorResult {
         todo!()
     }
 
@@ -710,13 +760,10 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
 
     fn visit_return_statement(&mut self, node: &mut ast::ReturnStatement) -> VisitorResult {
         let mut preamble = String::new();
-        let mut result_handle = None;
-
 
         let expr_result = node.expression.accept(self);
         preamble += &expr_result.preamble;
-        result_handle = expr_result.result_handle;
-
+        let result_handle = expr_result.result_handle;
 
         VisitorResult {
             preamble,
@@ -731,31 +778,38 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
         for arg in node.arguments.iter_mut() {
             let arg_result = arg.accept(self);
             preamble += &arg_result.preamble;
-            let handle = arg_result.result_handle.expect("Constructor argument must have a result");
+            let handle = arg_result
+                .result_handle
+                .expect("Constructor argument must have a result");
             arg_handles.push(handle.llvm_name);
             let arg_type = match arg {
                 ast::Expression::NumberLiteral(_) => "double".to_string(),
                 ast::Expression::BooleanLiteral(_) => "i1".to_string(),
                 ast::Expression::StringLiteral(_) => "i8*".to_string(),
-                ast::Expression::Variable(id) => {
-                    match &id.info.ty {
-                        Some(ty) => match ty {
-                            ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Number) => "double".to_string(),
-                            ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Bool) => "i1".to_string(),
-                            ast::typing::Type::BuiltIn(ast::typing::BuiltInType::String) => "i8*".to_string(),
-                            ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Object) => "i8*".to_string(),
-                            ast::typing::Type::Defined(name) => format!("%{}_type*", name.id.clone()),
-                            _ => "i8*".to_string(),
+                ast::Expression::Variable(id) => match &id.info.ty {
+                    Some(ty) => match ty {
+                        ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Number) => {
+                            "double".to_string()
                         }
-                        None => "i8*".to_string(),
-                    }
-                }
+                        ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Bool) => {
+                            "i1".to_string()
+                        }
+                        ast::typing::Type::BuiltIn(ast::typing::BuiltInType::String) => {
+                            "i8*".to_string()
+                        }
+                        ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Object) => {
+                            "i8*".to_string()
+                        }
+                        ast::typing::Type::Defined(name) => format!("%{}_type*", name.id.clone()),
+                        _ => "i8*".to_string(),
+                    },
+                    None => "i8*".to_string(),
+                },
                 _ => "i8*".to_string(),
             };
             arg_types.push(arg_type);
         }
 
-        
         let result_var = self.generate_tmp_variable();
         let call_args = arg_handles
             .iter()
@@ -769,11 +823,13 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
         );
         VisitorResult {
             preamble,
-            result_handle: Some(crate::llvm_types::LlvmHandle::new_object_register(result_var)),
+            result_handle: Some(crate::llvm_types::LlvmHandle::new_object_register(
+                result_var,
+            )),
         }
     }
 
-    fn visist_list_indexing(&mut self, node: &mut ListIndexing) -> VisitorResult {
+    fn visist_list_indexing(&mut self, _node: &mut ListIndexing) -> VisitorResult {
         todo!()
     }
 }
@@ -786,7 +842,10 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
     }
 
     fn visit_type_def(&mut self, node: &mut ast::TypeDef) -> VisitorResult {
-        use crate::visitor::type_def::{generate_vtable_type, generate_object_struct_type, generate_constructor, generate_method_definitions};
+        use crate::visitor::type_def::{
+            generate_constructor, generate_method_definitions, generate_object_struct_type,
+            generate_vtable_type,
+        };
         let mut preamble = String::new();
         // VTable
         preamble += &generate_vtable_type(self, node);
@@ -794,8 +853,8 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
         let struct_str = generate_object_struct_type(self, node);
         preamble += &struct_str;
         // Collect field types for constructor
-        let type_name = &node.name.id;
-        
+        let _type_name = &node.name.id;
+
         // Constructor
         preamble += &generate_constructor(self, node);
         // Methods
@@ -803,7 +862,10 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
 
         println!("Type members IDs map contents:");
         for ((type_name, member_name), index) in &self.type_members_ids {
-            println!("Type: {}, Member: {}, Index: {}", type_name, member_name, index);
+            println!(
+                "Type: {}, Member: {}, Index: {}",
+                type_name, member_name, index
+            );
         }
 
         VisitorResult {
@@ -818,7 +880,9 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
 
         let return_type = match &node.function_def.identifier.info.ty {
             Some(ty) => match ty {
-                ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Number) => "double".to_string(),
+                ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Number) => {
+                    "double".to_string()
+                }
                 ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Bool) => "i1".to_string(),
                 ast::typing::Type::BuiltIn(ast::typing::BuiltInType::String) => "i8*".to_string(),
                 ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Object) => "i8*".to_string(),
@@ -836,10 +900,16 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
             }
             let llvm_type = match param.info.ty.clone() {
                 Some(ty) => match ty {
-                    ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Number) => "double".to_string(),
+                    ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Number) => {
+                        "double".to_string()
+                    }
                     ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Bool) => "i1".to_string(),
-                    ast::typing::Type::BuiltIn(ast::typing::BuiltInType::String) => "i8*".to_string(),
-                    ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Object) => "i8*".to_string(),
+                    ast::typing::Type::BuiltIn(ast::typing::BuiltInType::String) => {
+                        "i8*".to_string()
+                    }
+                    ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Object) => {
+                        "i8*".to_string()
+                    }
                     ast::typing::Type::Defined(name) => format!("%{}_type*", name.id.clone()),
                     _ => "i8*".to_string(),
                 },
@@ -857,8 +927,12 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
                 Some(ty) => match ty {
                     ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Number) => LlvmType::F64,
                     ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Bool) => LlvmType::I1,
-                    ast::typing::Type::BuiltIn(ast::typing::BuiltInType::String) => LlvmType::String,
-                    ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Object) => LlvmType::Object,
+                    ast::typing::Type::BuiltIn(ast::typing::BuiltInType::String) => {
+                        LlvmType::String
+                    }
+                    ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Object) => {
+                        LlvmType::Object
+                    }
                     ast::typing::Type::Defined(_) => LlvmType::Object,
                     _ => LlvmType::Object,
                 },
@@ -868,10 +942,18 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
             preamble += &self.alloca_statement(&param_ptr, &llvm_type);
             preamble += &self.store_statement(&format!("%{}", param.id), &param_ptr, &llvm_type);
             match llvm_type {
-                LlvmType::F64 => self.context.define(param.id.clone(), Variable::new_f64(param_ptr)),
-                LlvmType::I1 => self.context.define(param.id.clone(), Variable::new_i1(param_ptr)),
-                LlvmType::String => self.context.define(param.id.clone(), Variable::new_string(param_ptr)),
-                LlvmType::Object => self.context.define(param.id.clone(), Variable::new_object(param_ptr)),
+                LlvmType::F64 => self
+                    .context
+                    .define(param.id.clone(), Variable::new_f64(param_ptr)),
+                LlvmType::I1 => self
+                    .context
+                    .define(param.id.clone(), Variable::new_i1(param_ptr)),
+                LlvmType::String => self
+                    .context
+                    .define(param.id.clone(), Variable::new_string(param_ptr)),
+                LlvmType::Object => self
+                    .context
+                    .define(param.id.clone(), Variable::new_object(param_ptr)),
             };
         }
 
@@ -879,7 +961,7 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
             ast::FunctionBody::ArrowExpression(arrow_exp) => {
                 let exp_result = arrow_exp.expression.accept(self);
                 exp_result
-            },
+            }
             ast::FunctionBody::Block(block) => {
                 let block_result = self.visit_block(block);
                 block_result
@@ -919,37 +1001,55 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
     fn visit_constant_def(&mut self, node: &mut ast::ConstantDef) -> VisitorResult {
         let mut preamble = String::new();
         let constant_name = &node.identifier.id;
-        
+
         let init_result = node.initializer_expression.accept(self);
         preamble += &init_result.preamble;
-        
-        let init_value = init_result.result_handle.expect("Constant initializer must have a result");
-        
+
+        let init_value = init_result
+            .result_handle
+            .expect("Constant initializer must have a result");
+
         match init_value.handle_type.inner_type() {
             LlvmType::F64 => {
-                preamble += &format!("@{} = constant double {}\n\n", constant_name, init_value.llvm_name);
-            },
+                preamble += &format!(
+                    "@{} = constant double {}\n\n",
+                    constant_name, init_value.llvm_name
+                );
+            }
             LlvmType::I1 => {
-                preamble += &format!("@{} = constant i1 {}\n\n", constant_name, init_value.llvm_name);
-            },
+                preamble += &format!(
+                    "@{} = constant i1 {}\n\n",
+                    constant_name, init_value.llvm_name
+                );
+            }
             LlvmType::String => {
                 if init_value.llvm_name.starts_with("\"") {
-                    let string_content = &init_value.llvm_name[1..init_value.llvm_name.len()-1];
+                    let string_content = &init_value.llvm_name[1..init_value.llvm_name.len() - 1];
                     let byte_length = string_content.len() + 1;
-                    
-                    preamble += &format!("@{}.str = private constant [{} x i8] c\"{}\\00\", align 1\n", 
-                                        constant_name, byte_length, string_content);
-                    preamble += &format!("@{} = constant i8* getelementptr inbounds ([{} x i8], [{} x i8]* @{}.str, i64 0, i64 0)\n\n",
-                                        constant_name, byte_length, byte_length, constant_name);
+
+                    preamble += &format!(
+                        "@{}.str = private constant [{} x i8] c\"{}\\00\", align 1\n",
+                        constant_name, byte_length, string_content
+                    );
+                    preamble += &format!(
+                        "@{} = constant i8* getelementptr inbounds ([{} x i8], [{} x i8]* @{}.str, i64 0, i64 0)\n\n",
+                        constant_name, byte_length, byte_length, constant_name
+                    );
                 } else {
-                    preamble += &format!("@{} = constant i8* {}\n\n", constant_name, init_value.llvm_name);
+                    preamble += &format!(
+                        "@{} = constant i8* {}\n\n",
+                        constant_name, init_value.llvm_name
+                    );
                 }
-            },
+            }
             LlvmType::Object => {
-                preamble += &format!("@{} = constant i8* {}\n\n", constant_name, init_value.llvm_name);
-            },
+                preamble += &format!(
+                    "@{} = constant i8* {}\n\n",
+                    constant_name, init_value.llvm_name
+                );
+            }
         }
-        
+
         VisitorResult {
             preamble,
             result_handle: None,
@@ -959,33 +1059,33 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
     fn visit_protocol_def(&mut self, node: &mut ast::ProtocolDef) -> VisitorResult {
         let mut preamble = String::new();
         let protocol_name = &node.name.id;
-        
+
         preamble += &format!("%{}_vtable_type = type {{\n", protocol_name);
-        
+
         for (i, func_sig) in node.function_signatures.iter().enumerate() {
-            let method_name = &func_sig.identifier.id;
-            
+            let _method_name = &func_sig.identifier.id;
+
             preamble += "  i8* (i8*";
-            
+
             for _ in &func_sig.parameters {
                 preamble += ", double";
             }
             preamble += ")*";
-            
+
             if i < node.function_signatures.len() - 1 {
                 preamble += ",\n";
             } else {
                 preamble += "\n";
             }
         }
-        
+
         preamble += "}\n\n";
-        
+
         preamble += &format!("%{}_interface = type {{\n", protocol_name);
         preamble += "  i8*,                    ; Object pointer\n";
         preamble += &format!("  %{}_vtable_type*  ; VTable pointer\n", protocol_name);
         preamble += "}\n\n";
-        
+
         VisitorResult {
             preamble,
             result_handle: None,
@@ -1022,9 +1122,12 @@ impl GeneratorVisitor {
                 format!("%{}_type*", type_name.id)
             }
             ast::typing::Type::Iterable(inner_type_box) => {
-                format!("{}*", self.llvm_type_str_from_ast_type(inner_type_box.as_ref()))
+                format!(
+                    "{}*",
+                    self.llvm_type_str_from_ast_type(inner_type_box.as_ref())
+                )
             }
-            _ => panic!("NO implemented type")
+            _ => panic!("NO implemented type"),
         }
     }
 
@@ -1040,7 +1143,7 @@ impl GeneratorVisitor {
         }
     }
     // Helper to get LLVM type alignment
-    fn llvm_type_align(&self, llvm_type: &str) -> usize {
+    fn _llvm_type_align(&self, llvm_type: &str) -> usize {
         match llvm_type {
             "double" => 8,
             "i32" => 4,
@@ -1051,5 +1154,3 @@ impl GeneratorVisitor {
         }
     }
 }
-
-

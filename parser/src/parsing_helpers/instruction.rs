@@ -2,7 +2,7 @@ use ast::{Definition, Expression, Program};
 
 pub enum Instruction {
     Expression(Expression),
-    Definition(Definition)
+    Definition(Definition),
 }
 
 impl From<Definition> for Instruction {
@@ -28,5 +28,5 @@ pub fn program_from_instructions(instructions: Vec<Instruction>) -> Program {
         }
     }
 
-    return Program::new(definitions, expressions)
+    return Program::new(definitions, expressions);
 }

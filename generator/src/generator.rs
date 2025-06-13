@@ -1,27 +1,23 @@
-use ast::{VisitableExpression, VisitableDefinition};
+use ast::{VisitableDefinition, VisitableExpression};
 
 use crate::visitor::GeneratorVisitor;
-
 
 pub struct CodeGenerator {}
 
 impl CodeGenerator {
     pub fn new() -> Self {
-        Self {  }
+        Self {}
     }
 
     pub fn generate_code_from_program_ast(self, node: &mut ast::Program) -> String {
         let mut generator = GeneratorVisitor::new();
         let mut program = generator.instantiate_global_print_helpers();
-        
-        
+
         let mut definitions_code = String::new();
         for definition in &mut node.definitions {
             let definition_result = definition.accept(&mut generator);
             definitions_code += &definition_result.preamble;
         }
-        
-        
 
         let mut expressions_code = String::new();
         if !node.expressions.is_empty() {
@@ -29,11 +25,11 @@ impl CodeGenerator {
             expressions_code += &inner.preamble;
         }
 
-        let mut global_String = String::new();
+        let mut global_string = String::new();
         for string_global in generator.string_constants.iter() {
-            global_String.push_str(&format!("{}\n", string_global.clone()));
+            global_string.push_str(&format!("{}\n", string_global.clone()));
         }
-        let global_str: &str = global_String.as_str();
+        let global_str: &str = global_string.as_str();
         println!("global_str: {global_str}");
         program += global_str;
         program += &definitions_code;
@@ -44,4 +40,3 @@ impl CodeGenerator {
         program
     }
 }
-

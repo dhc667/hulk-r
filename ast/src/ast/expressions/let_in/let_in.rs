@@ -1,4 +1,3 @@
-
 use std::vec;
 
 use super::super::Expression;
@@ -6,7 +5,6 @@ use super::assignment::Assignment;
 use crate::tokens::*;
 use crate::visitors::ExpressionVisitor;
 use crate::visitors::visitable_expression::VisitableExpression;
-
 
 pub struct LetIn {
     pub let_token: Keyword,
@@ -61,4 +59,3 @@ impl<T: ExpressionVisitor<R>, R> VisitableExpression<T, R> for LetIn {
         visitor.visit_let_in(self)
     }
 }
-
