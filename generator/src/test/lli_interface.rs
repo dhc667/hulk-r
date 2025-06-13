@@ -20,7 +20,7 @@ pub fn call_lli(program_str: &str) -> Result<String, String> {
 
 pub fn lli_f64(program_str: &str) -> Result<f64, String> {
     let value = call_lli(program_str)?;
-
+    print!("{}", value);
     match value.parse::<f64>() {
         Ok(val) => Ok(val),
         Err(err) => Err(err.to_string()),
@@ -35,4 +35,10 @@ pub fn lli_i1(program_str: &str) -> Result<bool, String> {
         "false" => Ok(false),
         _ => Err(format!("Unexpected boolean output: {}", value)),
     }
+}
+
+pub fn lli_string(program_str: &str) -> Result<String, String> {
+    let value = call_lli(program_str)?;
+    print!("{}", value);
+    Ok(value)
 }

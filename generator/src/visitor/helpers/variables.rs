@@ -2,14 +2,12 @@ use crate::{llvm_types::{LlvmHandle, LlvmType}, GeneratorVisitor};
 
 
 impl GeneratorVisitor {
-    pub(crate) fn generate_tmp_variable(&mut self) -> String {
-        // we use the . after % to get around llvm's requirement that %N names
-        // be sequential starting at 0 within the same context
-        let tmp_variable = format!("%.{}", self.tmp_variable_id);
-        self.tmp_variable_id += 1;
-
-        tmp_variable
+    pub fn generate_tmp_variable(&self) -> String {
+        let current = self.tmp_counter.get();
+        self.tmp_counter.set(current + 1);
+        format!("%tmp{}", current)
     }
+
 
     pub(crate) fn alloca_statement(&self, var_register_name: &str, var_type: &LlvmType) -> String {
         let (type_name, align_size) = self.type_name_and_align_size(var_type);
@@ -42,6 +40,8 @@ impl GeneratorVisitor {
         let result_handle = match var_type {
             LlvmType::F64 => LlvmHandle::new_f64_register(target_register_name),
             LlvmType::I1 => LlvmHandle::new_i1_register(target_register_name),
+            LlvmType::String => LlvmHandle::new_string_register(target_register_name),
+            LlvmType::Object => LlvmHandle::new_object_register(target_register_name),
         };
 
         (preamble, result_handle)
@@ -64,6 +64,8 @@ impl GeneratorVisitor {
         match llvm_type {
             LlvmType::F64 => ("double", 8),
             LlvmType::I1 => ("i1", 1),
+            LlvmType::String => ("i8*", 8),
+            LlvmType::Object => ("i8*", 8),
         }
     }
 }

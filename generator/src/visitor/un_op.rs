@@ -21,22 +21,15 @@ impl GeneratorVisitor {
             HandleType::Literal(LlvmType::I1) | HandleType::Register(LlvmType::I1) => {
                 self.get_boolean_un_op_visitor_result(op, inner_result)
             }
+            HandleType::Literal(LlvmType::String) | HandleType::Register(LlvmType::String) => {
+                self.get_string_un_op_visitor_result(op, inner_result)
+            }
+            HandleType::Literal(LlvmType::Object) | HandleType::Register(LlvmType::Object) => {
+                self.get_object_un_op_visitor_result(op, inner_result)
+            }
         }
     }
 
-    /// # Description
-    ///
-    /// This will be used internally to create a visitor result when the
-    /// lhs of a unary operator is double, to not fill the visit_unop
-    /// function with too much code.
-    ///
-    /// It is assumed if the lhs is double then the rhs will also be double,
-    /// this is a guarantee of SA
-    ///
-    /// # Panics
-    ///
-    /// - If the inner result handle is None or if the
-    /// operator is not supported by double values
     fn get_double_un_op_visitor_result(
         &mut self,
         op: &ast::UnaryOperator,
@@ -89,6 +82,30 @@ impl GeneratorVisitor {
                 };
             }
             _ => panic!("Unsupported unary operator for boolean"),
+        }
+    }
+
+    fn get_string_un_op_visitor_result(
+        &mut self,
+        op: &ast::UnaryOperator,
+        inner_result: VisitorResult,
+    ) -> VisitorResult {
+        let inner_handle = inner_result.result_handle.unwrap();
+
+        match op {
+            _ => panic!("Unsupported unary operator for string"),
+        }
+    }
+
+    fn get_object_un_op_visitor_result(
+        &mut self,
+        op: &ast::UnaryOperator,
+        inner_result: VisitorResult,
+    ) -> VisitorResult {
+        let inner_handle = inner_result.result_handle.unwrap();
+
+        match op {
+            _ => panic!("Unsupported unary operator for object"),
         }
     }
 }
