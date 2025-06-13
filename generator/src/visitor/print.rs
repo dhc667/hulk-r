@@ -70,6 +70,8 @@ impl GeneratorVisitor {
             + "declare i32 @sprintf(i8*, i8*, ...)\n"
             + "declare i8* @strcat(i8*, i8*)\n"
             + "declare i8* @strcpy(i8*, i8*)\n"
+            + "declare i32 @strlen(i8*)\n"
+            + "declare i32 @strcmp(i8*, i8*)\n"
             + "declare i8* @malloc(i64)\n"
             + "@.fmt = private unnamed_addr constant [4 x i8] c\"%s\\0A\\00\", align 1"
             + "\n"

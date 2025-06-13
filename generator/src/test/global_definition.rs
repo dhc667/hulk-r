@@ -284,6 +284,27 @@ fn test_josue_name() {
     assert_eq!(result, expected);
 }
 
+#[test]
+fn test_dario_and_josue_name() {
+    let llvm = generate_code(
+        r#"
+            type Person ( name: String,age: Number){
+                age=age*2;
+                name=name;
+                getAge(): Number { return self.age; }
+                getName(): String { return self.name; }
+            }
+            let josue = new Person("josue",20), dario = new Person("dario",20) in print(josue.getName() @ " y " @ dario.getName());
+
+        "#,
+    );
+    println!("{}", llvm);
+
+    let result = lli_string(&llvm).unwrap();
+    let expected = "josue y dario";
+
+    assert_eq!(result, expected);
+}
 
 #[test]
 fn test_josue_age() {
