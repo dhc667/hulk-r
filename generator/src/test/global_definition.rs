@@ -248,6 +248,21 @@ fn test_string() {
 }
 
 #[test]
+fn test_string_2() {
+    let llvm = generate_code(
+        r#"
+            let a = "hello world"  in let b = a in print(b);
+        "#,
+    );
+    println!("{}", llvm);
+
+    let result = lli_string(&llvm).unwrap();
+    let expected = "hello world";
+
+    assert_eq!(result, expected);
+}
+
+#[test]
 fn test_josue_name() {
     let llvm = generate_code(
         r#"

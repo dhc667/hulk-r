@@ -107,7 +107,7 @@ pub fn generate_vtable_type(visitor: &mut GeneratorVisitor, node: &mut ast::Type
                     let original_type_for_def = visitor
                         .original_type_for_definition
                         .get(&(parent.clone(), method_name.clone()))
-                        .unwrap_or_else(|| panic!("error searching "));
+                        .unwrap_or_else(|| panic!("error searching original type for parent method"));
                     visitor.function_member_def_from_type_and_name.insert(
                         (type_name.clone(), method_name.clone(), i.clone()),
                         arg_types.clone(),
@@ -115,10 +115,21 @@ pub fn generate_vtable_type(visitor: &mut GeneratorVisitor, node: &mut ast::Type
                     println!("type method: {} {}", type_name, method_name);
                     // Use the original defining type's mangled function name
                     let mangled_func_name = format!("{}_{}", original_type_for_def, method_name);
-                    let ret_type_str = "i8*"; // Use i8* for parent vtable pointer type
-                    vtable_fn_ptr_types.push(ret_type_str.to_string());
-                    vtable_initializers
-                        .push(format!("i8* bitcast (i8* @{} to i8*)", mangled_func_name));
+                    
+                    // Fix: Get the actual return type for inherited methods
+                    let ret_type_str = visitor.function_member_signature_types.get(&(original_type_for_def.clone(),method_name.clone())).cloned().unwrap_or_else(|| panic!("error searching return type for parent method"));
+                    
+                    // Build the correct signature for the inherited method
+                    let mut param_types_for_cast = vec![format!("%{}_type*", original_type_for_def)];
+                    param_types_for_cast.extend(arg_types.clone());
+                    
+                    vtable_fn_ptr_types.push("i8*".to_string());
+                    vtable_initializers.push(format!(
+                        "i8* bitcast ({} ({})* @{} to i8*)",
+                        ret_type_str,
+                        param_types_for_cast.join(", "),
+                        mangled_func_name
+                    ));
                     visitor.function_member_names.insert(
                         (type_name.clone(), method_name.clone()),
                         (vtable_initializers.len() - 1).to_string(),
@@ -127,6 +138,11 @@ pub fn generate_vtable_type(visitor: &mut GeneratorVisitor, node: &mut ast::Type
                         (type_name.clone(), method_name.clone()),
                         original_type_for_def.clone(),
                     );
+                    visitor.function_member_signature_types.insert(
+                        (type_name.clone(), method_name.clone()),
+                        ret_type_str.clone(),
+                    );
+                    
                 }
             }
         }
@@ -147,6 +163,14 @@ pub fn generate_vtable_type(visitor: &mut GeneratorVisitor, node: &mut ast::Type
             (type_name.clone(), func_def.identifier.id.clone()),
             type_name.clone(),
         );
+        visitor.function_member_signature_types.insert(
+            (type_name.clone(), func_def.identifier.id.clone()),
+            match &func_def.identifier.info.ty {
+                Some(ty) => visitor.llvm_type_str_from_ast_type(ty),
+                None => "void".to_string(),
+            },
+        );
+        
         let mangled_func_name = format!("{}_{}", type_name, func_def.identifier.id);
         let ret_type_str = match &func_def.identifier.info.ty {
             Some(ty) => visitor.llvm_type_str_from_ast_type(ty),
@@ -196,16 +220,29 @@ pub fn generate_vtable_type(visitor: &mut GeneratorVisitor, node: &mut ast::Type
         );
     }
     // Emit the vtable struct type
-    preamble += &format!("\n  {}\n", vtable_fn_ptr_types.join(",\n  "));
+    if !vtable_fn_ptr_types.is_empty() {
+        preamble += &format!("\n  {}\n", vtable_fn_ptr_types.join(",\n  "));
+    } else {
+        preamble += "\n  i8* ; Empty vtable placeholder\n";
+    }
     preamble += "}\n\n";
+    
     // Emit the global vtable instance
     let global_vtable_name = format!("@{}_vtable", type_name);
-    preamble += &format!(
-        "{} = private unnamed_addr constant {} {{ {} }}, align 8\n\n",
-        global_vtable_name,
-        vtable_type_name,
-        vtable_initializers.join(", ")
-    );
+    if !vtable_initializers.is_empty() {
+        preamble += &format!(
+            "{} = private unnamed_addr constant {} {{ {} }}, align 8\n\n",
+            global_vtable_name,
+            vtable_type_name,
+            vtable_initializers.join(", ")
+        );
+    } else {
+        preamble += &format!(
+            "{} = private unnamed_addr constant {} {{ i8* null }}, align 8\n\n",
+            global_vtable_name,
+            vtable_type_name
+        );
+    }
     preamble
 }
 
@@ -246,12 +283,19 @@ pub fn generate_object_struct_type(
         sorted_parent_members.sort_by_key(|(_, index)| *index);
         // For each parent member, add it to the child's fields and maintain index mapping
         for (member_name, _parent_index) in sorted_parent_members {
-            // NOTE: In a full implementation, the type should be looked up from a registry.
-            // Here, we use a placeholder type (double) for demonstration.
-            let member_llvm_type_str = "double".to_string(); // Replace with actual type lookup
+            // Fix: Get the actual type from the parent's type registry
+            let member_llvm_type_str = visitor
+                .type_members_types
+                .get(&(parent.clone(), member_name.clone()))
+                .cloned()
+                .unwrap_or_else(|| {
+                    eprintln!("Warning: Could not find type for parent member {}.{}, using double", parent, member_name);
+                    "double".to_string()
+                });
+            
             // Add to field list
             field_llvm_types_str.push(member_llvm_type_str.clone());
-            // Map the member name in child type to the same index it had in parent
+            // Map the member name in child type to the current index
             visitor
                 .type_members_ids
                 .insert((type_name.clone(), member_name.clone()), member_index);
@@ -429,14 +473,12 @@ pub fn generate_constructor(visitor: &mut GeneratorVisitor, node: &mut ast::Type
                 .get(i)
                 .cloned()
                 .unwrap_or_else(|| "i8*".to_string());
-            parent_ctor_call_args.push(format!(
-                "{} {}",
-                parent_arg_type,
-                eval_result
-                    .result_handle
-                    .expect("No result handle")
-                    .llvm_name
-            ));
+            if let Some(handle) = eval_result.result_handle {
+                parent_ctor_call_args.push(format!("{} {}", parent_arg_type, handle.llvm_name));
+            } else {
+                eprintln!("Warning: Parent constructor argument {} has no result handle", i);
+                parent_ctor_call_args.push(format!("{} null", parent_arg_type));
+            }
         }
         // Call parent constructor to create parent instance
         let parent_instance = visitor.generate_tmp_variable();
@@ -517,7 +559,7 @@ pub fn generate_constructor(visitor: &mut GeneratorVisitor, node: &mut ast::Type
     };
     // For each data member defined in this type, initialize it from the corresponding constructor parameter
     for (i, data_member) in node.data_member_defs.iter_mut().enumerate() {
-        let param_index = parent_member_count + i;
+        let _param_index = parent_member_count + i; // Fix: Remove unused variable warning
         let child_member_index = visitor
             .type_members_ids
             .get(&(type_name.clone(), data_member.identifier.id.clone()))
@@ -531,7 +573,6 @@ pub fn generate_constructor(visitor: &mut GeneratorVisitor, node: &mut ast::Type
             "  {} = getelementptr inbounds %{}_type, %{}_type* {}, i32 0, i32 {}\n",
             child_member_ptr, type_name, type_name, obj_typed_ptr, child_member_index
         );
-
         // Use default value expression
         let default_result = data_member.default_value.accept(visitor);
         preamble += &default_result.preamble;
@@ -548,8 +589,6 @@ pub fn generate_constructor(visitor: &mut GeneratorVisitor, node: &mut ast::Type
             "  store {} {}, {}* {}, align 8\n",
             member_type, default_handle.llvm_name, member_type, child_member_ptr
         );
-
-        
     }
     // Restore the previous context frame
     let _ = std::mem::replace(&mut visitor.context, old_context);
@@ -655,7 +694,16 @@ pub fn generate_method_definitions(
         // Emit the return statement
         if ret_type_str != "void" {
             if let Some(res_handle) = body_result.result_handle {
-                preamble += &format!("  ret {} {}\n", ret_type_str, res_handle.llvm_name);
+                // Patch: If the return type is i8* and the result is a pointer to a field, emit a load
+                if ret_type_str == "i8*" && res_handle.llvm_name.starts_with("%") {
+                    let load_var = visitor.generate_tmp_variable();
+                    preamble += &format!(
+                        "  {} = load i8*, i8** {}, align 8\n  ret i8* {}\n",
+                        load_var, res_handle.llvm_name, load_var
+                    );
+                } else {
+                    preamble += &format!("  ret {} {}\n", ret_type_str, res_handle.llvm_name);
+                }
             } else {
                 // If no return value is produced, emit a default value for the return type
                 let default_ret_val = match ret_type_str.as_str() {
