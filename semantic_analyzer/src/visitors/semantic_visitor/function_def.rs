@@ -23,32 +23,11 @@ impl<'a> SemanticVisitor<'a> {
         fn_def: &mut FunctionDef,
         enclosing_type_name: Option<&TypeName>,
     ) -> TypeAnnotation {
-        let mut has_invalid_annotations = false;
-        match self.get_conformable(&fn_def.identifier.info.ty) {
-            Ok(_) => {}
-            Err(message) => {
-                self.errors.push(message);
-                has_invalid_annotations = true;
-            }
-        };
-
         for param in &fn_def.parameters {
             self.var_definitions.define(
                 param.id.clone(),
                 VarInfo::new_from_identifier(param, true, None),
             );
-            match self.get_conformable(&param.info.ty) {
-                Ok(_) => {}
-                Err(message) => {
-                    self.errors.push(message);
-                    has_invalid_annotations = true;
-                }
-            };
-        }
-
-        // If has invalid annotations skip the method checking
-        if has_invalid_annotations {
-            return None;
         }
 
         let body_type = fn_def.body.accept(self);

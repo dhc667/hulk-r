@@ -1,0 +1,95 @@
+use crate::regex_engine::regex_ast::{
+    regex_exp::RegexExp,
+    bin_op::{BinOp, BinaryOperator},
+    un_op::{UnOp, UnaryOperator},
+    symbol::{
+        symbol::{MatchableSymbol, Symbol, SymbolSet},
+        char_set::CharSet,
+    },
+};
+
+grammar;
+
+// Gramática principal
+pub Regex: RegexExp = {
+    <u:Union> => u,
+};
+
+Union: RegexExp = {
+    <l:Union> "|" <r:Concat> => RegexExp::BinOp(BinOp {
+        left: Box::new(l),
+        right: Box::new(r),
+        op: BinaryOperator::Union,
+    }),
+    <c:Concat> => c,
+};
+
+Concat: RegexExp = {
+    <l:Concat> <r:Unary> => RegexExp::BinOp(BinOp {
+        left: Box::new(l),
+        right: Box::new(r),
+        op: BinaryOperator::Concat,
+    }),
+    <u:Unary> => u,
+};
+
+Unary: RegexExp = {
+    <a:Unary> <op:UnOp> => RegexExp::UnOp(UnOp {
+        operand: Box::new(a),
+        op,
+    }),
+    <a:Atom> => a,
+};
+
+UnOp: UnaryOperator = {
+    "*" => UnaryOperator::KleeneStar,
+    "+" => UnaryOperator::Plus,
+    "?" => UnaryOperator::Optional,
+};
+
+Atom: RegexExp = {
+    <c:Char> => RegexExp::Atom(MatchableSymbol::Symbol(Symbol::Char(c))),
+    "[" <neg:Negation?> <elems:RangeElems> "]" => RegexExp::Atom(MatchableSymbol::SymbolSet(
+        SymbolSet::CharSet(CharSet::new(elems, neg.is_some()))
+    )),
+    "(" <r:Regex> ")" => r,
+    "." => RegexExp::Atom(MatchableSymbol::SymbolSet(SymbolSet::Dot)),
+};
+
+RangeElems: Vec<(char, char)> = {
+    <start:Char> "-" <end:Char> => vec![(start, end)],
+    <start:Char> "-" <end:Char> <rest:RangeElems> => {
+        let mut ranges = vec![(start, end)];
+        ranges.extend(rest);
+        ranges
+    },
+};
+
+Escapable: char = {
+    "\\|" => '|',
+    "\\[" => '[',
+    "\\]" => ']',
+    "\\-" => '-',
+    "\\(" => '(',
+    "\\)" => ')',
+    "\\\\" => '\\',
+    "\\." => '.',
+    "\\*" => '*',
+    "\\+" => '+',
+    "\\?" => '?',
+    "\\^" => '^',
+    "\\t" => '\t',
+    "\\n" => '\n',
+    "\\r" => '\r',
+    "\\s" => ' ',        // Space
+};
+
+Negation: () = {
+    "^" => (),
+}
+
+Char: char = {
+    <c:Escapable> => c,
+    <c:r"."> => c.chars().next().unwrap(),
+};
+

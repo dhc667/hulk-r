@@ -384,3 +384,206 @@ pub fn annotate_function_accessed_object() {
 
     assert_eq!(to_string(&a_type), "A".to_string());
 }
+
+#[test]
+pub fn unknown_annotation_in_constructor_called() {
+    let p = ProgramParser::new();
+    let mut answ = p
+        .parse(
+            "
+            type Point(a: Number, b: Bool){x=a;y=b;}
+            let a = new Point(4, false) in 
+                let x = if(a.y) 1 else 2 in 
+                    x;
+        ",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    assert_eq!(
+        result.err().unwrap(),
+        vec![
+            "Semantic Error: Type or protocol Bool is not defined.",
+            "Cannot access member y of type Point. Properties are private, even to inherited types."
+        ]
+    )
+}
+
+#[test]
+pub fn unknown_annotation_in_func_called() {
+    let p = ProgramParser::new();
+    let mut answ = p
+        .parse(
+            "
+            function foo(a: Number, b: Bool): Number => a;
+            foo(1, false) + true;
+        ",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    assert_eq!(
+        result.err().unwrap(),
+        vec![
+            "Semantic Error: Type or protocol Bool is not defined.",
+            "Type mismatch: Cannot apply + to operands of type Number and Boolean"
+        ]
+    )
+}
+
+#[test]
+pub fn unknown_annotation_in_method_called() {
+    let p = ProgramParser::new();
+    let mut answ = p
+        .parse(
+            "
+            type A{
+                method(x: Bool): Number => 3;
+            }
+            let a = new A() in 
+                a.method(true) + false;
+        ",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    assert_eq!(
+        result.err().unwrap(),
+        vec![
+            "Semantic Error: Type or protocol Bool is not defined.",
+            "Type mismatch: Cannot apply + to operands of type Number and Boolean"
+        ]
+    )
+}
+
+#[test]
+fn concat_checks1() {
+    let p = ProgramParser::new();
+    let mut answ = p
+        .parse(
+            r#"
+            let x = "hello", y = " world" in {
+                x @ y;
+                x @@ y;
+            };
+        "#,
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    semantic_analyzer.analyze_program_ast(&mut answ).unwrap();
+
+    assert_eq!(semantic_analyzer.errors.len(), 0);
+}
+
+#[test]
+fn concat_checks2() {
+    let p = ProgramParser::new();
+    let mut answ = p
+        .parse(
+            r#"
+            let x = "hello", y = 3 in {
+                x @ y;
+                x @@ y;
+            };
+        "#,
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    semantic_analyzer.analyze_program_ast(&mut answ).unwrap();
+
+    assert_eq!(semantic_analyzer.errors.len(), 0);
+}
+
+#[test]
+fn concat_checks3() {
+    let p = ProgramParser::new();
+    let mut answ = p
+        .parse(
+            r#"
+            let x = 3, y = 4 in {
+                x @ y;
+                x @@ y;
+            };
+        "#,
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    semantic_analyzer.analyze_program_ast(&mut answ).unwrap();
+
+    assert_eq!(semantic_analyzer.errors.len(), 0);
+}
+
+#[test]
+fn concat_checks4() {
+    let p = ProgramParser::new();
+    let mut answ = p
+        .parse(
+            r#"
+            let x = 3, y = true in {
+                x @ y;
+                x @@ y;
+            };
+        "#,
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    semantic_analyzer.analyze_program_ast(&mut answ).unwrap();
+
+    assert_eq!(semantic_analyzer.errors.len(), 0);
+}
+
+#[test]
+fn concat_checks5() {
+    let p = ProgramParser::new();
+    let mut answ = p
+        .parse(
+            r#"
+            let x = true, y = false in {
+                x @ y;
+                x @@ y;
+            };
+        "#,
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    semantic_analyzer.analyze_program_ast(&mut answ).unwrap();
+
+    assert_eq!(semantic_analyzer.errors.len(), 0);
+}
+
+#[test]
+fn concat_checks6() {
+    let p = ProgramParser::new();
+    let mut answ = p
+        .parse(
+            r#"
+            let x = [1, 2, 3], y = [4, 5] in {
+                x @ y;
+                x @@ y;
+            };
+        "#,
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+
+    assert_eq!(
+        result.err().unwrap(),
+        vec![
+            "Type mismatch: Cannot apply @ to operands of type Number* and Number*",
+            "Type mismatch: Cannot apply @@ to operands of type Number* and Number*"
+        ]
+    );
+}
