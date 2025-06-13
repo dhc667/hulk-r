@@ -210,7 +210,7 @@ fn abc() {
     let llvm = generate_code(
         r#"
             type A() { x=10; f(): Number { return 10; } }
-            type B() inherits A() {  m(): Number { return 20; } }
+            type B() inherits A() {  h(): Number { return 20; } }
             type C() inherits B() { f(): Number { return 30; } }
 
             function g(): B {
