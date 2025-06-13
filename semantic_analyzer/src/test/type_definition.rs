@@ -1,13 +1,13 @@
 use std::vec;
 
 use ast::typing::to_string;
-use parser::ProgramParser;
+use parser::parser::Parser;
 
 use crate::semantic_analyzer::SemanticAnalyzer;
 
 #[test]
 fn simple_member_definition() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p.parse("type A { field = 3;}").unwrap();
 
@@ -30,7 +30,7 @@ fn simple_member_definition() {
 
 #[test]
 fn simple_method_definition() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p.parse("type A { method() => { 3; };}").unwrap();
 
@@ -53,7 +53,7 @@ fn simple_method_definition() {
 
 #[test]
 fn type_defintion_and_usage() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse("type A { field = 3; method() => { 3; }; } let a = new A() in {a;};")
@@ -90,7 +90,7 @@ fn type_defintion_and_usage() {
 
 #[test]
 fn inherited_member_resolve() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -150,7 +150,7 @@ fn inherited_member_resolve() {
 
 #[test]
 fn inherited_member_resolve_with_ambiguity() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -208,7 +208,7 @@ fn inherited_member_resolve_with_ambiguity() {
 
 #[test]
 fn several_inheritance_member_usage() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -286,7 +286,7 @@ fn several_inheritance_member_usage() {
 
 #[test]
 fn inherited_member_in_operation() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -354,7 +354,7 @@ fn inherited_member_in_operation() {
 
 #[test]
 fn infered_type_usage() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -394,7 +394,7 @@ fn infered_type_usage() {
 
 #[test]
 fn infered_type_usage_with_indefinition() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -422,7 +422,7 @@ fn infered_type_usage_with_indefinition() {
 
 #[test]
 fn accessing_methods_with_arguments() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -449,7 +449,7 @@ fn accessing_methods_with_arguments() {
 
 #[test]
 fn accessing_methods_with_arguments_and_ambiguity() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -475,7 +475,7 @@ fn accessing_methods_with_arguments_and_ambiguity() {
 
 #[test]
 fn accesing_methods_with_invalid_amount_parameters() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -508,7 +508,7 @@ fn accesing_methods_with_invalid_amount_parameters() {
 
 #[test]
 fn accesing_methods_with_invalid_parameter_types() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -538,7 +538,7 @@ fn accesing_methods_with_invalid_parameter_types() {
 
 #[test]
 fn invalid_method_use() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -565,7 +565,7 @@ fn invalid_method_use() {
 
 #[test]
 fn type_mismatch_when_using_method() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -591,7 +591,7 @@ fn type_mismatch_when_using_method() {
 
 #[test]
 fn declaration_of_type_with_arguments() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p.parse("type A(x: Number) { field = x; }").unwrap();
 
@@ -603,7 +603,7 @@ fn declaration_of_type_with_arguments() {
 
 #[test]
 fn declaration_of_type_with_arguments_and_usage() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -629,7 +629,7 @@ fn declaration_of_type_with_arguments_and_usage() {
 
 #[test]
 fn declaration_of_type_with_arguments_and_usage2() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -656,7 +656,7 @@ fn declaration_of_type_with_arguments_and_usage2() {
 
 #[test]
 fn declaration_of_type_with_reference_to_self() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -680,7 +680,7 @@ fn declaration_of_type_with_reference_to_self() {
 
 #[test]
 fn declaration_of_type_with_reference_to_self_wrong() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -707,7 +707,7 @@ fn declaration_of_type_with_reference_to_self_wrong() {
 
 #[test]
 fn declaration_of_type_with_self_inherited_access() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -736,7 +736,7 @@ fn declaration_of_type_with_self_inherited_access() {
 
 #[test]
 fn declaration_of_type_with_self_inherited_access_wrong() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -768,7 +768,7 @@ fn declaration_of_type_with_self_inherited_access_wrong() {
 
 #[test]
 fn super_constructor_call() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -793,7 +793,7 @@ fn super_constructor_call() {
 
 #[test]
 fn super_constructor_call2() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -818,7 +818,7 @@ fn super_constructor_call2() {
 
 #[test]
 fn super_constructor_with_wrong_arguments() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -846,7 +846,7 @@ fn super_constructor_with_wrong_arguments() {
 
 #[test]
 fn nested_super_constructor_call() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -884,7 +884,7 @@ fn nested_super_constructor_call() {
 
 #[test]
 fn dassigning_to_self() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -907,7 +907,7 @@ fn dassigning_to_self() {
 
 #[test]
 fn shadowed_dassignment_to_self() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -931,7 +931,7 @@ fn shadowed_dassignment_to_self() {
 
 #[test]
 fn list_field() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -955,7 +955,7 @@ fn list_field() {
 
 #[test]
 fn mutate_field_in_list() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -980,7 +980,7 @@ fn mutate_field_in_list() {
 
 #[test]
 fn mutate_field_in_list_incorrect_typing() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -1008,7 +1008,7 @@ fn mutate_field_in_list_incorrect_typing() {
 
 #[test]
 fn operation_on_element_without_indexing() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -1036,7 +1036,7 @@ fn operation_on_element_without_indexing() {
 
 #[test]
 fn unknown_annotation() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -1058,7 +1058,7 @@ fn unknown_annotation() {
 
 #[test]
 fn unknown_annotation_in_method_param() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -1087,7 +1087,7 @@ fn unknown_annotation_in_method_param() {
 
 #[test]
 fn unknown_annotation_in_method_return() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -1113,7 +1113,7 @@ fn unknown_annotation_in_method_return() {
 
 #[test]
 fn unknown_annotation_in_type_arg() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -1135,7 +1135,7 @@ fn unknown_annotation_in_type_arg() {
 
 #[test]
 fn reassign_nonexisting_property() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -1162,7 +1162,7 @@ fn reassign_nonexisting_property() {
 
 #[test]
 fn use_field_without_self() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -1189,7 +1189,7 @@ fn use_field_without_self() {
 
 #[test]
 fn field_with_same_name_as_param() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -1213,7 +1213,7 @@ fn field_with_same_name_as_param() {
 
 #[test]
 fn field_override_errors() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -1244,7 +1244,7 @@ fn field_override_errors() {
 
 #[test]
 fn method_incorrect_override() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -1273,7 +1273,7 @@ fn method_incorrect_override() {
 
 #[test]
 fn method_incorrect_override_diferent_amount() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -1302,7 +1302,7 @@ fn method_incorrect_override_diferent_amount() {
 
 #[test]
 fn method_override_variant_1() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -1325,7 +1325,7 @@ fn method_override_variant_1() {
 
 #[test]
 fn method_override_variant_2() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -1348,7 +1348,7 @@ fn method_override_variant_2() {
 
 #[test]
 fn method_override_variant_3() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -1371,7 +1371,7 @@ fn method_override_variant_3() {
 
 #[test]
 fn field_override_should_fail() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
     let mut answ = p
         .parse(
             r#"
@@ -1393,7 +1393,7 @@ fn field_override_should_fail() {
 
 #[test]
 fn method_override_wrong_arg_count() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
     let mut answ = p
         .parse(
             "
@@ -1419,7 +1419,7 @@ fn method_override_wrong_arg_count() {
 
 #[test]
 fn method_override_wrong_return_covariance() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
     let mut answ = p
         .parse(
             r#"
@@ -1448,7 +1448,7 @@ fn method_override_wrong_return_covariance() {
 
 #[test]
 fn complicated_inheritance_chain() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
     let mut answ = p
         .parse(
             "
@@ -1473,7 +1473,7 @@ fn complicated_inheritance_chain() {
 
 #[test]
 fn complicated_inheritance_cycle_should_fail() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
     let mut answ = p
         .parse(
             r#"
@@ -1490,7 +1490,7 @@ fn complicated_inheritance_cycle_should_fail() {
 
 #[test]
 fn override_from_far_ancestor() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(

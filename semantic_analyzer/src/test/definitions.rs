@@ -1,9 +1,9 @@
 use crate::semantic_analyzer::SemanticAnalyzer;
-use parser::ProgramParser;
+use parser::parser::Parser;
 
 #[test]
 fn not_defined_variable() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p.parse("x + 2;").unwrap();
 
@@ -21,7 +21,7 @@ fn not_defined_variable() {
 
 #[test]
 fn shadow_different_let_in() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse("let x = 1 + 2 in let x = x + 2 in {x + 2;};")
@@ -37,7 +37,7 @@ fn shadow_different_let_in() {
 
 #[test]
 fn shadow_in_same_let_in() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p.parse("let x = 1 + 2, x = x + 2 in {x + 2;};").unwrap();
 
@@ -51,7 +51,7 @@ fn shadow_in_same_let_in() {
 
 #[test]
 fn lookup_in_let_in() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p.parse("let x = 1 + 2 in let y = 4 in {x + 2;};").unwrap();
 
@@ -65,7 +65,7 @@ fn lookup_in_let_in() {
 
 #[test]
 fn lookup_in_let_in_with_shadow() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse("{ let x = 1 + 2 in let x = 4 in {x + 2;}; };")
@@ -81,7 +81,7 @@ fn lookup_in_let_in_with_shadow() {
 
 #[test]
 fn not_defined_variable_different_let_in() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p.parse("{ let x=3 in {x;}; x+18; };").unwrap();
 
@@ -99,7 +99,7 @@ fn not_defined_variable_different_let_in() {
 
 #[test]
 fn several_undefinitions() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse("{ let x=3, y=4, z=5 in {x;}; x+y+z+18; };")
@@ -123,7 +123,7 @@ fn several_undefinitions() {
 
 #[test]
 fn func_definitions() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse("function foo(x: Number, y: Number): Number { x+y;}")
@@ -170,7 +170,7 @@ fn func_definitions() {
 
 #[test]
 fn anotated_var_with_wrong_value_type() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p.parse("let x: Number = true in {x;};").unwrap();
 
@@ -188,7 +188,7 @@ fn anotated_var_with_wrong_value_type() {
 
 #[test]
 fn list_definition() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p.parse("let x: Boolean* = [true, false] in x;").unwrap();
 
@@ -202,7 +202,7 @@ fn list_definition() {
 
 #[test]
 fn mutate_field() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -227,7 +227,7 @@ fn mutate_field() {
 
 #[test]
 fn mutate_indexing() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -251,7 +251,7 @@ fn mutate_indexing() {
 
 #[test]
 fn mutate_non_variable() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -274,7 +274,7 @@ fn mutate_non_variable() {
 
 #[test]
 fn mutate_field_outside_definition() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -306,7 +306,7 @@ fn mutate_field_outside_definition() {
 
 #[test]
 pub fn print_defined() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p.parse("print(1);").unwrap();
 

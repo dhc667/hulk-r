@@ -1,11 +1,11 @@
 use ast::typing::{BuiltInType, Type};
-use parser::ProgramParser;
+use parser::parser::Parser;
 
 use crate::semantic_analyzer::SemanticAnalyzer;
 
 #[test]
 fn built_ins_inheritance() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p.parse("3;").unwrap();
 
@@ -72,7 +72,7 @@ fn built_ins_inheritance() {
 
 #[test]
 fn basic_inheritance() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -108,7 +108,7 @@ fn basic_inheritance() {
 
 #[test]
 fn before_delcared() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -146,7 +146,7 @@ fn before_delcared() {
 
 #[test]
 fn nested_inheritance() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -203,7 +203,7 @@ fn nested_inheritance() {
 
 #[test]
 fn inheritance_cycle() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
@@ -249,7 +249,7 @@ fn inheritance_cycle() {
 
 #[test]
 fn complicated_inheritance_cycle() {
-    let p = ProgramParser::new();
+    let p = Parser::new();
 
     let mut answ = p
         .parse(
