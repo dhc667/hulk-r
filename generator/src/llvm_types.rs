@@ -12,7 +12,7 @@ impl LlvmType {
         match self {
             LlvmType::F64 => "double",
             LlvmType::I1 => "i1",
-            LlvmType::String => "%string_type*",
+            LlvmType::String => "%i8*",
             LlvmType::Object => "i8*",
         }
     }

@@ -105,7 +105,7 @@ pub struct GeneratorVisitor {
     /// Maps type_name to the types of its constructor arguments.
     constructor_args_types: HashMap<String, Vec<String>>,
     /// Maps string literals to their LLVM global names.
-    string_constants: HashMap<String, String>,
+    pub(crate) string_constants: Vec<String>,
     /// Counter for generating unique string constant names.
     string_counter: u32,
     /// Maps (type_name, function_name) to the argument types for the function member.
@@ -128,7 +128,7 @@ impl GeneratorVisitor {
             function_member_names: HashMap::new(),
             inherits: HashMap::new(),
             constructor_args_types: HashMap::new(),
-            string_constants: HashMap::new(),
+            string_constants: Vec::new(),
             string_counter: 0,
             global_string_definitions: Vec::new(),
             function_member_def_from_type_and_name: HashMap::new(),
@@ -642,9 +642,66 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
     }
 
     fn visit_string_literal(&mut self, node: &mut ast::StringLiteral) -> VisitorResult {
-        todo!()
-    }
+        let value = node.string.clone();
+        let a = self.generate_tmp_variable();
+        let tmp_var = &a[1..]; // Remove the % prefix for global name
+        let global_str_name = format!("{}_str", tmp_var);
+        let str_len = value.len();
 
+        // Define the global string constant (with null terminator)
+        let global_str_code = format!(
+            "@{} = private unnamed_addr constant [{} x i8] c\"{}\\00\", align 1\n",
+            global_str_name,
+            str_len + 1,
+            value
+        );
+
+        self.string_constants.push(global_str_code.clone());
+
+        for x in self.string_constants.iter() {
+            println!("global string aaaaaaa =======: {}", x.clone());
+        }
+
+        // Create local variable to store the string
+        let local_str_var = self.generate_tmp_variable();
+        let alloca_code = format!(
+            "{} = alloca [{} x i8], align 1\n",
+            local_str_var,
+            str_len + 1
+        );
+
+        // Get pointer to local variable
+        let local_ptr_var = self.generate_tmp_variable();
+        let local_gep_code = format!(
+            "{} = getelementptr inbounds [{} x i8], [{} x i8]* {}, i64 0, i64 0\n",
+            local_ptr_var,
+            str_len + 1,
+            str_len + 1,
+            local_str_var
+        );
+
+        // Get pointer to the global string constant
+        let global_ptr_var = self.generate_tmp_variable();
+        let global_gep_code = format!(
+            "{} = getelementptr inbounds [{} x i8], [{} x i8]* @{}, i64 0, i64 0\n",
+            global_ptr_var,
+            str_len + 1,
+            str_len + 1,
+            global_str_name
+        );
+
+        // Copy the string to local variable using strcpy
+        let strcpy_code = format!(
+            "call i8* @strcpy(i8* {}, i8* {})\n",
+            local_ptr_var,
+            global_ptr_var
+        );
+
+        VisitorResult {
+            preamble: alloca_code + &local_gep_code + &global_gep_code + &strcpy_code,
+            result_handle: Some(LlvmHandle::new_string_register(local_ptr_var)), // Return pointer to local string
+        }
+    }
     fn visit_list_literal(&mut self, node: &mut ast::ListLiteral) -> VisitorResult {
         todo!()
     }

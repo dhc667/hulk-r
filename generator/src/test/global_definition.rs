@@ -229,3 +229,37 @@ fn abc() {
 
     assert_eq!(result, expected);
 }
+
+#[test]
+fn test_string() {
+    let llvm = generate_code(
+        r#"
+            
+
+            let a = "hello world" in print(a);
+        "#,
+    );
+    println!("{}", llvm);
+
+    let result = lli_string(&llvm).unwrap();
+    let expected = "hello world";
+
+    assert_eq!(result, expected);
+}
+//
+// #[test]
+// fn test_string_concatenation() {
+//     let llvm = generate_code(
+//         r#"
+//
+//
+//             let a = "hello" @ " world" in print(a);
+//         "#,
+//     );
+//     println!("{}", llvm);
+//
+//     let result = lli_string(&llvm).unwrap();
+//     let expected = "hello world";
+//
+//     assert_eq!(result, expected);
+// }
