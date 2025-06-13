@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-
 struct Frame<T> {
     can_access_parents: bool,
     values: HashMap<String, T>,
@@ -33,7 +32,15 @@ impl<R> Context<R> {
         ctx
     }
 
-    pub fn push_frame(&mut self, can_access_parents: bool) {
+    pub fn push_open_frame(&mut self) {
+        self.push_frame(true);
+    }
+
+    pub fn push_closed_frame(&mut self) {
+        self.push_frame(false);
+    }
+
+    fn push_frame(&mut self, can_access_parents: bool) {
         let mut can_access_parents = can_access_parents;
 
         if self.scope_stack.len() == 0 {
