@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use ast::{
     BinaryOperator, UnaryOperator,
-    typing::{Type, TypeAnnotation, to_string},
+    typing::{BuiltInType, Type, TypeAnnotation, to_string},
 };
 
 use super::{generics::GenericType, get_binary_op_functor_type, get_unary_op_functor_type};
@@ -159,6 +159,37 @@ impl TypeChecker {
         }
     }
 
+    fn check_concat(
+        &self,
+        op: &BinaryOperator,
+        left: &TypeAnnotation,
+        right: &TypeAnnotation,
+        errors: &mut Vec<String>,
+    ) -> TypeAnnotation {
+        let accepted_types = vec![
+            Some(Type::BuiltIn(BuiltInType::String)),
+            Some(Type::BuiltIn(BuiltInType::Number)),
+            Some(Type::BuiltIn(BuiltInType::Bool)),
+        ];
+
+        let left_ok = accepted_types
+            .iter()
+            .any(|t| self.conforms(left, &t.clone()));
+        let right_ok = accepted_types
+            .iter()
+            .any(|t| self.conforms(right, &t.clone()));
+
+        if !left_ok || !right_ok {
+            errors.push(format!(
+                "Type mismatch: Cannot apply {} to operands of type {} and {}",
+                op,
+                to_string(left),
+                to_string(right)
+            ));
+        }
+        Some(Type::BuiltIn(BuiltInType::String))
+    }
+
     /// # Description
     /// Checks if operands of a binary operation conform to the expected types
     /// and returns the resulting type of the operation.
@@ -178,6 +209,11 @@ impl TypeChecker {
         right: &TypeAnnotation,
         errors: &mut Vec<String>,
     ) -> TypeAnnotation {
+        // special case for concatenation operators, we should do something more general here
+        if matches!(op, BinaryOperator::At(_) | BinaryOperator::AtAt(_)) {
+            return self.check_concat(op, left, right, errors);
+        }
+
         let functor = get_binary_op_functor_type(&op);
 
         if !self.conforms(&left, &functor.parameter_types[0])
