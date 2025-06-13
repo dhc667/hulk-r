@@ -4,11 +4,13 @@ use crate::{
     RegexParser,
     lexer_generator::{
         automata::{super_dfa::SuperDFA, super_nfa::SuperNFA},
-        lexer_result::LexerResult,
+        lexer_chunk::LexerChunk,
         rule::Rule,
     },
     regex_engine::automata::{nfa::NFA, nfa_builder::NFABuilder},
 };
+
+type Tokens<'a, TokenKind> = Vec<LexerChunk<'a, TokenKind>>;
 
 /// # Description
 /// This module defines a `Lexer` struct that represents a lexer for tokenizing input strings based on defined rules.
@@ -56,7 +58,10 @@ where
     /// * `input`: The input string to be tokenized.
     /// # Returns
     /// A `LexerResult` containing the tokens recognized in the input string and the errors encountered.
-    pub fn split<'a>(&self, input: &'a str) -> LexerResult<'a, TokenKind> {
+    pub fn split<'a>(
+        &self,
+        input: &'a str,
+    ) -> Result<Tokens<'a, TokenKind>, (Tokens<'a, TokenKind>, Vec<String>)> {
         let mut result = self.engine.scan(input);
 
         result.tokens = result
@@ -64,6 +69,10 @@ where
             .into_iter()
             .filter(|token| self.rules.get(&token.ty).map_or(false, |rule| !rule.skip))
             .collect();
-        result
+        if result.errors.is_empty() {
+            Ok(result.tokens)
+        } else {
+            Err((result.tokens, result.errors))
+        }
     }
 }

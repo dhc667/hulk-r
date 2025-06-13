@@ -14,7 +14,7 @@ pub fn lex_some_tokens() {
 
     let result = lexer.split("aab bba");
 
-    let tokens = result.tokens;
+    let tokens = result.ok().unwrap();
     assert_eq!(tokens.len(), 6);
     assert_eq!(
         tokens.iter().map(|t| t.ty.clone()).collect::<Vec<_>>(),
@@ -42,7 +42,7 @@ pub fn lex_some_tokens2() {
 
     let result = lexer.split("aab bba ccc");
 
-    let tokens = result.tokens;
+    let tokens = result.ok().unwrap();
     assert_eq!(tokens.len(), 9);
     assert_eq!(
         tokens.iter().map(|t| t.ty.clone()).collect::<Vec<_>>(),
@@ -73,7 +73,7 @@ pub fn resolve_ambiguity() {
 
     let result = lexer.split("aab ab");
 
-    let tokens = result.tokens;
+    let tokens = result.ok().unwrap();
     assert_eq!(tokens.len(), 2);
     assert_eq!(
         tokens.iter().map(|t| t.ty.clone()).collect::<Vec<_>>(),
@@ -92,7 +92,7 @@ pub fn resolve_ambiguity2() {
     let lexer = Lexer::new(rules);
     let result = lexer.split("aab ab abb");
 
-    let tokens = result.tokens;
+    let tokens = result.ok().unwrap();
     assert_eq!(tokens.len(), 3);
     assert_eq!(
         tokens.iter().map(|t| t.ty.clone()).collect::<Vec<_>>(),
@@ -111,7 +111,7 @@ pub fn edge_case() {
     let lexer = Lexer::new(rules);
     let result = lexer.split(str);
 
-    let tokens = result.tokens;
+    let tokens = result.ok().unwrap();
     assert_eq!(tokens.len(), str.len());
     assert_eq!(
         tokens.iter().map(|t| t.ty.clone()).collect::<Vec<_>>(),
@@ -132,7 +132,7 @@ pub fn unrecognized_character() {
 
     let lexer = Lexer::new(rules);
 
-    let errors = lexer.split("aab bba ccc").errors;
+    let errors = lexer.split("aab bba ccc").err().unwrap().1;
 
     assert_eq!(errors.len(), 1);
     assert_eq!(
@@ -153,7 +153,7 @@ pub fn error_recovery() {
 
     let result = lexer.split("aab bba caac");
 
-    let errors = result.errors;
+    let errors = result.err().unwrap().1;
     assert_eq!(errors.len(), 2);
     assert_eq!(
         errors,
@@ -183,7 +183,7 @@ pub fn lex_hulk_line() {
     let lexer = Lexer::new(rules);
     let result = lexer.split("let let_var: Number = 5 in x;");
 
-    let tokens = result.tokens;
+    let tokens = result.ok().unwrap();
     assert_eq!(tokens.len(), 9);
     assert_eq!(
         tokens.iter().map(|t| t.ty.clone()).collect::<Vec<_>>(),
@@ -211,7 +211,7 @@ pub fn line_error() {
     let lexer = Lexer::new(rules);
     let result = lexer.split("a\nb\nc");
 
-    let errors = result.errors;
+    let errors = result.err().unwrap().1;
     assert_eq!(errors.len(), 2);
     assert_eq!(
         errors,
@@ -251,7 +251,7 @@ pub fn lex_some_python() {
     let lexer = Lexer::new(rules);
     let result = lexer.split(input);
 
-    let tokens = result.tokens;
+    let tokens = result.ok().unwrap();
     assert_eq!(
         tokens.iter().map(|t| t.ty).collect::<Vec<_>>(),
         vec![
@@ -307,7 +307,12 @@ pub fn lex_some_python_2() {
     let lexer = Lexer::new(rules);
     let result = lexer.split(input);
     assert_eq!(
-        result.tokens.iter().map(|t| t.ty).collect::<Vec<_>>(),
+        result
+            .ok()
+            .unwrap()
+            .iter()
+            .map(|t| t.ty)
+            .collect::<Vec<_>>(),
         vec![
             "DEF",
             "IDENTIFIER",
@@ -369,7 +374,7 @@ pub fn lex_some_c_sharp() {
     let lexer = Lexer::new(rules);
     let result = lexer.split(input);
 
-    let tokens = result.tokens;
+    let tokens = result.ok().unwrap();
     assert_eq!(
         tokens.iter().map(|t| t.ty).collect::<Vec<_>>(),
         vec![
@@ -402,7 +407,7 @@ pub fn empty_match() {
     let lexer = Lexer::new(rules);
     let result = lexer.split(input);
 
-    let errors = result.errors;
+    let errors = result.err().unwrap().1;
     assert_eq!(errors.len(), 1);
     assert_eq!(
         errors,
