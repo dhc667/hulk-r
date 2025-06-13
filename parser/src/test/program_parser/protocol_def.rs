@@ -35,4 +35,3 @@ protocol Hash {
         &BuiltInType::Object
     )
 }
-

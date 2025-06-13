@@ -1,6 +1,5 @@
 use crate::{Keyword, TypeName};
 
-
 pub struct ExtensionIndicator {
     pub extends_token: Keyword,
     pub extendee_name: TypeName,

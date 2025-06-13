@@ -27,9 +27,7 @@ fn concat_is_lowest_precedence() {
     let answ = p.parse("a + b @ c || d").unwrap();
 
     assert!(matches!(
-        answ.as_bin_op()
-            .unwrap()
-            .op,
+        answ.as_bin_op().unwrap().op,
         ast::BinaryOperator::At(_)
     ))
 }
@@ -41,9 +39,7 @@ fn concat_is_lowest_precedence_2() {
     let answ = p.parse("a + b @ c || d @@ c").unwrap();
 
     assert!(matches!(
-        answ.as_bin_op()
-            .unwrap()
-            .op,
+        answ.as_bin_op().unwrap().op,
         ast::BinaryOperator::AtAt(_)
     ))
 }

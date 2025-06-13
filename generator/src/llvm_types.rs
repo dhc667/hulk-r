@@ -1,10 +1,9 @@
-#[derive(Copy, Clone)]
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum LlvmType {
     F64,
     I1,
     String, // Now represents %string_type*
-    Object
+    Object,
 }
 
 impl LlvmType {
@@ -106,7 +105,7 @@ impl LlvmHandle {
         };
         LlvmHandle::new(HandleType::literal_i1(), llvm_value.to_string())
     }
-    
+
     pub fn new_string_literal(value: String) -> LlvmHandle {
         LlvmHandle::new(HandleType::literal_string(), value)
     }
@@ -122,13 +121,12 @@ impl LlvmHandle {
     pub fn new_i1_register(name: String) -> LlvmHandle {
         LlvmHandle::new(HandleType::register_i1(), name)
     }
-    
+
     pub fn new_string_register(name: String) -> LlvmHandle {
         LlvmHandle::new(HandleType::register_string(), name)
     }
-    
+
     pub fn new_object_register(name: String) -> LlvmHandle {
         LlvmHandle::new(HandleType::register_object(), name)
     }
-
 }

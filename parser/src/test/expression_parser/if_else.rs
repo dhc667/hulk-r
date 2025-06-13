@@ -12,13 +12,7 @@ fn parses_if_else_expression() {
         let else_branch = &if_else_exp.else_expression;
 
         assert_eq!(
-            condition
-                .as_bin_op()
-                .unwrap()
-                .lhs
-                .as_variable()
-                .unwrap()
-                .id,
+            condition.as_bin_op().unwrap().lhs.as_variable().unwrap().id,
             "x"
         );
         assert_eq!(then_branch.as_variable().unwrap().id, "y");
@@ -39,13 +33,7 @@ fn parses_if_else_if_expression() {
         let else_branch = &if_else_exp.else_expression;
 
         assert_eq!(
-            condition
-                .as_bin_op()
-                .unwrap()
-                .lhs
-                .as_variable()
-                .unwrap()
-                .id,
+            condition.as_bin_op().unwrap().lhs.as_variable().unwrap().id,
             "x"
         );
         assert_eq!(then_branch.as_variable().unwrap().id, "y");

@@ -1,4 +1,4 @@
-use crate::{typing::Type, BinaryOperator, Expression, Identifier, Keyword};
+use crate::{BinaryOperator, Expression, Identifier, Keyword, typing::Type};
 
 pub struct ConstantDef {
     pub identifier: Identifier,

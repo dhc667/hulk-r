@@ -6,15 +6,7 @@ fn parses_and_or() {
     let p = grammar::ExpressionParser::new();
     let ast = p.parse("a || b && c").unwrap();
 
-    assert_eq!(
-        ast.as_bin_op()
-            .unwrap()
-            .lhs
-            .as_variable()
-            .unwrap()
-            .id,
-        "a"
-    );
+    assert_eq!(ast.as_bin_op().unwrap().lhs.as_variable().unwrap().id, "a");
 
     assert_eq!(
         ast.as_bin_op()
@@ -35,15 +27,7 @@ fn parses_leq_get_eq() {
     let p = grammar::ExpressionParser::new();
     let ast = p.parse("a || 4 < 3 == 3 < 4").unwrap();
 
-    assert_eq!(
-        ast.as_bin_op()
-            .unwrap()
-            .lhs
-            .as_variable()
-            .unwrap()
-            .id,
-        "a"
-    );
+    assert_eq!(ast.as_bin_op().unwrap().lhs.as_variable().unwrap().id, "a");
 
     assert_eq!(
         ast.as_bin_op()
@@ -68,11 +52,7 @@ fn logical_literals() {
     let ast = p.parse("true || false && 3 < 4").unwrap();
 
     assert!(matches!(
-        ast.as_bin_op()
-            .unwrap()
-            .lhs
-            .as_boolean_literal()
-            .unwrap(),
+        ast.as_bin_op().unwrap().lhs.as_boolean_literal().unwrap(),
         BooleanLiteral::True(_)
     ));
 

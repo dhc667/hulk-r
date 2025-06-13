@@ -1,12 +1,12 @@
-mod var_definition;
+mod check_override;
 mod destructive_assignment;
-mod function_call;
-mod function_def;
-mod print;
 mod find_member_info;
 mod find_method_info;
+mod function_call;
+mod function_def;
 mod get_conformable;
-mod check_override;
+mod print;
+mod var_definition;
 
 use std::collections::HashMap;
 
@@ -18,7 +18,8 @@ use ast::{
 use generator::context::Context;
 
 use crate::{
-    def_info::{FuncInfo, TypeInfo, VarInfo}, typing::TypeChecker
+    def_info::{FuncInfo, TypeInfo, VarInfo},
+    typing::TypeChecker,
 };
 
 /// # Description
@@ -59,7 +60,6 @@ impl<'a> SemanticVisitor<'a> {
             flattened_hierarchy.insert(type_key.clone(), type_info.get_type_annotation());
         }
 
-
         SemanticVisitor {
             type_definitions,
             type_hierarchy,
@@ -98,9 +98,8 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
                 self.handle_list_element_reassign(&assignee_type, &expr_type)
             }
             _ => {
-                let message = format!(
-                    "Semantic Error: only variables and self properties can be assigned",
-                );
+                let message =
+                    format!("Semantic Error: only variables and self properties can be assigned",);
                 self.errors.push(message);
                 None
             }
@@ -113,14 +112,13 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
         let left_type = node.lhs.accept(self);
         let right_type = node.rhs.accept(self);
 
-        let op_type = self
-            .type_checker
-            .check_bin_op(&node.op, &left_type, &right_type, &mut self.errors);
+        let op_type =
+            self.type_checker
+                .check_bin_op(&node.op, &left_type, &right_type, &mut self.errors);
         op_type
     }
 
     fn visit_un_op(&mut self, node: &mut UnOp) -> TypeAnnotation {
-
         let operand_type = node.rhs.accept(self);
         let op_type = self
             .type_checker
@@ -162,14 +160,12 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
         let identifier_type = match &iterable_type {
             Some(Type::Iterable(inner_type)) => Some(inner_type.as_ref().clone()),
             ty => {
-                self.errors.push(
-                    format!(
-                        "Semantic Error: Cannot iterate over type {}",
-                        to_string(&ty)
-                    )
-                );
+                self.errors.push(format!(
+                    "Semantic Error: Cannot iterate over type {}",
+                    to_string(&ty)
+                ));
                 None
-            },
+            }
         };
 
         self.var_definitions.define(
@@ -179,7 +175,7 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
 
         self.handle_var_definition(&mut node.element, identifier_type, true);
         let result = node.body.accept(self);
-        
+
         self.var_definitions.pop_frame();
         result
     }
@@ -241,7 +237,8 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
         // Resolve the member info
         let member_info = self.find_member_info(member_name.clone(), &ty);
         let Some(member_info) = member_info.cloned() else {
-            self.errors.push(format!("Could not find data member {}", member_name));
+            self.errors
+                .push(format!("Could not find data member {}", member_name));
             return None;
         };
 
@@ -251,7 +248,10 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
         node.obj_type = ty.clone();
 
         // Check if expresion is self
-        let id_info = node.object.as_variable().and_then(|var| self.var_definitions.get_value(&var.id));
+        let id_info = node
+            .object
+            .as_variable()
+            .and_then(|var| self.var_definitions.get_value(&var.id));
         if let Some(self_info) = id_info {
             if self_info.is_constant {
                 return member_info.ty.clone();
@@ -274,10 +274,15 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
 
         let func_info = self.find_method_info(func_name.clone(), &ty);
         let Some(func_info) = func_info else {
-            self.errors.push(format!("Could not find method {}", func_name));
+            self.errors
+                .push(format!("Could not find method {}", func_name));
             return None;
         };
-        return self.handle_function_call(func_info.clone(), &mut node.member.identifier, &mut node.member.arguments)
+        return self.handle_function_call(
+            func_info.clone(),
+            &mut node.member.identifier,
+            &mut node.member.arguments,
+        );
     }
 
     // Other
@@ -305,7 +310,10 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
             return self.handle_print(&mut node.arguments);
         }
         // Check if the function is defined
-        let function_def = self.func_definitions.get_value(&node.identifier.id).cloned();
+        let function_def = self
+            .func_definitions
+            .get_value(&node.identifier.id)
+            .cloned();
         let Some(fn_info) = function_def else {
             let message = format!("Function {} is not defined", node.identifier.id);
             self.errors.push(message);
@@ -332,7 +340,8 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
     }
 
     fn visit_new_expr(&mut self, node: &mut NewExpr) -> TypeAnnotation {
-        let type_def = self.type_definitions
+        let type_def = self
+            .type_definitions
             .get_value(&node.type_name)
             .and_then(|d| d.as_defined())
             .cloned();
@@ -370,20 +379,18 @@ impl<'a> DefinitionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
                 param.id.clone(),
                 VarInfo::new_from_identifier(param, true, None),
             );
-            
         }
 
         // Check the super constructor
         if let Some(inheritance) = &mut node.inheritance_indicator {
-            let parent_type = self.type_definitions
+            let parent_type = self
+                .type_definitions
                 .get_value(&inheritance.parent_name.id)
                 .and_then(|d| d.as_defined())
-                .expect(
-                    &format!(
-                        "Type {} is not defined, this should not happen in Semantic visitor",
-                        inheritance.parent_name.id
-                    )
-                )
+                .expect(&format!(
+                    "Type {} is not defined, this should not happen in Semantic visitor",
+                    inheritance.parent_name.id
+                ))
                 .clone();
 
             // Check if the arguments match
@@ -403,15 +410,13 @@ impl<'a> DefinitionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
         }
 
         // Define Reference to self
-        self.var_definitions.define(
-            "self".to_string(),
-            VarInfo::new_self_instance(&node.name),
-        );
+        self.var_definitions
+            .define("self".to_string(), VarInfo::new_self_instance(&node.name));
 
         // Define the data members
         for member in &mut node.data_member_defs {
             let member_type = member.default_value.accept(self);
-            
+
             if !self.check_field_override(&member.identifier.id, &node.name.id) {
                 self.errors.push(format!(
                     "Semantic Error: Cannot declare field {} in type {}, as it overrides parent definition.",
@@ -419,10 +424,7 @@ impl<'a> DefinitionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
                     &node.name.id
                 ));
             }
-            self.handle_field_definition(
-                &mut member.identifier,
-                member_type.clone(),
-            );
+            self.handle_field_definition(&mut member.identifier, member_type.clone());
 
             let member_info = self.type_definitions
                 .get_value_mut(&node.name.id)
@@ -436,10 +438,9 @@ impl<'a> DefinitionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
                 .and_then(|d| d.as_var_mut())
                 .expect(&format!(
                     "Member {} is not defined in type {}, this should not happen in Semantic visitor",
-                    &member.identifier.id, 
+                    &member.identifier.id,
                     &node.name.id
                 ));
-
 
             if member_info.ty.is_none() {
                 member_info.ty = member_type.clone();
@@ -459,8 +460,8 @@ impl<'a> DefinitionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
             self.handle_fn_def(method, Some(&node.name));
             self.var_definitions.pop_frame();
         }
-        
-        self.var_definitions.pop_frame();        
+
+        self.var_definitions.pop_frame();
         None
     }
 

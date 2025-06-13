@@ -4,7 +4,6 @@ pub use expression::Expression;
 mod new_expr;
 pub use new_expr::NewExpr;
 
-
 mod bin_op;
 pub use bin_op::BinOp;
 
@@ -22,13 +21,13 @@ mod if_else;
 pub use if_else::IfElse;
 
 mod loops;
-pub use loops::While;
 pub use loops::For;
+pub use loops::While;
 
 mod block;
 pub use block::Block;
-pub use block::ReturnStatement;
 pub use block::BlockBodyItem;
+pub use block::ReturnStatement;
 
 mod function_call;
 pub use function_call::FunctionCall;
@@ -40,6 +39,5 @@ mod list_indexing;
 pub use list_indexing::ListIndexing;
 
 mod member_access;
-pub use member_access::FunctionMemberAccess;
 pub use member_access::DataMemberAccess;
-
+pub use member_access::FunctionMemberAccess;

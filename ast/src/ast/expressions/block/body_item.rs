@@ -2,10 +2,9 @@ use crate::{Expression, ExpressionVisitor, VisitableExpression};
 
 use super::return_statement::ReturnStatement;
 
-
 pub enum BlockBodyItem {
     Expression(Expression),
-    ReturnStatement(ReturnStatement)
+    ReturnStatement(ReturnStatement),
 }
 
 impl BlockBodyItem {
@@ -42,7 +41,7 @@ impl<T: ExpressionVisitor<R>, R> VisitableExpression<T, R> for BlockBodyItem {
     fn accept(&mut self, visitor: &mut T) -> R {
         match self {
             Self::Expression(e) => e.accept(visitor),
-            Self::ReturnStatement(s) => s.accept(visitor)
+            Self::ReturnStatement(s) => s.accept(visitor),
         }
     }
 }

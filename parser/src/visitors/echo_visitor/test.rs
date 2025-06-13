@@ -41,7 +41,9 @@ fn echoes_multiple_semicolon_terminated_exp_list() {
 fn echoes_if_statement() {
     let p = ExpressionParser::new();
 
-    let mut answ = p.parse("{ if (x + 3) { print(h); x + 2;; } else d; }").unwrap();
+    let mut answ = p
+        .parse("{ if (x + 3) { print(h); x + 2;; } else d; }")
+        .unwrap();
 
     let mut echoer = EchoVisitor::new();
 

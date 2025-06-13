@@ -1,6 +1,6 @@
 use crate::grammar::ExpressionParser;
-use ast::UnaryOperator;
 use ast::Expression;
+use ast::UnaryOperator;
 
 #[test]
 fn parses_unary_op() {

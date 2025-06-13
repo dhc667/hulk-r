@@ -1,6 +1,5 @@
 use super::{GeneratorVisitor, VisitorResult};
 
-
 impl GeneratorVisitor {
     pub(crate) fn handle_while(
         &mut self,

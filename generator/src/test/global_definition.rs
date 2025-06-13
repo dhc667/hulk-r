@@ -1,6 +1,6 @@
+use super::generate_code;
 use crate::test::lli_interface::lli_f64;
 use crate::test::lli_interface::lli_string;
-use super::generate_code;
 
 #[test]
 fn data_access() {
@@ -48,7 +48,6 @@ fn data_access_bool() {
 
     assert_eq!(lli_f64(&llvm).unwrap(), 5.0);
 }
-
 
 #[test]
 fn function_definition() {

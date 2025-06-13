@@ -1,4 +1,4 @@
-use crate::{tokens, ExpressionVisitor, VisitableExpression};
+use crate::{ExpressionVisitor, VisitableExpression, tokens};
 
 use super::Expression;
 

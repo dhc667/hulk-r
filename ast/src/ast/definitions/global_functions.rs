@@ -20,10 +20,14 @@ impl GlobalFunctionDef {
         }
     }
 
-    pub fn from_signature_and_body(function_token: Keyword, signature: FunctionSignature, body: FunctionBody) -> Self {
+    pub fn from_signature_and_body(
+        function_token: Keyword,
+        signature: FunctionSignature,
+        body: FunctionBody,
+    ) -> Self {
         Self {
             function_token,
-            function_def: FunctionDef::from_signature(signature, body)
+            function_def: FunctionDef::from_signature(signature, body),
         }
     }
 }

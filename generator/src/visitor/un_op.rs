@@ -90,7 +90,7 @@ impl GeneratorVisitor {
         op: &ast::UnaryOperator,
         inner_result: VisitorResult,
     ) -> VisitorResult {
-        let inner_handle = inner_result.result_handle.unwrap();
+        let _inner_handle = inner_result.result_handle.unwrap();
 
         match op {
             _ => panic!("Unsupported unary operator for string"),
@@ -102,7 +102,7 @@ impl GeneratorVisitor {
         op: &ast::UnaryOperator,
         inner_result: VisitorResult,
     ) -> VisitorResult {
-        let inner_handle = inner_result.result_handle.unwrap();
+        let _inner_handle = inner_result.result_handle.unwrap();
 
         match op {
             _ => panic!("Unsupported unary operator for object"),

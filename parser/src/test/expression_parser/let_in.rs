@@ -12,13 +12,7 @@ fn parses_let_in_expression() {
 
         let body = &let_exp.body;
 
-        let x = &body
-            .as_bin_op()
-            .unwrap()
-            .lhs
-            .as_variable()
-            .unwrap()
-            .id;
+        let x = &body.as_bin_op().unwrap().lhs.as_variable().unwrap().id;
 
         assert_eq!(x, "x");
     } else {
@@ -39,13 +33,7 @@ fn parses_let_in_exp_with_several_assignments() {
         assert_eq!(second_assignment.identifier.id, "y");
 
         let body = &let_exp.body.as_let_in().unwrap().body;
-        let x = &body
-            .as_bin_op()
-            .unwrap()
-            .lhs
-            .as_variable()
-            .unwrap()
-            .id;
+        let x = &body.as_bin_op().unwrap().lhs.as_variable().unwrap().id;
 
         assert_eq!(x, "x");
     } else {

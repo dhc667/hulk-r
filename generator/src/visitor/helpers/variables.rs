@@ -1,5 +1,7 @@
-use crate::{llvm_types::{LlvmHandle, LlvmType}, GeneratorVisitor};
-
+use crate::{
+    GeneratorVisitor,
+    llvm_types::{LlvmHandle, LlvmType},
+};
 
 impl GeneratorVisitor {
     pub fn generate_tmp_variable(&self) -> String {
@@ -7,7 +9,6 @@ impl GeneratorVisitor {
         self.tmp_counter.set(current + 1);
         format!("%tmp{}", current)
     }
-
 
     pub(crate) fn alloca_statement(&self, var_register_name: &str, var_type: &LlvmType) -> String {
         let (type_name, align_size) = self.type_name_and_align_size(var_type);
