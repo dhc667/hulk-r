@@ -303,17 +303,3 @@ fn mutate_field_outside_definition() {
         ]
     );
 }
-
-#[test]
-pub fn print_defined() {
-    let p = ProgramParser::new();
-
-    let mut answ = p.parse("print(1);").unwrap();
-
-    let mut semantic_analyzer = SemanticAnalyzer::new();
-
-    semantic_analyzer.analyze_program_ast(&mut answ).unwrap();
-
-    // No errors expected
-    assert!(semantic_analyzer.errors.is_empty());
-}

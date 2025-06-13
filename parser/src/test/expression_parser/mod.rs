@@ -1,6 +1,5 @@
 mod additions;
 mod logical;
-mod concat;
 mod terms;
 
 mod block;

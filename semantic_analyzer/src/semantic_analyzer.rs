@@ -6,9 +6,7 @@ use generator::context::Context;
 use crate::def_info::{FuncInfo, TypeInfo, VarInfo};
 
 use crate::graph_utils::dfs::get_cycle;
-use crate::visitors::{
-    AnnotationVisitor, GlobalDefinerVisitor, InheritanceVisitor, SemanticVisitor,
-};
+use crate::visitors::{GlobalDefinerVisitor, InheritanceVisitor, SemanticVisitor};
 
 pub struct SemanticAnalyzer {
     pub type_definitions: Context<TypeInfo>,
@@ -42,8 +40,6 @@ impl SemanticAnalyzer {
             definition.accept(&mut type_definer_visitor);
         }
 
-        // Check if every type exists
-
         // Define inheritance relationships
         let mut inheritance_visitor = InheritanceVisitor::new(
             &mut self.type_hierarchy,
@@ -66,20 +62,6 @@ impl SemanticAnalyzer {
         // We return here to avoid running semantic checks on undefined stuff
         if self.errors.len() > 0 {
             return Err(self.errors.clone());
-        }
-
-        let mut annotation_visitor = AnnotationVisitor::new(
-            &mut self.type_definitions,
-            &mut self.func_definitions,
-            &mut self.errors,
-        );
-
-        for definition in &mut program.definitions {
-            definition.accept(&mut annotation_visitor);
-        }
-
-        for expression in &mut program.expressions {
-            expression.accept(&mut annotation_visitor);
         }
 
         let mut semantic_visitor = SemanticVisitor::new(

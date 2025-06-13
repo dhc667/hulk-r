@@ -1,5 +1,5 @@
 use generator::CodeGenerator;
-use parser::parser::Parser;
+use parser::ProgramParser;
 use semantic_analyzer::semantic_analyzer::SemanticAnalyzer;
 
 fn write_output(target_file: &str, content: &str) -> Result<(), std::io::Error> {
@@ -16,25 +16,16 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     //  NOTE: the parser -> semantic analyzer -> generator steps will eventually
     //        be abstracted away into a single struct or function
 
-    let p = Parser::new();
-    let ast = p.parse(&content);
-
-    let mut ast = match ast {
-        Ok(ast) => ast,
-        Err(errors) => {
-            for error in errors {
-                println!("{}", error);
-            }
-            return Err("Parsing errors found".into());
-        }
-    };
+    let p = ProgramParser::new();
+    let mut ast = p
+        .parse(&content)
+        .map_err(|e| format!("Parse error: {}", e))?;
 
     let mut semantic_analyzer = SemanticAnalyzer::new();
     let analysis_result = semantic_analyzer.analyze_program_ast(&mut ast);
-
     if let Err(errors) = analysis_result {
         for error in errors {
-            println!("{}", error);
+            println!("Error: {}", error);
         }
         return Err("Semantic errors found".into());
     }

@@ -56,15 +56,6 @@ pub fn get_binary_op_functor_type(op: &BinaryOperator) -> FunctorType {
             Some(Type::BuiltIn(BuiltInType::Bool)),
         ),
 
-        // Concatenation
-        BinaryOperator::At(_) | BinaryOperator::AtAt(_) => FunctorType::new(
-            vec![
-                Some(Type::BuiltIn(BuiltInType::Object)),
-                Some(Type::BuiltIn(BuiltInType::Object)),
-            ],
-            Some(Type::BuiltIn(BuiltInType::String)),
-        ),
-
         // Assignment
         BinaryOperator::Equal(_) | BinaryOperator::ColonEqual(_) => FunctorType::new(
             vec![

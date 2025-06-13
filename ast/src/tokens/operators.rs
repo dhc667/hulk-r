@@ -11,9 +11,6 @@ pub enum BinaryOperator {
     Times(TokenPosition),
     Modulo(TokenPosition),
 
-    At(TokenPosition),
-    AtAt(TokenPosition),
-
     EqualEqual(TokenPosition),
     Less(TokenPosition),
     LessEqual(TokenPosition),
@@ -39,8 +36,10 @@ impl Display for BinaryOperator {
             BinaryOperator::FloorDivide(_) => write!(f, "//"),
             BinaryOperator::Times(_) => write!(f, "*"),
             BinaryOperator::Modulo(_) => write!(f, "%"),
+
             BinaryOperator::Equal(_) => write!(f, "="),
             BinaryOperator::ColonEqual(_) => write!(f, ":="),
+
             BinaryOperator::Less(_) => write!(f, "<"),
             BinaryOperator::LessEqual(_) => write!(f, "<="),
             BinaryOperator::Greater(_) => write!(f, ">"),
@@ -49,10 +48,7 @@ impl Display for BinaryOperator {
             BinaryOperator::NotEqual(_) => write!(f, "!="),
             BinaryOperator::Or(_) => write!(f, "||"),
             BinaryOperator::And(_) => write!(f, "&&"),
-
             BinaryOperator::Concat(_) => write!(f, ", "),
-            BinaryOperator::At(_) => write!(f, "@"),
-            BinaryOperator::AtAt(_) => write!(f, "@@"),
         }
     }
 }

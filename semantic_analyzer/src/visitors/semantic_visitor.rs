@@ -4,9 +4,7 @@ mod function_call;
 mod function_def;
 mod print;
 mod find_member_info;
-mod find_method_info;
 mod get_conformable;
-mod check_override;
 
 use std::collections::HashMap;
 
@@ -30,7 +28,7 @@ use crate::{
 /// * `var_definitions` - A mutable reference to a context that holds the variable definitions.
 /// * `func_definitions` - A mutable reference to a context that holds the function definitions.
 /// * `errors` - A mutable reference to a vector that holds the errors encountered during the visit.
-/// # Note
+/// /// # Note
 /// This visitor assumes that the type definitions and variable definitions are already defined in the context.
 /// It does not define types or variables, it only checks for their correctness.
 pub struct SemanticVisitor<'a> {
@@ -239,10 +237,14 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
         let ty = node.object.accept(self);
 
         // Resolve the member info
-        let member_info = self.find_member_info(member_name.clone(), &ty);
-        let Some(member_info) = member_info.cloned() else {
-            self.errors.push(format!("Could not find data member {}", member_name));
-            return None;
+        let member_info = self.find_member_info(member_name.clone(), &ty, false);
+        let member_info = match member_info.and_then(|d| d.as_var()).cloned() {
+            Some(info) => info,
+            None => {
+                self.errors
+                    .push(format!("Could not find data member {}", member_name));
+                return None;
+            }
         };
 
         // Annotate identifier
@@ -272,12 +274,13 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
         // annotate object
         node.obj_type = ty.clone();
 
-        let func_info = self.find_method_info(func_name.clone(), &ty);
-        let Some(func_info) = func_info else {
-            self.errors.push(format!("Could not find method {}", func_name));
-            return None;
-        };
-        return self.handle_function_call(func_info.clone(), &mut node.member.identifier, &mut node.member.arguments)
+        let func_info = self.find_member_info(func_name.clone(), &ty, true);
+        if let Some(member_info) = func_info.and_then(|d| d.as_func()).cloned() {
+            return self.handle_function_call(member_info, &mut node.member.identifier, &mut node.member.arguments)
+        }
+        self.errors
+            .push(format!("Could not find method {}", func_name));
+        None
     }
 
     // Other
@@ -302,7 +305,7 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
 
     fn visit_function_call(&mut self, node: &mut FunctionCall) -> TypeAnnotation {
         if node.identifier.id == "print" {
-            return self.handle_print(&mut node.arguments);
+            self.handle_print(&mut node.arguments);
         }
         // Check if the function is defined
         let function_def = self.func_definitions.get_value(&node.identifier.id).cloned();
@@ -364,13 +367,25 @@ impl<'a> DefinitionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
 
     fn visit_type_def(&mut self, node: &mut TypeDef) -> TypeAnnotation {
         // Define the parameters
+        let mut has_invalid_annotations = false;
+
         self.var_definitions.push_closed_frame();
         for param in &node.parameter_list {
             self.var_definitions.define(
                 param.id.clone(),
                 VarInfo::new_from_identifier(param, true, None),
             );
-            
+            match self.get_conformable(&param.info.ty) {
+                Ok(_) => {},
+                Err(message) => {
+                    self.errors.push(message);
+                    has_invalid_annotations = true;
+                },
+            }
+        }
+        // If there is an unknown param annotation skip the type checking
+        if has_invalid_annotations {
+            return None;
         }
 
         // Check the super constructor
@@ -412,16 +427,10 @@ impl<'a> DefinitionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
         for member in &mut node.data_member_defs {
             let member_type = member.default_value.accept(self);
             
-            if !self.check_field_override(&member.identifier.id, &node.name.id) {
-                self.errors.push(format!(
-                    "Semantic Error: Cannot declare field {} in type {}, as it overrides parent definition.",
-                    &member.identifier.id,
-                    &node.name.id
-                ));
-            }
-            self.handle_field_definition(
+            self.handle_var_definition(
                 &mut member.identifier,
                 member_type.clone(),
+                true,
             );
 
             let member_info = self.type_definitions
@@ -440,7 +449,6 @@ impl<'a> DefinitionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
                     &node.name.id
                 ));
 
-
             if member_info.ty.is_none() {
                 member_info.ty = member_type.clone();
             }
@@ -449,13 +457,6 @@ impl<'a> DefinitionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
         //Define the methods
         for method in &mut node.function_member_defs {
             self.var_definitions.push_open_frame();
-            if !self.check_method_override(&method.identifier.id, &node.name.id) {
-                self.errors.push(format!(
-                    "Semantic Error: Method {} in type {}, does not properly overrides parent definition.",
-                    &method.identifier.id,
-                    &node.name.id
-                ));
-            }
             self.handle_fn_def(method, Some(&node.name));
             self.var_definitions.pop_frame();
         }

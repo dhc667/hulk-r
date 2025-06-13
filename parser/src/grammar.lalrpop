@@ -216,15 +216,8 @@ MultipleSemicolons: u32 = {
 
 pub Expression: ast::Expression = {
     DestructiveAssignment => ast::Expression::from(<>),
-    Concat
+    LogicalOr => ast::Expression::from(<>),
 }
-
-Concat: ast::Expression = {
-    <l:Concat> <op:ConcatOp> <r:LogicalOr>
-        => ast::Expression::from(ast::BinOp::new(l, op, r)),
-    LogicalOr,
-}
-
 
 DestructiveAssignment: ast::DestructiveAssignment = {
     <l:Atom> <o:ColonAssignOp> <r:Expression>
@@ -394,7 +387,7 @@ Block: ast::Block = {
 
 
 BlockBody: (Vec<ast::BlockBodyItem>, bool) = {
-    <l:BlockBody> <x:BlockBodyItem> => {
+    <mut l:BlockBody> <x:BlockBodyItem> => {
         let (mut l, _) = l;
         let (x, semicolons) = x;
         l.push(x);
@@ -426,13 +419,6 @@ ArrowOp: tokens::ArrowOperator = {
 ColonAssignOp: tokens::BinaryOperator = {
     <s: @L> ":=" <e: @R>
         => tokens::BinaryOperator::ColonEqual(tokens::TokenPosition::new(s, e)),
-}
-
-ConcatOp: tokens::BinaryOperator = {
-    <s: @L> "@" <e: @R>
-        => tokens::BinaryOperator::At(tokens::TokenPosition::new(s, e)),
-    <s: @L> "@@" <e: @R>
-        => tokens::BinaryOperator::AtAt(tokens::TokenPosition::new(s, e)),
 }
 
 LogicalOrOperator: tokens::BinaryOperator = {

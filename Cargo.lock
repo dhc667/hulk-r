@@ -226,14 +226,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "lexer"
-version = "0.1.0"
-dependencies = [
- "lalrpop",
- "lalrpop-util 0.22.1",
-]
-
-[[package]]
 name = "libc"
 version = "0.2.171"
 source = "registry+https://github.com/rust-lang/crates.io-index"
