@@ -9,7 +9,6 @@ fn define_get() {
 
     assert_eq!(ctx.get_value("a"), Some(&3));
     assert_eq!(ctx.get_value("b"), Some(&2));
-
 }
 
 #[test]
@@ -19,20 +18,20 @@ fn define_in_parent_get_in_child() {
     ctx.define("x".to_string(), 3);
     ctx.define("y".to_string(), 2);
 
-    ctx.push_frame(true);
+    ctx.push_open_frame();
 
     ctx.define("y".to_string(), 1);
 
     assert_eq!(ctx.get_value("x"), Some(&3));
     assert_eq!(ctx.get_value("y"), Some(&1));
 
-    ctx.push_frame(false);
+    ctx.push_closed_frame();
 
     ctx.define("x".to_string(), 0);
 
     assert_eq!(ctx.get_value("x"), Some(&0));
     assert_eq!(ctx.get_value("y"), None);
-    
+
     ctx.pop_frame();
     ctx.pop_frame();
 

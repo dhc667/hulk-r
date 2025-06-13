@@ -2,21 +2,17 @@ use lalrpop_util::lalrpop_mod;
 
 lalrpop_mod!(pub grammar);
 
-mod ast;
-pub use ast::*;
-
-pub mod tokens;
-pub use tokens::*;
-
 pub mod visitors;
-pub use visitors::Visitor;
-pub use visitors::Visitable;
+
+mod parsing_helpers;
 
 pub use grammar::ProgramParser;
 
+pub mod parser;
+
 #[cfg(test)]
 mod test {
-    mod atom_parser;
     mod expression_parser;
+    mod parsing_errors;
     mod program_parser;
 }

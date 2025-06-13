@@ -1,0 +1,10 @@
+let c = 0, a = 0, b = 0, fib = 1 in {
+	print(fib);
+	while (c < 10) {
+		a := b;
+		b := fib;
+		fib := a + b;
+		c := c + 1;
+		print(fib);
+	};
+};

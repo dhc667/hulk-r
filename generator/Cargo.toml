@@ -4,4 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+ast = { path = "../ast" }
+
+[dev-dependencies]
 parser = { path = "../parser" }
+semantic_analyzer = { path = "../semantic_analyzer" }
