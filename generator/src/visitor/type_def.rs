@@ -31,23 +31,32 @@ pub fn generate_vtable_type(visitor: &mut GeneratorVisitor, node: &mut ast::Type
     let mut preamble = String::new();
     preamble += &format!("{} = type {{", vtable_type_name);
 
+    let mut max_father_i = 0;
     // --- Inheritance: Copy parent vtable methods if any ---
     // If this type inherits from a parent, copy the parent's vtable entries
     if let Some(inheritance) = &node.inheritance_indicator {
         let parent = &inheritance.parent_name.id;
         // Check if the parent has any function member definitions
-        if let Some(parent_methods) = visitor.function_member_def_from_type_and_name.iter().filter(|((parent_type, _), _)| parent_type == parent).collect::<Vec<_>>().first() {
+        if visitor.function_member_def_from_type_and_name.iter().any(|((parent_type, _,_), _)| parent_type == parent) {
             // Collect all parent's methods (name and argument types)
-            let parent_methods: Vec<_> = visitor.function_member_def_from_type_and_name.iter()
-                .filter(|((parent_type, _), _)| parent_type == parent)
-                .map(|((_, method_name), arg_types)| (method_name.clone(), arg_types.clone()))
-                .collect();
-            for (method_name, arg_types) in parent_methods {
+            let mut parent_methods: Vec<_> = Vec::new();
+
+            // Copy parent's method tuples (name/index/args) to avoid borrowing during later mutation
+            for ((parent_type, method_name, i), arg_types) in visitor.function_member_def_from_type_and_name.iter() {
+                if parent_type == parent {
+                    parent_methods.push(((method_name.clone(), i.clone()), arg_types.clone()));
+                }
+            }
+            parent_methods.sort_by_key(|((_, i), _)| i.clone());
+
+            for ((method_name, i), arg_types) in parent_methods {
+                max_father_i = i.clone();
                 // Check if the child overrides this method
                 let overridden = node.function_member_defs.iter().find(|f| &f.identifier.id == &method_name);
                 if let Some(definition) = overridden {
+                    println!("type method: {} {}", type_name, method_name);
                     // If overridden, insert the child's method into the vtable
-                    visitor.function_member_def_from_type_and_name.insert((type_name.clone(), method_name.clone()), arg_types.clone());
+                    visitor.function_member_def_from_type_and_name.insert((type_name.clone(), method_name.clone(), i.clone()), arg_types.clone());
                     // Use the child's mangled function name and correct signature
                     let mangled_func_name = format!("{}_{}", type_name, method_name);
                     let ret_type_str = match &definition.identifier.info.ty {
@@ -73,12 +82,13 @@ pub fn generate_vtable_type(visitor: &mut GeneratorVisitor, node: &mut ast::Type
                         (vtable_initializers.len() - 1).to_string()
                     );
                     // Record the original type for this method definition
-                    visitor.original_type_for_definition.insert((type_name.clone(), method_name.clone()),type_name.clone());
+                    visitor.original_type_for_definition.insert((type_name.clone(), method_name.clone()), type_name.clone());
                 }
-                else{
+                else {
                     // If not overridden, copy the parent's vtable entry
-                    let original_type_for_def = visitor.original_type_for_definition.get(&(parent.clone(),method_name.clone())).unwrap_or_else(|| panic!("error searching "));
-                    visitor.function_member_def_from_type_and_name.insert((type_name.clone(), method_name.clone()), arg_types.clone());
+                    let original_type_for_def = visitor.original_type_for_definition.get(&(parent.clone(), method_name.clone())).unwrap_or_else(|| panic!("error searching "));
+                    visitor.function_member_def_from_type_and_name.insert((type_name.clone(), method_name.clone(), i.clone()), arg_types.clone());
+                    println!("type method: {} {}", type_name, method_name);
                     // Use the original defining type's mangled function name
                     let mangled_func_name = format!("{}_{}", original_type_for_def, method_name);
                     let ret_type_str = "i8*"; // Use i8* for parent vtable pointer type
@@ -88,7 +98,7 @@ pub fn generate_vtable_type(visitor: &mut GeneratorVisitor, node: &mut ast::Type
                         (type_name.clone(), method_name.clone()),
                         (vtable_initializers.len() - 1).to_string()
                     );
-                    visitor.original_type_for_definition.insert((type_name.clone(),method_name.clone() ), original_type_for_def.clone());
+                    visitor.original_type_for_definition.insert((type_name.clone(), method_name.clone()), original_type_for_def.clone());
                 }
             }
         }
@@ -121,9 +131,10 @@ pub fn generate_vtable_type(visitor: &mut GeneratorVisitor, node: &mut ast::Type
         }
         // Map the method signature for later lookup
         visitor.function_member_def_from_type_and_name.insert(
-            (type_name.clone(), func_def.identifier.id.clone()),
+            (type_name.clone(), func_def.identifier.id.clone(),max_father_i+1),
             arg_types,
         );
+        max_father_i+=1;
         let fn_ptr_type_str = format!("i8*");
         vtable_fn_ptr_types.push(fn_ptr_type_str.clone());
         vtable_initializers.push(format!("i8* bitcast ({} ({})* @{} to i8*)", ret_type_str, param_llvm_types_for_sig.join(", "), mangled_func_name));
