@@ -168,10 +168,6 @@ impl GeneratorVisitor {
         let result_handle = self.generate_tmp_variable();
 
         let operation = match op {
-            Concat(_) => format!(
-                "{} = call i8* @strcat(i8* {}, i8* {})",
-                result_handle, lhs_handle.llvm_name, rhs_handle.llvm_name
-            ),
             EqualEqual(_) => format!(
                 "{} = fcmp oeq double {}, {}",
                 result_handle, lhs_handle.llvm_name, rhs_handle.llvm_name

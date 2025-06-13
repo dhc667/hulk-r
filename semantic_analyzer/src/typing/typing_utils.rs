@@ -64,15 +64,7 @@ pub fn get_binary_op_functor_type(op: &BinaryOperator) -> FunctorType {
             ],
             Some(Type::BuiltIn(BuiltInType::Object)),
         ),
-        
-        // Strings
-        BinaryOperator::Concat(_) => FunctorType::new(
-            vec![
-                Some(Type::BuiltIn(BuiltInType::String)),
-                Some(Type::BuiltIn(BuiltInType::String)),
-            ],
-            Some(Type::BuiltIn(BuiltInType::String)),
-        )
+       
     }
 }
 

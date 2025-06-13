@@ -23,8 +23,6 @@ pub enum BinaryOperator {
 
     Equal(TokenPosition),
     ColonEqual(TokenPosition),
-    
-    Concat(TokenPosition),
 }
 
 impl Display for BinaryOperator {
@@ -48,7 +46,6 @@ impl Display for BinaryOperator {
             BinaryOperator::NotEqual(_) => write!(f, "!="),
             BinaryOperator::Or(_) => write!(f, "||"),
             BinaryOperator::And(_) => write!(f, "&&"),
-            BinaryOperator::Concat(_) => write!(f, ", "),
         }
     }
 }
