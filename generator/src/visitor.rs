@@ -109,7 +109,7 @@ pub struct GeneratorVisitor {
     /// Counter for generating unique string constant names.
     string_counter: u32,
     /// Maps (type_name, function_name) to the argument types for the function member.
-    function_member_def_from_type_and_name: HashMap<(String, String), Vec<String>>,
+    function_member_def_from_type_and_name: HashMap<(String, String, i32 ), Vec<String>>,
     /// Stores global string definitions for emission at the top of the LLVM IR.
     global_string_definitions: Vec<String>,
     /// Maps (type_name, member_name) to the original type for the definition (for type resolution).
@@ -405,17 +405,12 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
         call_args_values_with_llvm_types.push(format!("i8* {}", object_ptr_name));
         
         // Look up argument types from the context map
-        let arg_types = if let Some(arg_types) = self.function_member_def_from_type_and_name.get(&(current_type.clone(), func_name_in_ast.clone())) {
-            arg_types.clone()
-        } else {
-            panic!(
-                "Function argument types for method '{}' in type '{}' not found in context",
-                func_name_in_ast,
-                current_type
-            );
-        };
-
-        // Now `arg_types` is a Vec<String> available without borrowing `self`
+        let mut arg_types: Vec<String> = Vec::new();
+        for ((type_name, method_name, index), arg_types_value) in &self.function_member_def_from_type_and_name {
+            if type_name == &current_type && method_name == &func_name_in_ast {
+                arg_types =  arg_types_value.clone();
+            }
+        }
 
         // Iterate and call methods that require `&mut self`
             for (arg_expr, arg_llvm_type_str) in node.member.arguments.iter_mut().zip(arg_types.iter()) {
