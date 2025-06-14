@@ -736,26 +736,12 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
 
         self.string_constants.push(global_str_code.clone());
 
-        // for x in self.string_constants.iter() {
-        //     println!("global string aaaaaaa =======: {}", x.clone());
-        // }
-
-        // Create local variable to store the string
+        // Create a heap-allocated string using malloc
         let local_str_var = self.generate_tmp_variable();
-        let alloca_code = format!(
-            "{} = alloca [{} x i8], align 1\n",
+        let malloc_code = format!(
+            "{} = call i8* @malloc(i64 {})\n",
             local_str_var,
             str_len + 1
-        );
-
-        // Get pointer to local variable
-        let local_ptr_var = self.generate_tmp_variable();
-        let local_gep_code = format!(
-            "{} = getelementptr inbounds [{} x i8], [{} x i8]* {}, i64 0, i64 0\n",
-            local_ptr_var,
-            str_len + 1,
-            str_len + 1,
-            local_str_var
         );
 
         // Get pointer to the global string constant
@@ -768,15 +754,15 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
             global_str_name
         );
 
-        // Copy the string to local variable using strcpy
+        // Copy the string to heap variable using strcpy
         let strcpy_code = format!(
             "call i8* @strcpy(i8* {}, i8* {})\n",
-            local_ptr_var, global_ptr_var
+            local_str_var, global_ptr_var
         );
 
         VisitorResult {
-            preamble: alloca_code + &local_gep_code + &global_gep_code + &strcpy_code,
-            result_handle: Some(LlvmHandle::new_string_register(local_ptr_var)), // Return pointer to local string
+            preamble: malloc_code + &global_gep_code + &strcpy_code,
+            result_handle: Some(LlvmHandle::new_string_register(local_str_var)), // Return pointer to heap string
         }
     }
     fn visit_list_literal(&mut self, _node: &mut ast::ListLiteral) -> VisitorResult {
@@ -995,7 +981,15 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
 
         if return_type != "void" {
             if let Some(result_handle) = &body_result.result_handle {
+                // if return_type == "i8*" && result_handle.llvm_name.starts_with("%") {
+                //     let load_var = self.generate_tmp_variable();
+                //     preamble += &format!(
+                //         "  {} = load i8*, i8** {}, align 8\n  ret i8* {}\n",
+                //         load_var, result_handle.llvm_name, load_var
+                //     );
+                // } else {
                 preamble += &format!("  ret {} {}\n", return_type, result_handle.llvm_name);
+                // }
             } else {
                 match return_type.as_str() {
                     "double" => preamble += "  ret double 0.0\n",
