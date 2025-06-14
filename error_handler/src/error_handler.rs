@@ -22,4 +22,20 @@ impl ErrorHandler {
         }
         line_breaks
     }
+
+    pub fn add_error(&mut self, error: HulkError) {
+        self.errors.push(error);
+    }
+
+    pub fn extend_errors(&mut self, errors: Vec<HulkError>) {
+        self.errors.extend(errors);
+    }
+
+    pub fn has_errors(&self) -> bool {
+        !self.errors.is_empty()
+    }
+
+    pub fn get_error_messages(&self) -> Vec<String> {
+        self.errors.iter().map(|error| error.to_string()).collect()
+    }
 }
