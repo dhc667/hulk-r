@@ -1,3 +1,5 @@
+use crate::error::lexical::invalid_character::InvalidCharacterError;
+
 pub enum LexicalError {
-    InvalidCharacter(String),
+    InvalidCharacter(InvalidCharacterError),
 }
