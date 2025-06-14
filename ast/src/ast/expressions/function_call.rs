@@ -2,6 +2,7 @@ use crate::{ExpressionVisitor, Identifier, VisitableExpression};
 
 use super::Expression;
 
+#[derive(Debug)]
 pub struct FunctionCall {
     pub identifier: Identifier,
     pub arguments: Vec<Expression>,

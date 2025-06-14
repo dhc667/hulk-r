@@ -2,6 +2,7 @@ use crate::{ExpressionVisitor, VisitableExpression, tokens, typing::TypeAnnotati
 
 use super::Expression;
 
+#[derive(Debug)]
 pub struct ListLiteral {
     pub left_bracket: tokens::GroupingOperator,
     pub right_bracket: tokens::GroupingOperator,
