@@ -751,37 +751,27 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
         let mut preamble = String::new();
         let mut arg_handles = Vec::new();
         let mut arg_types = Vec::new();
-        for arg in node.arguments.iter_mut() {
+        // Use constructor_args_types to get the expected types for the constructor
+        let expected_types = self
+            .constructor_args_types
+            .get(&node.type_name)
+            .cloned();
+        for (i, arg) in node.arguments.iter_mut().enumerate() {
             let arg_result = arg.accept(self);
             preamble += &arg_result.preamble;
             let handle = arg_result
                 .result_handle
                 .expect("Constructor argument must have a result");
             arg_handles.push(handle.llvm_name);
-            let arg_type = match arg {
-                ast::Expression::NumberLiteral(_) => "double".to_string(),
-                ast::Expression::BooleanLiteral(_) => "i1".to_string(),
-                ast::Expression::StringLiteral(_) => "i8*".to_string(),
-                ast::Expression::Variable(id) => match &id.info.ty {
-                    Some(ty) => match ty {
-                        ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Number) => {
-                            "double".to_string()
-                        }
-                        ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Bool) => {
-                            "i1".to_string()
-                        }
-                        ast::typing::Type::BuiltIn(ast::typing::BuiltInType::String) => {
-                            "i8*".to_string()
-                        }
-                        ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Object) => {
-                            "i8*".to_string()
-                        }
-                        ast::typing::Type::Defined(name) => format!("%{}_type*", name.id.clone()),
-                        _ => "i8*".to_string(),
-                    },
-                    None => "i8*".to_string(),
-                },
-                _ => "i8*".to_string(),
+            // Use the expected type from constructor_args_types if available
+            let arg_type = if let Some(ref types) = expected_types {
+                if i < types.len() {
+                    types[i].clone()
+                } else {
+                    "i8*".to_string() // fallback if out of bounds
+                }
+            } else {
+                "i8*".to_string() // fallback if not found
             };
             arg_types.push(arg_type);
         }
