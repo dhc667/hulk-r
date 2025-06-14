@@ -22,6 +22,9 @@ impl ErrorHandler {
                 line_breaks.push(i);
             }
         }
+        if !program_text.ends_with('\n') {
+            line_breaks.push(program_text.len());
+        }
         line_breaks
     }
 
@@ -43,40 +46,41 @@ impl ErrorHandler {
 
         self.errors
             .iter()
-            .map(|error| {
-                let line_number = self.get_line_number(error.get_position());
-                let line_start = self.line_breaks[line_number];
-                let line_end = if line_number + 1 < self.line_breaks.len() {
-                    self.line_breaks[line_number + 1]
-                } else {
-                    self.program_text.len()
-                };
-                let line_text = &self.program_text[line_start..line_end].trim_end_matches('\n');
-                let col = error.get_position() - line_start;
-                let pointer_line = format!("{}{}", " ".repeat(col), "^",);
-
-                format!(
-                    "{}\n --> line {}:{}\n  |\n{:3} | {}\n  |   {}\n",
-                    error.to_string(),
-                    line_number + 1,
-                    col + 1,
-                    line_number + 1,
-                    line_text,
-                    pointer_line
-                )
-            })
+            .map(|error| self.format_message(error))
             .collect()
     }
 
+    pub fn get_raw_errors(&mut self) -> Vec<String> {
+        self.errors
+            .sort_by(|a, b| a.get_position().cmp(&b.get_position()));
+
+        self.errors.iter().map(|error| error.to_string()).collect()
+    }
+
     fn get_line_number(&self, position: usize) -> usize {
-        match self.line_breaks.binary_search_by(|&line| {
-            if line > position {
-                std::cmp::Ordering::Greater
-            } else {
-                std::cmp::Ordering::Less
-            }
-        }) {
-            Ok(idx) | Err(idx) => idx,
-        }
+        self.line_breaks
+            .partition_point(|&line_start| line_start < position)
+            - 1
+    }
+
+    fn format_message(&self, error: &HulkError) -> String {
+        let pos = error.get_position();
+        let line_number = self.get_line_number(pos);
+        let line_start = self.line_breaks[line_number];
+        let line_end = self.line_breaks[line_number + 1];
+
+        let line_text = &self.program_text[line_start..line_end].trim_end_matches('\n');
+        let col = pos - line_start;
+        let pointer_line = format!("{}{}", " ".repeat(col), "^",);
+
+        format!(
+            "{}\n --> line {}:{}\n  |\n{:3} | {}\n  |   {}\n",
+            error.to_string(),
+            line_number + 1,
+            col + 1,
+            line_number + 1,
+            line_text,
+            pointer_line
+        )
     }
 }

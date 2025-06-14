@@ -8,3 +8,4 @@ lalrpop = "0.22.1"
 
 [dependencies]
 lalrpop-util = { version = "0.22.1", features = ["lexer", "unicode"] }
+error_handler = { path = "../error_handler" }

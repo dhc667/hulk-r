@@ -1,5 +1,7 @@
 use std::vec;
 
+use error_handler::error_handler::ErrorHandler;
+
 use crate::lexer_generator::{lexer::Lexer, rule::Rule};
 
 #[test]
@@ -130,14 +132,19 @@ pub fn unrecognized_character() {
         Rule::new_skip("WhiteSpace".to_string(), r"\s+".to_string()),
     ];
 
+    let program_text = "aab bba ccc";
+
     let lexer = Lexer::new(rules);
 
-    let errors = lexer.split("aab bba ccc").err().unwrap().1;
+    let mut error_handler = ErrorHandler::new(program_text);
+    let errors = lexer.split(program_text).err().unwrap().1;
 
-    assert_eq!(errors.len(), 1);
+    error_handler.extend_errors(errors);
+
+    assert_eq!(error_handler.errors.len(), 1);
     assert_eq!(
-        errors,
-        vec!["Lexical Error: Unexpected character 'c' at line: 0, column: 8",]
+        error_handler.get_raw_errors(),
+        vec!["Invalid character `c`"]
     );
 }
 
@@ -151,16 +158,17 @@ pub fn error_recovery() {
 
     let lexer = Lexer::new(rules);
 
-    let result = lexer.split("aab bba caac");
+    let program_text = "aab bba caac";
 
-    let errors = result.err().unwrap().1;
-    assert_eq!(errors.len(), 2);
+    let mut error_handler = ErrorHandler::new(program_text);
+    let errors = lexer.split(program_text).err().unwrap().1;
+
+    error_handler.extend_errors(errors);
+
+    assert_eq!(error_handler.errors.len(), 2);
     assert_eq!(
-        errors,
-        vec![
-            "Lexical Error: Unexpected character 'c' at line: 0, column: 8",
-            "Lexical Error: Unexpected character 'c' at line: 0, column: 11",
-        ]
+        error_handler.get_raw_errors(),
+        vec!["Invalid character `c`", "Invalid character `c`"]
     );
 }
 
@@ -209,16 +217,17 @@ pub fn line_error() {
     ];
 
     let lexer = Lexer::new(rules);
-    let result = lexer.split("a\nb\nc");
+    let program_text = "a\nb\nc";
 
-    let errors = result.err().unwrap().1;
-    assert_eq!(errors.len(), 2);
+    let mut error_handler = ErrorHandler::new(program_text);
+    let errors = lexer.split(program_text).err().unwrap().1;
+
+    error_handler.extend_errors(errors);
+
+    assert_eq!(error_handler.errors.len(), 2);
     assert_eq!(
-        errors,
-        vec![
-            "Lexical Error: Unexpected character 'b' at line: 2, column: 1",
-            "Lexical Error: Unexpected character 'c' at line: 3, column: 1"
-        ]
+        error_handler.get_raw_errors(),
+        vec!["Invalid character `b`", "Invalid character `c`"]
     );
 }
 
@@ -402,15 +411,18 @@ pub fn lex_some_c_sharp() {
 pub fn empty_match() {
     let rules = vec![Rule::new("EMPTY", "a*".to_string())];
 
-    let input = "bbbbbb";
+    let program_text = "bbbbbb";
 
     let lexer = Lexer::new(rules);
-    let result = lexer.split(input);
 
-    let errors = result.err().unwrap().1;
-    assert_eq!(errors.len(), 1);
+    let mut error_handler = ErrorHandler::new(program_text);
+    let errors = lexer.split(program_text).err().unwrap().1;
+
+    error_handler.extend_errors(errors);
+
+    assert_eq!(error_handler.errors.len(), 1);
     assert_eq!(
-        errors,
-        vec!["Lexical Error: Unexpected character 'b' at line: 0, column: 0",]
+        error_handler.get_raw_errors(),
+        vec!["Invalid character `b`",]
     );
 }

@@ -242,6 +242,7 @@ dependencies = [
 name = "lexer"
 version = "0.1.0"
 dependencies = [
+ "error_handler",
  "lalrpop",
  "lalrpop-util 0.22.1",
 ]

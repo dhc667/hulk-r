@@ -4,6 +4,8 @@ use std::{
     hash::Hash,
 };
 
+use error_handler::error::lexical::invalid_character::InvalidCharacterError;
+
 use crate::{
     automata_utils::{
         marked_queue::MarkedQueue,
@@ -96,12 +98,7 @@ where
                 pos = end;
             } else {
                 if pos == 0 || chars[pos - 1] != chars[pos] {
-                    errors.push(format!(
-                        "Lexical Error: Unexpected character '{}' at line: {}, column: {}",
-                        chars[pos],
-                        line.0,
-                        pos - line.1
-                    ));
+                    errors.push(InvalidCharacterError::new(chars[pos], pos).into());
                 }
                 line = current_line;
                 pos += 1;

@@ -1,4 +1,7 @@
+use error_handler::error::error::HulkError;
+
 use crate::lexer_generator::lexer_chunk::LexerChunk;
+
 use std::{fmt::Debug, hash::Hash};
 
 /// # Description
@@ -15,7 +18,7 @@ where
     TokenKind: Clone + PartialEq + Hash + Eq + Debug,
 {
     pub tokens: Vec<LexerChunk<'a, TokenKind>>,
-    pub errors: Vec<String>,
+    pub errors: Vec<HulkError>,
 }
 
 impl<'a, TokenKind> LexerResult<'a, TokenKind>
@@ -28,7 +31,7 @@ where
     /// - `errors`: A vector of error messages encountered during the tokenization process.
     /// # Returns
     /// A new `LexerResult` instance containing the provided tokens and errors.
-    pub fn new(tokens: Vec<LexerChunk<'a, TokenKind>>, errors: Vec<String>) -> Self {
+    pub fn new(tokens: Vec<LexerChunk<'a, TokenKind>>, errors: Vec<HulkError>) -> Self {
         Self { tokens, errors }
     }
 }

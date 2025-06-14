@@ -292,7 +292,7 @@ impl TypeChecker {
             .zip(parameters.iter())
             .enumerate()
         {
-            if !self.conforms(expected, provided) {
+            if !self.conforms(provided, expected) {
                 errors.push(format!(
                     "Function {} expects parameter {} of type {}, but got {}",
                     fn_info.name,
