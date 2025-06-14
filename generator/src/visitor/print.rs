@@ -98,6 +98,7 @@ impl GeneratorVisitor {
                     | HandleType::Literal(LlvmType::String) => self.print_string(&handle.llvm_name),
                     HandleType::Register(LlvmType::Object)
                     | HandleType::Literal(LlvmType::Object) => self.print_object(&handle.llvm_name),
+                    _ => panic!("Not handle"),
                 },
                 None => self.print_none(),
             };
