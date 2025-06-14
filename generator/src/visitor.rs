@@ -976,6 +976,7 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
                 LlvmType::Object => self
                     .context
                     .define(param.id.clone(), Variable::new_object(param_ptr)),
+                _ => panic!("Unsuported type")
             };
         }
 
@@ -1070,6 +1071,7 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
                     constant_name, init_value.llvm_name
                 );
             }
+            _ => panic!("Unsuported type")
         }
 
         VisitorResult {
