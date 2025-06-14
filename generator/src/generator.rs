@@ -30,7 +30,6 @@ impl CodeGenerator {
             global_string.push_str(&format!("{}\n", string_global.clone()));
         }
         let global_str: &str = global_string.as_str();
-        println!("global_str: {global_str}");
         program += global_str;
         program += &definitions_code;
         program += "define i32 @main() {\nentry:\n";
