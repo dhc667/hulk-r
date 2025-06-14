@@ -198,31 +198,87 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
         let mut preamble = expression_result.preamble;
 
         let exp_result_handle = expression_result.result_handle.expect(
-            "Variable must be dassigned to non-null expression result, SA should've caught this",
+            "Variable must be assigned to non-null expression result, SA should've caught this",
         );
 
-        let variable = match node.lhs.as_ref() {
-            Expression::Variable(var) => var,
-            _ => todo!(),
-        };
+        match node.lhs.as_mut() {
+            Expression::Variable(var) => {
+                // Handle regular variable assignment
+                let var_llvm_name = &self
+                    .context
+                    .get_value(&var.id)
+                    .expect(&format!(
+                        "Variable {} not found, SA should have caught this",
+                        var.id
+                    ))
+                    .llvm_name;
 
-        let var_llvm_name = &self
-            .context
-            .get_value(&variable.id)
-            .expect(
-                format!(
-                    "Variable {} not found, SA should have caught this",
-                    variable.id
-                )
-                .as_str(),
-            )
-            .llvm_name;
+                preamble += &self.store_statement(
+                    &exp_result_handle.llvm_name,
+                    &var_llvm_name,
+                    &exp_result_handle.handle_type.inner_type(),
+                );
+            }
+            Expression::DataMemberAccess(data_member_access) => {
+                // Handle data member assignment
+                let object_result = data_member_access.object.accept(self);
+                preamble += &object_result.preamble;
+                
+                let object_ptr = object_result
+                    .result_handle
+                    .expect("Object must have a result")
+                    .llvm_name;
+                let object_type = data_member_access.obj_type.clone();
 
-        preamble += &self.store_statement(
-            &exp_result_handle.llvm_name,
-            &var_llvm_name,
-            &exp_result_handle.handle_type.inner_type(),
-        );
+                let type_name = match &object_type {
+                    Some(ty) => to_string(&Some(ty.clone())),
+                    None => panic!("Object type not found for data member access"),
+                };
+                let member_id = data_member_access.member.id.clone();
+
+                if let Some(idx) = self
+                    .type_members_ids
+                    .get(&(type_name.clone(), member_id.clone()))
+                {
+                    let field_index = idx.clone();
+                    
+                    // Get pointer to the member field
+                    let member_ptr = self.generate_tmp_variable();
+                    let gep_instr = format!(
+                        "  {} = getelementptr inbounds %{}_type, %{}_type* {}, i32 0, i32 {}\n",
+                        member_ptr, type_name, type_name, object_ptr, field_index
+                    );
+                    preamble += &gep_instr;
+
+                    // Store the new value to the member
+                    let member_type = data_member_access.member.info.ty.clone();
+                    let llvm_type = match &member_type {
+                        Some(ty) => match ty {
+                            ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Number) => LlvmType::F64,
+                            ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Bool) => LlvmType::I1,
+                            ast::typing::Type::BuiltIn(ast::typing::BuiltInType::String) => LlvmType::String,
+                            ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Object) => LlvmType::Object,
+                            _ => LlvmType::Object,
+                        },
+                        None => LlvmType::Object,
+                    };
+
+                    preamble += &self.store_statement(
+                        &exp_result_handle.llvm_name,
+                        &member_ptr,
+                        &llvm_type,
+                    );
+                } else {
+                    panic!(
+                        "Data member '{}' not found in type '{}'",
+                        member_id, type_name
+                    );
+                }
+            }
+            _ => {
+                panic!("Unsupported left-hand side expression type for destructive assignment");
+            }
+        }
 
         VisitorResult {
             preamble,

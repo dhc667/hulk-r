@@ -56,7 +56,7 @@ fn function_definition() {
         "
             function f(x: Number): Number { return x; }
             function g(x: Number): Number { return f(x); }
-            type Point (a:Number,b:Number) {x=a;y=b;}
+            type Point (a:Number,b:Boolean) {x=a;y=b;}
             let a = new Point(4,false) in
             let x = g(4) in print(g(x));
             ",
@@ -209,9 +209,9 @@ fn function_definition_with_return_type_test() {
 fn abc() {
     let llvm = generate_code(
         r#"
-            type A() { x=10; f(): Number { return 10; } }
+            type A() { x=10; f(): Number { self.x; } get_x(): Number { return self.x;}  }
             type B() inherits A() {  h(): Number { return 20; } }
-            type C() inherits B() { f(): Number { return 30; } }
+            type C() inherits B() { f(): Number { return 3*self.get_x(); } }
 
             function g(): B {
                 if (true)  {
@@ -343,4 +343,72 @@ fn test_josue_age() {
 //     let expected = "hello world";
 //
 //     assert_eq!(result, expected);
+// }
+#[test]
+fn deep_inheritance_and_override() {
+    let llvm = generate_code(
+        r#"
+            type Base(a: Number) { x = a; getx(): Number { return self.x; } }
+            type Mid(a: Number) inherits Base(a + 1) { get(): Number { return self.getx() * 2; } }
+            type Leaf(a: Number) inherits Mid(a * 2) { get(): Number { return self.getx() + 100; } }
+            let obj = new Leaf(5) in print(obj.get());
+        "#,
+    );
+    println!("{}", llvm);
+    let result = lli_f64(&llvm).unwrap();
+    // Leaf(5) -> Mid(10) -> Base(11), so x = 11, get() = 11 + 100 = 111
+    assert_eq!(result, 111.0);
+}
+
+#[test]
+fn nested_type_instantiation_and_method_calls() {
+    let llvm = generate_code(
+        r#"
+            type Inner(a: Number) { val = a; get(): Number { return self.val; } }
+            type Outer(a: Number) { inner = new Inner(a * 3); getInnerVal(): Number { return self.inner.get(); } }
+            let o = new Outer(7) in print(o.getInnerVal());
+        "#,
+    );
+    println!("{}", llvm);
+    let result = lli_f64(&llvm).unwrap();
+    assert_eq!(result, 21.0);
+}
+
+
+#[test]
+fn mutate_fields_and_verify() {
+    let llvm = generate_code(
+        r#"
+            type Counter(start: Number) { value = start; get_value():Number => self.value; inc(): Number { self.value := self.value + 1; return self.value; } }
+            let c = new Counter(10) in { c.inc();  c.inc(); print(c.get_value()); };
+        "#,
+    );
+    println!("{}", llvm);
+    let result = lli_f64(&llvm).unwrap();
+    assert_eq!(result, 12.0);
+}
+
+#[test]
+fn complex_string_manipulation() {
+    let llvm = generate_code(
+        r#"
+            let a = "foo", b = "bar", c = "baz" in print(a @ "-" @ b @ ":" @ c);
+        "#,
+    );
+    println!("{}", llvm);
+    let result = lli_string(&llvm).unwrap();
+    assert_eq!(result, "foo-bar:baz");
+}
+//
+//
+// #[test]
+// fn interleaved_number_and_string_operations() {
+//     let llvm = generate_code(
+//         r#"
+//             let n = 42, s = " is the answer" in print(n @ s);
+//         "#,
+//     );
+//     println!("{}", llvm);
+//     let result = lli_string(&llvm).unwrap();
+//     assert_eq!(result, "42 is the answer");
 // }
