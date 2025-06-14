@@ -2,6 +2,7 @@ use crate::{Identifier, Keyword};
 
 use super::{FunctionBody, FunctionDef, FunctionSignature};
 
+#[derive(Debug)]
 pub struct GlobalFunctionDef {
     pub function_token: Keyword,
     pub function_def: FunctionDef,

@@ -4,6 +4,7 @@ use super::{
     ProtocolDef, constants::ConstantDef, global_functions::GlobalFunctionDef, types::TypeDef,
 };
 
+#[derive(Debug)]
 pub enum Definition {
     TypeDef(TypeDef),
     FunctionDef(GlobalFunctionDef),

@@ -1,5 +1,6 @@
 use crate::{ArrowOperator, Block, Expression, ExpressionVisitor, VisitableExpression};
 
+#[derive(Debug)]
 pub enum FunctionBody {
     ArrowExpression(ArrowExpression),
     Block(Block),
@@ -44,6 +45,7 @@ impl<T: ExpressionVisitor<R>, R> VisitableExpression<T, R> for FunctionBody {
     }
 }
 
+#[derive(Debug)]
 pub struct ArrowExpression {
     pub operator: ArrowOperator,
     pub expression: Expression,

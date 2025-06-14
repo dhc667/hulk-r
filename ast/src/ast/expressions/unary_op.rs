@@ -5,6 +5,7 @@ use crate::{
 
 use super::Expression;
 
+#[derive(Debug)]
 pub struct UnOp {
     pub op: UnaryOperator,
     pub rhs: Box<Expression>,

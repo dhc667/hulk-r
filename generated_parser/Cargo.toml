@@ -1,0 +1,9 @@
+[package]
+name = "generated_parser"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+lexer = { path = "../lexer" }
+parser_generator = { path = "../parser_generator" }
+ast = { path = "../ast" }

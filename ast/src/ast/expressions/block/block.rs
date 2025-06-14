@@ -2,6 +2,7 @@ use crate::{ExpressionVisitor, GroupingOperator, VisitableExpression};
 
 use super::BlockBodyItem;
 
+#[derive(Debug)]
 pub struct Block {
     pub open_brace: GroupingOperator,
     pub close_brace: GroupingOperator,

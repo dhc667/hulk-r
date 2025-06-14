@@ -2,6 +2,7 @@ use crate::{FunctionDef, Identifier, Keyword, TypeName};
 
 use super::{DataMemberDef, InheritanceIndicator};
 
+#[derive(Debug)]
 pub struct TypeDef {
     pub type_token: Keyword,
     pub name: TypeName,

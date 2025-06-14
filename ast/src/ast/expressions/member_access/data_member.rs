@@ -3,6 +3,7 @@ use crate::{
     typing::TypeAnnotation,
 };
 
+#[derive(Debug)]
 pub struct DataMemberAccess {
     pub object: Box<Expression>,
     pub obj_type: TypeAnnotation,

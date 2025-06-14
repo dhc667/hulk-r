@@ -2,14 +2,13 @@ use std::fmt::Display;
 
 use super::*;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum Keyword {
     Let(TokenPosition),
     If(TokenPosition),
     Else(TokenPosition),
     While(TokenPosition),
     For(TokenPosition),
-    Print(TokenPosition),
     In(TokenPosition),
     Elif(TokenPosition),
 
@@ -30,7 +29,6 @@ impl Display for Keyword {
             Keyword::If(_) => write!(f, "if"),
             Keyword::Else(_) => write!(f, "else"),
             Keyword::While(_) => write!(f, "while"),
-            Keyword::Print(_) => write!(f, "print"),
             Keyword::In(_) => write!(f, "in"),
             Keyword::Elif(_) => write!(f, "elif"),
             Keyword::Function(_) => write!(f, "function"),

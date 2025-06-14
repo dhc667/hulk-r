@@ -1,5 +1,6 @@
 use crate::{BinaryOperator, Expression, ExpressionVisitor, Identifier, VisitableExpression};
 
+#[derive(Debug)]
 pub struct Assignment {
     pub identifier: Identifier,
     pub op: BinaryOperator,

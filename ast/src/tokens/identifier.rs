@@ -4,7 +4,7 @@ use crate::typing::{Type, TypeAnnotation};
 
 use super::*;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Identifier {
     pub position: TokenPosition,
     pub id: String,
@@ -37,7 +37,7 @@ impl Display for Identifier {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct IdentifierInfo {
     pub ty: TypeAnnotation,
     pub definition_pos: Option<TokenPosition>,
