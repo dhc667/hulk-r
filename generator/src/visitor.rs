@@ -349,9 +349,9 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
             .llvm_name;
         let object_type = node.obj_type.clone();
 
-        println!("Object type: {:?}", object_type);
-        println!("Object pointer: {}", object_ptr);
-        println!("Member access: {}", node.member.id);
+        // println!("Object type: {:?}", object_type);
+        // println!("Object pointer: {}", object_ptr);
+        // println!("Member access: {}", node.member.id);
 
         let member_type = node.member.info.ty.clone();
 
@@ -365,9 +365,9 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
             },
             None => LlvmType::Object,
         };
-        println!("{}", member_type.unwrap().to_string());
-        println!("{}", llvm_type.llvm_type_str());
-        println!("{}", node.member.id);
+        // println!("{}", member_type.unwrap().to_string());
+        // println!("{}", llvm_type.llvm_type_str());
+        // println!("{}", node.member.id);
         let type_name = match &object_type {
             Some(ty) => to_string(&Some(ty.clone())),
 
@@ -377,14 +377,14 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
 
         let result_var = self.generate_tmp_variable();
 
-        println!("Looking for member '{}' in type '{}'", member_id, type_name);
+        // println!("Looking for member '{}' in type '{}'", member_id, type_name);
 
         if let Some(idx) = self
             .type_members_ids
             .get(&(type_name.clone(), member_id.clone()))
         {
             let field_index = idx.clone();
-            println!("Found member in index'{}'", field_index);
+            // println!("Found member in index'{}'", field_index);
             let gep_instr = format!(
                 "  {} = getelementptr inbounds %{}_type, %{}_type* {}, i32 0, i32 {}\n",
                 result_var, type_name, type_name, object_ptr, field_index
@@ -736,9 +736,9 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
 
         self.string_constants.push(global_str_code.clone());
 
-        for x in self.string_constants.iter() {
-            println!("global string aaaaaaa =======: {}", x.clone());
-        }
+        // for x in self.string_constants.iter() {
+        //     println!("global string aaaaaaa =======: {}", x.clone());
+        // }
 
         // Create local variable to store the string
         let local_str_var = self.generate_tmp_variable();
@@ -882,13 +882,13 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
         // Methods
         preamble += &generate_method_definitions(self, node);
 
-        println!("Type members IDs map contents:");
-        for ((type_name, member_name), index) in &self.type_members_ids {
-            println!(
-                "Type: {}, Member: {}, Index: {}",
-                type_name, member_name, index
-            );
-        }
+        // println!("Type members IDs map contents:");
+        // for ((type_name, member_name), index) in &self.type_members_ids {
+        //     println!(
+        //         "Type: {}, Member: {}, Index: {}",
+        //         type_name, member_name, index
+        //     );
+        // }
 
         VisitorResult {
             preamble,

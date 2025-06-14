@@ -210,15 +210,15 @@ pub fn generate_vtable_type(visitor: &mut GeneratorVisitor, node: &mut ast::Type
             (vtable_initializers.len() - 1).to_string(),
         );
     }
-
-    // Debug: Print function_member_names values for this type
-    println!("function_member_names:");
-    for ((type_name, method_name), index) in &visitor.function_member_names {
-        println!(
-            "  (type: {}, method: {}) => vtable index {}",
-            type_name, method_name, index
-        );
-    }
+    //
+    // // Debug: Print function_member_names values for this type
+    // println!("function_member_names:");
+    // for ((type_name, method_name), index) in &visitor.function_member_names {
+    //     println!(
+    //         "  (type: {}, method: {}) => vtable index {}",
+    //         type_name, method_name, index
+    //     );
+    // }
     // Emit the vtable struct type
     if !vtable_fn_ptr_types.is_empty() {
         preamble += &format!("\n  {}\n", vtable_fn_ptr_types.join(",\n  "));
@@ -289,8 +289,8 @@ pub fn generate_object_struct_type(
                 .get(&(parent.clone(), member_name.clone()))
                 .cloned()
                 .unwrap_or_else(|| {
-                    eprintln!("Warning: Could not find type for parent member {}.{}, using double", parent, member_name);
-                    "double".to_string()
+                    panic!("Could not find type for parent member {}.{}, using double", parent, member_name);
+
                 });
             
             // Add to field list
@@ -419,7 +419,7 @@ pub fn generate_constructor(visitor: &mut GeneratorVisitor, node: &mut ast::Type
         .map(|((_, member_name), member_type)| (member_name.clone(), member_type.clone()))
         .collect();
     for (member_name, member_type) in type_members {
-        println!("member_name: {} type {:?}", member_name, member_type);
+        // println!("member_name: {} type {:?}", member_name, member_type);
         field_llvm_types_str.push(member_type);
     }
 
@@ -476,7 +476,7 @@ pub fn generate_constructor(visitor: &mut GeneratorVisitor, node: &mut ast::Type
             if let Some(handle) = eval_result.result_handle {
                 parent_ctor_call_args.push(format!("{} {}", parent_arg_type, handle.llvm_name));
             } else {
-                eprintln!("Warning: Parent constructor argument {} has no result handle", i);
+                // eprintln!("Warning: Parent constructor argument {} has no result handle", i);
                 parent_ctor_call_args.push(format!("{} null", parent_arg_type));
             }
         }
@@ -499,10 +499,10 @@ pub fn generate_constructor(visitor: &mut GeneratorVisitor, node: &mut ast::Type
         parent_members.sort_by_key(|(_, index)| *index);
         for ((parent_type, member_name), &parent_index) in parent_members {
             // Get member type
-            println!(
-                "Parent type: {} member: {} index: {}",
-                parent_type, member_name, parent_index
-            );
+            // println!(
+            //     "Parent type: {} member: {} index: {}",
+            //     parent_type, member_name, parent_index
+            // );
             let member_type = visitor
                 .type_members_types
                 .get(&(parent_type.clone(), member_name.clone()))

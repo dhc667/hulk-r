@@ -399,8 +399,8 @@ fn complex_string_manipulation() {
     let result = lli_string(&llvm).unwrap();
     assert_eq!(result, "foo-bar:baz");
 }
-//
-//
+
+
 // #[test]
 // fn interleaved_number_and_string_operations() {
 //     let llvm = generate_code(
