@@ -434,7 +434,7 @@ fn return_string_from_function() {
     let llvm = generate_code(
         r#"
             function f(): String { return let a = "a" in { a:="hello";  (a @" world");}; }
-            let x = f() in print(x);
+            let x = f(),y = [1,2,3] in print(x);
         "#,
     );
     println!("{}", llvm);
@@ -453,3 +453,34 @@ fn return_string_from_function() {
 //     let result = lli_string(&llvm).unwrap();
 //     assert_eq!(result, "42 is the answer");
 // }
+
+
+#[test]
+fn simple_while_2() {
+    let llvm = generate_code(
+        r#"let x = 1 in {
+            while(x < 6) {
+                let a = "hello" in {
+                    let b = a @ " world" in {
+                     print(b);
+                    };
+                };
+                print(x);
+                 x := x + 1;
+            };
+
+        };"#,
+    );
+
+    println!("{}", llvm);
+    assert_eq!(lli_string(&llvm).unwrap(), "hello world
+1.000000
+hello world
+2.000000
+hello world
+3.000000
+hello world
+4.000000
+hello world
+5.000000");
+}
