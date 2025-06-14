@@ -400,6 +400,47 @@ fn complex_string_manipulation() {
     assert_eq!(result, "foo-bar:baz");
 }
 
+#[test]
+fn complex_string_manipulation_2() {
+    let llvm = generate_code(
+        r#"
+            function f(): String {"foobabaz";}
+
+            let a = f() in print(a);
+
+        "#,
+    );
+    println!("{}", llvm);
+    let result = lli_string(&llvm).unwrap();
+    assert_eq!(result, "foobabaz");
+}
+
+
+#[test]
+fn x1() {
+    let llvm = generate_code(
+        r#"
+            function f(): Number { return let a = 5 in a; }
+            let x = f() in print(x);
+        "#,
+    );
+    println!("{}", llvm);
+    let result = lli_f64(&llvm).unwrap();
+    assert_eq!(result, 5.0);
+}
+
+#[test]
+fn return_string_from_function() {
+    let llvm = generate_code(
+        r#"
+            function f(): String { return let a = "a" in { a:="hello";  (a @" world");}; }
+            let x = f() in print(x);
+        "#,
+    );
+    println!("{}", llvm);
+    let result = lli_string(&llvm).unwrap();
+    assert_eq!(result, "hello world");
+}
 
 // #[test]
 // fn interleaved_number_and_string_operations() {
