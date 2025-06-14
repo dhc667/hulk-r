@@ -1,4 +1,4 @@
-use crate::{ExpressionVisitor, GroupingOperator, VisitableExpression};
+use crate::{ExpressionVisitor, GroupingOperator, VisitableExpression, typing::TypeAnnotation};
 
 use super::Expression;
 
@@ -7,6 +7,7 @@ pub struct ListIndexing {
     pub open_brace: GroupingOperator,
     pub close_brace: GroupingOperator,
     pub index: Box<Expression>,
+    pub list_type: TypeAnnotation,
 }
 
 impl ListIndexing {
@@ -21,6 +22,7 @@ impl ListIndexing {
             open_brace,
             close_brace,
             index: Box::new(index),
+            list_type: None,
         }
     }
 }

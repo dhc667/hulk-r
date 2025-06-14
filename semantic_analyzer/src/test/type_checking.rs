@@ -213,6 +213,64 @@ pub fn list_typing_2() {
 }
 
 #[test]
+pub fn list_indexing() {
+    let p = Parser::new();
+    let mut answ = p
+        .parse(
+            "
+        let x = [1, 2, 3] in x[0];",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    semantic_analyzer.analyze_program_ast(&mut answ).unwrap();
+
+    let indexing = &answ.expressions[0]
+        .as_let_in()
+        .unwrap()
+        .body
+        .as_list_indexing()
+        .unwrap();
+
+    assert_eq!(semantic_analyzer.errors.len(), 0);
+    assert_eq!(
+        indexing.list_type,
+        Some(Type::Iterable(Box::new(Type::BuiltIn(BuiltInType::Number))))
+    );
+}
+
+#[test]
+pub fn list_indexing_2() {
+    let p = Parser::new();
+    let mut answ = p
+        .parse(
+            "
+            type A {
+                x = [1, 2, 3];
+                method(): Number* => self.x;
+            }
+            let a = new A() in a.method()[0];",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    semantic_analyzer.analyze_program_ast(&mut answ).unwrap();
+
+    let indexing = &answ.expressions[0]
+        .as_let_in()
+        .unwrap()
+        .body
+        .as_list_indexing()
+        .unwrap();
+
+    assert_eq!(semantic_analyzer.errors.len(), 0);
+    assert_eq!(
+        indexing.list_type,
+        Some(Type::Iterable(Box::new(Type::BuiltIn(BuiltInType::Number))))
+    );
+}
+
+#[test]
 pub fn list_typing_with_different_types() {
     let p = Parser::new();
     let mut answ = p.parse("let x = [1, 2, \"3\"] in { x ;};").unwrap();

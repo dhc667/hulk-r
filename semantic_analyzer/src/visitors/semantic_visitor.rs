@@ -298,6 +298,8 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
             _ => None,
         };
 
+        node.list_type = iterable_type.clone();
+
         let index_type = node.index.accept(self);
         if index_type != Some(Type::BuiltIn(BuiltInType::Number)) {
             let message = format!(
