@@ -7,5 +7,5 @@ edition = "2024"
 ast = { path = "../ast" }
 
 [dev-dependencies]
-parser = { path = "../parser" }
+generated_parser = { path = "../generated_parser" }
 semantic_analyzer = { path = "../semantic_analyzer" }

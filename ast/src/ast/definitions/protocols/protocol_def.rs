@@ -2,6 +2,7 @@ use crate::{Keyword, TypeName};
 
 use super::{ExtensionIndicator, FunctionSignature};
 
+#[derive(Debug)]
 pub struct ProtocolDef {
     pub protocol_token: Keyword,
     pub name: TypeName,

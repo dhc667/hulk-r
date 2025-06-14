@@ -1,5 +1,6 @@
 use crate::{Expression, Keyword, TypeName};
 
+#[derive(Debug)]
 pub struct InheritanceIndicator {
     pub inherits_token: Keyword,
     pub parent_name: TypeName,

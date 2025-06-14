@@ -1,5 +1,6 @@
 use crate::{BinaryOperator, Expression, Identifier, Keyword, typing::Type};
 
+#[derive(Debug)]
 pub struct ConstantDef {
     pub identifier: Identifier,
     pub assignment_operator: BinaryOperator,

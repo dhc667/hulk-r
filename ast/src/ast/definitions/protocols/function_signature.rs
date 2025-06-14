@@ -1,5 +1,6 @@
 use crate::Identifier;
 
+#[derive(Debug)]
 pub struct FunctionSignature {
     pub identifier: Identifier,
     pub parameters: Vec<Identifier>,

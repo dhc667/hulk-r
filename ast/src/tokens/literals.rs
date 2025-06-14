@@ -2,6 +2,8 @@ use std::{fmt::Display, usize};
 
 use super::*;
 
+
+#[derive(Debug)]
 pub struct NumberLiteral {
     pub position: TokenPosition,
     pub value: f64,
@@ -22,6 +24,7 @@ impl Display for NumberLiteral {
     }
 }
 
+#[derive(Debug)]
 pub enum BooleanLiteral {
     True(TokenPosition),
     False(TokenPosition),
@@ -49,6 +52,7 @@ impl Display for BooleanLiteral {
     }
 }
 
+#[derive(Debug)]
 pub struct StringLiteral {
     pub position: TokenPosition,
     pub string: String,

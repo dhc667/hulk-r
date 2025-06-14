@@ -2,6 +2,7 @@ use crate::{ExpressionVisitor, GroupingOperator, VisitableExpression};
 
 use super::Expression;
 
+#[derive(Debug)]
 pub struct ListIndexing {
     pub list: Box<Expression>,
     pub open_brace: GroupingOperator,

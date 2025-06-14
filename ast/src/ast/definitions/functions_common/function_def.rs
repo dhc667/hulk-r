@@ -2,6 +2,7 @@ use crate::{FunctionSignature, Identifier};
 
 use super::FunctionBody;
 
+#[derive(Debug)]
 pub struct FunctionDef {
     pub identifier: Identifier,
     pub parameters: Vec<Identifier>,

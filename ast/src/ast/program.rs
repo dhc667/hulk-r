@@ -1,5 +1,6 @@
 use super::{Definition, Expression};
 
+#[derive(Debug)]
 pub struct Program {
     pub definitions: Vec<Definition>,
     pub expressions: Vec<Expression>,

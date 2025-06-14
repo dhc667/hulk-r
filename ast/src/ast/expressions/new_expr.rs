@@ -2,6 +2,7 @@ use crate::{ExpressionVisitor, Keyword, VisitableExpression};
 
 use super::{Expression, FunctionCall};
 
+#[derive(Debug)]
 pub struct NewExpr {
     pub new_token: Keyword,
     pub type_name: String,

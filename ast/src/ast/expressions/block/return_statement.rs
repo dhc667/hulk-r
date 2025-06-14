@@ -1,5 +1,6 @@
 use crate::{Expression, ExpressionVisitor, Keyword, VisitableExpression};
 
+#[derive(Debug)]
 pub struct ReturnStatement {
     pub return_token: Keyword,
     pub expression: Expression,

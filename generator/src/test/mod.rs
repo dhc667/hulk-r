@@ -1,4 +1,4 @@
-use parser::grammar::ProgramParser;
+use generated_parser::ProgramParser;
 use semantic_analyzer::semantic_analyzer::SemanticAnalyzer;
 
 use crate::CodeGenerator;

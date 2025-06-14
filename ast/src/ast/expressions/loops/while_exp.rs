@@ -1,5 +1,6 @@
 use crate::{Block, Expression, ExpressionVisitor, Keyword, VisitableExpression};
 
+#[derive(Debug)]
 pub struct While {
     pub while_token: Keyword,
     pub condition: Box<Expression>,

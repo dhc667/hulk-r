@@ -1,5 +1,6 @@
 use crate::{Block, Expression, ExpressionVisitor, Identifier, Keyword, VisitableExpression};
 
+#[derive(Debug)]
 pub struct For {
     pub for_token: Keyword,
     pub element: Identifier,
