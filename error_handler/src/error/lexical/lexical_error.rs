@@ -5,6 +5,7 @@ use crate::error::{
     lexical::invalid_character::InvalidCharacterError,
 };
 
+#[derive(Debug, Clone)]
 pub enum LexicalError {
     InvalidCharacter(InvalidCharacterError),
 }

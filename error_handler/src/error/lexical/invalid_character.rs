@@ -5,6 +5,7 @@ use crate::error::{
     lexical::lexical_error::LexicalError,
 };
 
+#[derive(Debug, Clone)]
 pub struct InvalidCharacterError {
     character: char,
     position: usize,

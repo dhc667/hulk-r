@@ -25,6 +25,7 @@ use crate::error::{
     },
 };
 
+#[derive(Debug, Clone)]
 pub enum SemanticError {
     // Type errors
 

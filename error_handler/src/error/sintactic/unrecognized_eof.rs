@@ -5,6 +5,7 @@ use crate::error::{
     sintactic::syntactic_error::SyntacticError,
 };
 
+#[derive(Debug, Clone)]
 pub struct UnrecognizedEofError {
     expected: Vec<String>,
     position: usize,

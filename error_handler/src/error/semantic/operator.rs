@@ -5,6 +5,7 @@ use crate::error::{
     semantic::semantic_error::SemanticError,
 };
 
+#[derive(Debug, Clone)]
 pub struct BinOpError {
     operator: String,
     left_type: String,
@@ -45,6 +46,7 @@ impl HulkErrorTrait for BinOpError {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct UnOpError {
     operator: String,
     operand_type: String,

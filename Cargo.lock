@@ -309,6 +309,7 @@ name = "parser"
 version = "0.1.0"
 dependencies = [
  "ast",
+ "error_handler",
  "lalrpop",
  "lalrpop-util 0.21.0",
 ]

@@ -5,6 +5,7 @@ use crate::error::{
     sintactic::syntactic_error::SyntacticError,
 };
 
+#[derive(Debug, Clone)]
 pub struct UnrecognizedTokenError {
     token: String,
     expected: Vec<String>,
