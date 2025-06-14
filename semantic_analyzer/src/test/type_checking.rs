@@ -189,6 +189,30 @@ pub fn list_typing() {
 }
 
 #[test]
+pub fn list_typing_2() {
+    let p = Parser::new();
+    let mut answ = p.parse("let x = [1, true, \"hola\"] in x;").unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    semantic_analyzer.analyze_program_ast(&mut answ).unwrap();
+
+    let assignment = &answ.expressions[0].as_let_in().unwrap().assignment;
+
+    let dec = &assignment.identifier;
+    let list_literal = assignment.rhs.as_list_literal().unwrap();
+
+    assert_eq!(semantic_analyzer.errors.len(), 0);
+    assert_eq!(
+        dec.info.ty,
+        Some(Type::Iterable(Box::new(Type::BuiltIn(BuiltInType::Object))))
+    );
+    assert_eq!(
+        list_literal.list_type,
+        Some(Type::Iterable(Box::new(Type::BuiltIn(BuiltInType::Object))))
+    )
+}
+
+#[test]
 pub fn list_typing_with_different_types() {
     let p = Parser::new();
     let mut answ = p.parse("let x = [1, 2, \"3\"] in { x ;};").unwrap();

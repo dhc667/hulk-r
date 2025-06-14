@@ -223,7 +223,11 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
                 .get_common_supertype(&result_type, &item_type)
         }
         match result_type {
-            Some(result_type) => Some(Type::Iterable(Box::new(result_type))),
+            Some(result_type) => {
+                let list_type = Some(Type::Iterable(Box::new(result_type)));
+                node.list_type = list_type.clone();
+                list_type
+            }
             None => todo!("We need a way to handle unknown list types"),
         }
     }
