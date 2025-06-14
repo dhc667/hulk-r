@@ -80,7 +80,7 @@ impl GeneratorVisitor {
     pub(crate) fn handle_print(&mut self, inner_result: VisitorResult) -> VisitorResult {
         let preamble = inner_result.preamble
             + &match inner_result.result_handle {
-                Some(handle) => match handle.handle_type {
+                Some(ref handle) => match handle.handle_type {
                     HandleType::Register(LlvmType::F64) | HandleType::Literal(LlvmType::F64) => {
                         self.print_double(&handle.llvm_name)
                     }
@@ -105,7 +105,7 @@ impl GeneratorVisitor {
 
         VisitorResult {
             preamble,
-            result_handle: None,
+            result_handle: inner_result.result_handle,
         }
     }
 
