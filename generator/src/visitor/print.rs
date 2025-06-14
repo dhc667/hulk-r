@@ -70,8 +70,10 @@ impl GeneratorVisitor {
             + "declare i32 @sprintf(i8*, i8*, ...)\n"
             + "declare i8* @strcat(i8*, i8*)\n"
             + "declare i8* @strcpy(i8*, i8*)\n"
+            + "declare i32 @strlen(i8*)\n"
+            + "declare i32 @strcmp(i8*, i8*)\n"
             + "declare i8* @malloc(i64)\n"
-            + "@.fmt = private unnamed_addr constant [5 x i8] c\"%.*s\\00\", align 1 \n"
+            + "@.fmt = private unnamed_addr constant [4 x i8] c\"%s\\0A\\00\", align 1"
             + "\n"
     }
 
@@ -153,11 +155,15 @@ impl GeneratorVisitor {
 
     // FIXED: Changed parameter type from i8* to %string_type*
     fn print_string(&mut self, handle: &str) -> String {
-        format!("call void @printf(i8* {})\n", handle)
+        let tmp_var = self.generate_tmp_variable();
+        format!("{} = getelementptr inbounds [4 x i8], [4 x i8]* @.fmt, i64 0, i64 0\n", tmp_var)
+            + &format!("call i32 (i8*, ...) @printf(i8* {}, i8* {})\n", tmp_var,handle)
     }
 
     // FIXED: Changed parameter type from i8* to %string_type*
     fn print_object(&mut self, handle: &str) -> String {
-        format!("call void @printf(i8* {})\n", handle)
+        let tmp_var = self.generate_tmp_variable();
+        format!("{} = getelementptr inbounds [4 x i8], [4 x i8]* @.fmt, i64 0, i64 0\n", tmp_var)
+            + &format!("call i32 (i8*, ...) @printf(i8* {}, i8* {})\n", tmp_var,handle)
     }
 }

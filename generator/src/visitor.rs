@@ -116,6 +116,9 @@ pub struct GeneratorVisitor {
     _global_string_definitions: Vec<String>,
     /// Maps (type_name, member_name) to the original type for the definition (for type resolution).
     original_type_for_definition: HashMap<(String, String), String>,
+
+    /// Maps (type_name, function_name) to the LLVM function signature.
+    function_member_signature_types: HashMap<(String, String), String>,
 }
 
 impl GeneratorVisitor {
@@ -136,6 +139,7 @@ impl GeneratorVisitor {
             function_member_def_from_type_and_name: HashMap::new(),
             original_type_for_definition: HashMap::new(),
             tmp_counter: Cell::new(0),
+            function_member_signature_types: HashMap::new(),
         }
     }
 
@@ -194,31 +198,87 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
         let mut preamble = expression_result.preamble;
 
         let exp_result_handle = expression_result.result_handle.expect(
-            "Variable must be dassigned to non-null expression result, SA should've caught this",
+            "Variable must be assigned to non-null expression result, SA should've caught this",
         );
 
-        let variable = match node.lhs.as_ref() {
-            Expression::Variable(var) => var,
-            _ => todo!(),
-        };
+        match node.lhs.as_mut() {
+            Expression::Variable(var) => {
+                // Handle regular variable assignment
+                let var_llvm_name = &self
+                    .context
+                    .get_value(&var.id)
+                    .expect(&format!(
+                        "Variable {} not found, SA should have caught this",
+                        var.id
+                    ))
+                    .llvm_name;
 
-        let var_llvm_name = &self
-            .context
-            .get_value(&variable.id)
-            .expect(
-                format!(
-                    "Variable {} not found, SA should have caught this",
-                    variable.id
-                )
-                .as_str(),
-            )
-            .llvm_name;
+                preamble += &self.store_statement(
+                    &exp_result_handle.llvm_name,
+                    &var_llvm_name,
+                    &exp_result_handle.handle_type.inner_type(),
+                );
+            }
+            Expression::DataMemberAccess(data_member_access) => {
+                // Handle data member assignment
+                let object_result = data_member_access.object.accept(self);
+                preamble += &object_result.preamble;
+                
+                let object_ptr = object_result
+                    .result_handle
+                    .expect("Object must have a result")
+                    .llvm_name;
+                let object_type = data_member_access.obj_type.clone();
 
-        preamble += &self.store_statement(
-            &exp_result_handle.llvm_name,
-            &var_llvm_name,
-            &exp_result_handle.handle_type.inner_type(),
-        );
+                let type_name = match &object_type {
+                    Some(ty) => to_string(&Some(ty.clone())),
+                    None => panic!("Object type not found for data member access"),
+                };
+                let member_id = data_member_access.member.id.clone();
+
+                if let Some(idx) = self
+                    .type_members_ids
+                    .get(&(type_name.clone(), member_id.clone()))
+                {
+                    let field_index = idx.clone();
+                    
+                    // Get pointer to the member field
+                    let member_ptr = self.generate_tmp_variable();
+                    let gep_instr = format!(
+                        "  {} = getelementptr inbounds %{}_type, %{}_type* {}, i32 0, i32 {}\n",
+                        member_ptr, type_name, type_name, object_ptr, field_index
+                    );
+                    preamble += &gep_instr;
+
+                    // Store the new value to the member
+                    let member_type = data_member_access.member.info.ty.clone();
+                    let llvm_type = match &member_type {
+                        Some(ty) => match ty {
+                            ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Number) => LlvmType::F64,
+                            ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Bool) => LlvmType::I1,
+                            ast::typing::Type::BuiltIn(ast::typing::BuiltInType::String) => LlvmType::String,
+                            ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Object) => LlvmType::Object,
+                            _ => LlvmType::Object,
+                        },
+                        None => LlvmType::Object,
+                    };
+
+                    preamble += &self.store_statement(
+                        &exp_result_handle.llvm_name,
+                        &member_ptr,
+                        &llvm_type,
+                    );
+                } else {
+                    panic!(
+                        "Data member '{}' not found in type '{}'",
+                        member_id, type_name
+                    );
+                }
+            }
+            _ => {
+                panic!("Unsupported left-hand side expression type for destructive assignment");
+            }
+        }
 
         VisitorResult {
             preamble,
@@ -289,9 +349,9 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
             .llvm_name;
         let object_type = node.obj_type.clone();
 
-        println!("Object type: {:?}", object_type);
-        println!("Object pointer: {}", object_ptr);
-        println!("Member access: {}", node.member.id);
+        // println!("Object type: {:?}", object_type);
+        // println!("Object pointer: {}", object_ptr);
+        // println!("Member access: {}", node.member.id);
 
         let member_type = node.member.info.ty.clone();
 
@@ -305,9 +365,9 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
             },
             None => LlvmType::Object,
         };
-        println!("{}", member_type.unwrap().to_string());
-        println!("{}", llvm_type.llvm_type_str());
-        println!("{}", node.member.id);
+        // println!("{}", member_type.unwrap().to_string());
+        // println!("{}", llvm_type.llvm_type_str());
+        // println!("{}", node.member.id);
         let type_name = match &object_type {
             Some(ty) => to_string(&Some(ty.clone())),
 
@@ -317,14 +377,14 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
 
         let result_var = self.generate_tmp_variable();
 
-        println!("Looking for member '{}' in type '{}'", member_id, type_name);
+        // println!("Looking for member '{}' in type '{}'", member_id, type_name);
 
         if let Some(idx) = self
             .type_members_ids
             .get(&(type_name.clone(), member_id.clone()))
         {
             let field_index = idx.clone();
-            println!("Found member in index'{}'", field_index);
+            // println!("Found member in index'{}'", field_index);
             let gep_instr = format!(
                 "  {} = getelementptr inbounds %{}_type, %{}_type* {}, i32 0, i32 {}\n",
                 result_var, type_name, type_name, object_ptr, field_index
@@ -411,8 +471,11 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
         let mut call_param_llvm_types_for_sig = Vec::new();
         let mut call_args_values_with_llvm_types = Vec::new();
         // Always push the self pointer as i8*
-        call_param_llvm_types_for_sig.push("i8*".to_string());
-        call_args_values_with_llvm_types.push(format!("i8* {}", object_ptr_name));
+        // call_param_llvm_types_for_sig.push("i8*".to_string());
+        // call_args_values_with_llvm_types.push(format!("i8* {}", object_ptr_name));
+        // Instead, use the correct type for self pointer
+        call_param_llvm_types_for_sig.push(format!("%{}_type*", current_type));
+        call_args_values_with_llvm_types.push(format!("%{}_type* {}", current_type, object_ptr_name));
 
         // Look up argument types from the context map
         let mut arg_types: Vec<String> = Vec::new();
@@ -467,97 +530,66 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
                 vtable_ptr, vtable_type_name, vtable_type_name, vtable_ptr_ptr
             );
             let func_ptr_location_in_vtable = self.generate_tmp_variable();
-            let super_field_ptr = self.generate_tmp_variable();
-            let super_field_load = self.generate_tmp_variable();
-            // Try to find the function index in this type's vtable
-            if let Some(func_vtable_idx_str) = self
-                .function_member_names
-                .get(&(current_type.clone(), func_name_in_ast.clone()))
-            {
-                // Found in this vtable
+            // Get the correct function pointer type for the vtable entry
+            let vtable_func_ptr_type = func_signature_ptr_type_for_load.clone();
+            preamble += &format!(
+                "  {} = getelementptr inbounds {}, {}* {}, i32 0, i32 {}\n",
+                func_ptr_location_in_vtable,
+                vtable_type_name,
+                vtable_type_name,
+                vtable_ptr,
+                self.function_member_names.get(&(current_type.clone(), func_name_in_ast.clone())).unwrap()
+            );
+            let loaded_func_ptr = self.generate_tmp_variable();
+            preamble += &format!(
+                "  {} = load {}, {}* {}, align 8\n",
+                loaded_func_ptr,
+                vtable_func_ptr_type,
+                vtable_func_ptr_type,
+                func_ptr_location_in_vtable
+            );
 
+            let result_reg: String;
+            if call_ret_type_str != "void" {
+                result_reg = self.generate_tmp_variable();
                 preamble += &format!(
-                    "  {} = getelementptr inbounds {}, {}* {}, i32 0, i32 {}\n",
-                    func_ptr_location_in_vtable,
-                    vtable_type_name,
-                    vtable_type_name,
-                    vtable_ptr,
-                    func_vtable_idx_str
-                );
-                let loaded_func_ptr = self.generate_tmp_variable();
-                preamble += &format!(
-                    "  {} = load {}, {}* {}, align 8\n",
+                    "  {} = call {} {}({})\n",
+                    result_reg,
+                    call_ret_type_str,
                     loaded_func_ptr,
-                    func_signature_ptr_type_for_load,
-                    func_signature_ptr_type_for_load,
-                    func_ptr_location_in_vtable
+                    call_args_values_with_llvm_types.join(", ")
                 );
-
-                let result_reg: String;
-                if call_ret_type_str != "void" {
-                    result_reg = self.generate_tmp_variable();
-                    preamble += &format!(
-                        "  {} = call {} {}({})\n",
-                        result_reg,
-                        call_ret_type_str,
-                        loaded_func_ptr,
-                        call_args_values_with_llvm_types.join(", ")
-                    );
-                } else {
-                    result_reg = "".to_string();
-                    preamble += &format!(
-                        "  call void {}({})\n",
-                        loaded_func_ptr,
-                        call_args_values_with_llvm_types.join(", ")
-                    );
-                }
-
-                let result_handle = if call_ret_type_str != "void" {
-                    let ast_ret_type = node
-                        .member
-                        .identifier
-                        .info
-                        .ty
-                        .as_ref()
-                        .expect("Return type must be known for non-void");
-                    Some(LlvmHandle {
-                        handle_type: HandleType::Register(
-                            self.llvm_type_from_ast_type(ast_ret_type),
-                        ),
-                        llvm_name: result_reg,
-                    })
-                } else {
-                    None
-                };
-
-                return VisitorResult {
-                    preamble,
-                    result_handle,
-                };
-            } else if let Some(parent_type) = self.inherits.get(&current_type) {
-                // Not found, walk up to parent
-                // Get super field pointer and load parent object pointer
-
-                preamble += &format!(
-                    "  {} = getelementptr inbounds %{}_type, %{}_type* {}, i32 0, i32 1\n",
-                    super_field_ptr, current_type, current_type, object_typed_ptr
-                );
-
-                preamble += &format!(
-                    "  {} = load %{}_type*, %{}_type** {}, align 8\n",
-                    super_field_load, parent_type, parent_type, super_field_ptr
-                );
-                // Update for next iteration
-                current_type = parent_type.clone();
-                current_object_ptr = super_field_load;
-                // Also update the first argument for the call (self pointer)
-                call_args_values_with_llvm_types[0] = format!("i8* {}", current_object_ptr);
             } else {
-                panic!(
-                    "Function member '{}' not found in type '{}' or its ancestors",
-                    func_name_in_ast, current_type
+                result_reg = "".to_string();
+                preamble += &format!(
+                    "  call void {}({})\n",
+                    loaded_func_ptr,
+                    call_args_values_with_llvm_types.join(", ")
                 );
             }
+
+            let result_handle = if call_ret_type_str != "void" {
+                let ast_ret_type = node
+                    .member
+                    .identifier
+                    .info
+                    .ty
+                    .as_ref()
+                    .expect("Return type must be known for non-void");
+                Some(LlvmHandle {
+                    handle_type: HandleType::Register(
+                        self.llvm_type_from_ast_type(ast_ret_type),
+                    ),
+                    llvm_name: result_reg,
+                })
+            } else {
+                None
+            };
+
+            return VisitorResult {
+                preamble,
+                result_handle,
+            };
         }
     }
 
@@ -704,9 +736,9 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
 
         self.string_constants.push(global_str_code.clone());
 
-        for x in self.string_constants.iter() {
-            println!("global string aaaaaaa =======: {}", x.clone());
-        }
+        // for x in self.string_constants.iter() {
+        //     println!("global string aaaaaaa =======: {}", x.clone());
+        // }
 
         // Create local variable to store the string
         let local_str_var = self.generate_tmp_variable();
@@ -775,37 +807,27 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
         let mut preamble = String::new();
         let mut arg_handles = Vec::new();
         let mut arg_types = Vec::new();
-        for arg in node.arguments.iter_mut() {
+        // Use constructor_args_types to get the expected types for the constructor
+        let expected_types = self
+            .constructor_args_types
+            .get(&node.type_name)
+            .cloned();
+        for (i, arg) in node.arguments.iter_mut().enumerate() {
             let arg_result = arg.accept(self);
             preamble += &arg_result.preamble;
             let handle = arg_result
                 .result_handle
                 .expect("Constructor argument must have a result");
             arg_handles.push(handle.llvm_name);
-            let arg_type = match arg {
-                ast::Expression::NumberLiteral(_) => "double".to_string(),
-                ast::Expression::BooleanLiteral(_) => "i1".to_string(),
-                ast::Expression::StringLiteral(_) => "i8*".to_string(),
-                ast::Expression::Variable(id) => match &id.info.ty {
-                    Some(ty) => match ty {
-                        ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Number) => {
-                            "double".to_string()
-                        }
-                        ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Bool) => {
-                            "i1".to_string()
-                        }
-                        ast::typing::Type::BuiltIn(ast::typing::BuiltInType::String) => {
-                            "i8*".to_string()
-                        }
-                        ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Object) => {
-                            "i8*".to_string()
-                        }
-                        ast::typing::Type::Defined(name) => format!("%{}_type*", name.id.clone()),
-                        _ => "i8*".to_string(),
-                    },
-                    None => "i8*".to_string(),
-                },
-                _ => "i8*".to_string(),
+            // Use the expected type from constructor_args_types if available
+            let arg_type = if let Some(ref types) = expected_types {
+                if i < types.len() {
+                    types[i].clone()
+                } else {
+                    "i8*".to_string() // fallback if out of bounds
+                }
+            } else {
+                "i8*".to_string() // fallback if not found
             };
             arg_types.push(arg_type);
         }
@@ -860,13 +882,13 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
         // Methods
         preamble += &generate_method_definitions(self, node);
 
-        println!("Type members IDs map contents:");
-        for ((type_name, member_name), index) in &self.type_members_ids {
-            println!(
-                "Type: {}, Member: {}, Index: {}",
-                type_name, member_name, index
-            );
-        }
+        // println!("Type members IDs map contents:");
+        // for ((type_name, member_name), index) in &self.type_members_ids {
+        //     println!(
+        //         "Type: {}, Member: {}, Index: {}",
+        //         type_name, member_name, index
+        //     );
+        // }
 
         VisitorResult {
             preamble,

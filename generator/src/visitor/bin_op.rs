@@ -168,6 +168,35 @@ impl GeneratorVisitor {
         let result_handle = self.generate_tmp_variable();
 
         let operation = match op {
+             At(_) => {
+                // String concatenation implementation
+                // 1. Get string lengths for both operands
+                let len1_var = self.generate_tmp_variable();
+                let len2_var = self.generate_tmp_variable();
+                let total_len_var = self.generate_tmp_variable();
+                let total_len_plus_one_var = self.generate_tmp_variable();
+                let result_ptr = self.generate_tmp_variable();
+                
+                format!(
+                    // Get length of first string
+                    "{len1} = call i32 @strlen(i8* {lhs})\n\
+                    {len2} = call i32 @strlen(i8* {rhs})\n\
+                    {total_len} = add i32 {len1}, {len2}\n\
+                    {total_len_plus_one} = add i32 {total_len}, 1\n\
+                    {result_ptr} = call i8* @malloc(i32 {total_len_plus_one})\n\
+                    call i8* @strcpy(i8* {result_ptr}, i8* {lhs})\n\
+                    {result_handle} = call i8* @strcat(i8* {result_ptr}, i8* {rhs})\n",
+                    len1 = len1_var,
+                    len2 = len2_var,
+                    total_len = total_len_var,
+                    total_len_plus_one = total_len_plus_one_var,
+                    result_ptr = result_ptr,
+                    lhs = lhs_handle.llvm_name,
+                    rhs = rhs_handle.llvm_name,
+                    result_handle = result_handle
+                )
+            },
+            
             EqualEqual(_) => format!(
                 "{} = fcmp oeq double {}, {}",
                 result_handle, lhs_handle.llvm_name, rhs_handle.llvm_name
@@ -180,6 +209,7 @@ impl GeneratorVisitor {
                 Some(LlvmHandle::new_i1_register(result_handle))
             }
             Plus(_) => Some(LlvmHandle::new_string_register(result_handle)),
+            At(_) | AtAt(_) => Some(LlvmHandle::new_string_register(result_handle)),
             Equal(_) => panic!("= found in non-assignment, parser problem"),
             ColonEqual(_) => panic!(":= found in non-destructive assignment, parser problem"),
             _ => panic!("Unsupported string operator"),
