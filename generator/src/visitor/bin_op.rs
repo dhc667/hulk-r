@@ -34,6 +34,7 @@ impl GeneratorVisitor {
             HandleType::Literal(LlvmType::Object) | HandleType::Register(LlvmType::Object) => {
                 return self.get_object_bin_op_visitor_result(op, lhs_result, rhs_result);
             }
+            _ => panic!("Unsupported operand type"),
         };
     }
 

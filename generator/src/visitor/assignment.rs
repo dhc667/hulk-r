@@ -69,6 +69,7 @@ impl GeneratorVisitor {
                 self.context
                     .define(name, Variable::new_object(llvm_name.clone()));
             }
+            _ => panic!("Unhandled type"),
         }
 
         return llvm_name;
