@@ -24,6 +24,7 @@ use ast::{
     VisitableDefinition, VisitableExpression,
 };
 
+
 pub struct VisitorResult {
     pub result_handle: Option<LlvmHandle>,
     pub preamble: String,
@@ -72,6 +73,13 @@ impl Variable {
     pub fn new_object(llvm_name: String) -> Variable {
         Variable {
             var_type: LlvmType::Object,
+            llvm_name,
+        }
+    }
+
+    pub fn new_list(llvm_name: String) -> Variable {
+        Variable {
+            var_type: LlvmType::List,
             llvm_name,
         }
     }
@@ -765,9 +773,76 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
             result_handle: Some(LlvmHandle::new_string_register(local_str_var)), // Return pointer to heap string
         }
     }
-    fn visit_list_literal(&mut self, _node: &mut ast::ListLiteral) -> VisitorResult {
-        todo!()
+    fn visit_list_literal(&mut self, node: &mut ast::ListLiteral) -> VisitorResult {
+        let type_name = match &node.list_type {
+            Some(ty) => to_string(&Some(ty.clone())),
+            None => panic!("Object type not found for data member access"),
+        };
+
+        let mut preamble = String::new();
+        let mut element_handles = Vec::new();
+
+        for element in node.elements.iter_mut() {
+            let e_result = element.accept(self);
+            preamble += &e_result.preamble;
+            if let Some(handle) = e_result.result_handle {
+                element_handles.push(handle);
+            }
+        }
+
+        let list_len = element_handles.len();
+        let tmp_var_id = self.tmp_counter.get();
+        self.tmp_counter.set(tmp_var_id + 1);
+
+        let llvm_elem_type = match &node.list_type {
+            Some(ast_type) => self.llvm_type_str_from_ast_type(ast_type),
+            None => "i64".to_string(), // fallback, though shouldn't happen
+        };
+        print!("heyyyyy {llvm_elem_type}");
+        // Allocate memory for the array using malloc
+        // e.g., %list_ptr = call i8* @malloc(i64 size)
+        let type_size = self.llvm_type_size(&llvm_elem_type);
+        let total_size = type_size * list_len;
+        let ptr_var = format!("%list_ptr_{}", tmp_var_id);
+        preamble += &format!(
+            "{ptr_var} = call i8* @malloc(i64 {})\n",
+            total_size
+        );
+        // Bitcast to the appropriate pointer type
+        let array_ptr = format!("%casted_list_ptr_{}", tmp_var_id);
+        preamble += &format!(
+            "{array_ptr} = bitcast i8* {ptr_var} to {elem_type}*\n",
+            ptr_var=ptr_var,
+            array_ptr=array_ptr,
+            elem_type=llvm_elem_type
+        );
+
+        // Store elements into the array memory
+        for (i, handle) in element_handles.iter().enumerate() {
+            let elem_ptr = format!("%elem_ptr_{}_{}", tmp_var_id, i);
+            preamble += &format!(
+                "{elem_ptr} = getelementptr inbounds {elem_type}, {elem_type}* {array_ptr}, i64 {idx}\n",
+                elem_ptr=elem_ptr,
+                elem_type=llvm_elem_type,
+                array_ptr=array_ptr,
+                idx=i
+            );
+            preamble += &format!(
+                "store {elem_type} {value}, {elem_type}* {elem_ptr}\n",
+                elem_type=llvm_elem_type,
+                value=handle.llvm_name
+            );
+        }
+
+        // Return the pointer to the start of the list as the handle
+        VisitorResult {
+            preamble,
+            result_handle: Some(crate::llvm_types::LlvmHandle::new_list_register(
+                array_ptr,
+            )),
+        }
     }
+
 
     fn visit_empty_expression(&mut self) -> VisitorResult {
         VisitorResult {
@@ -1141,7 +1216,7 @@ impl GeneratorVisitor {
             }
             ast::typing::Type::Iterable(inner_type_box) => {
                 format!(
-                    "{}*",
+                    "{}",
                     self.llvm_type_str_from_ast_type(inner_type_box.as_ref())
                 )
             }
