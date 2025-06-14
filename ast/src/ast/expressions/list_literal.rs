@@ -1,4 +1,4 @@
-use crate::{ExpressionVisitor, VisitableExpression, tokens};
+use crate::{ExpressionVisitor, VisitableExpression, tokens, typing::TypeAnnotation};
 
 use super::Expression;
 
@@ -6,6 +6,7 @@ pub struct ListLiteral {
     pub left_bracket: tokens::GroupingOperator,
     pub right_bracket: tokens::GroupingOperator,
     pub elements: Vec<Expression>,
+    pub list_type: TypeAnnotation,
 }
 impl ListLiteral {
     pub fn new(
@@ -17,6 +18,7 @@ impl ListLiteral {
             left_bracket,
             right_bracket,
             elements,
+            list_type: None,
         }
     }
 }
