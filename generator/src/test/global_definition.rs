@@ -512,11 +512,11 @@ fn list_of_bools() {
 }
 
 #[test]
-fn list_of_strings() {
+fn list_of_strings_with_indexing() {
     let llvm = generate_code(
         r#"
             function f(): String { return let a = "a" in { a:="hello";  (a @" world");}; }
-            let x = f(),y = ["hi",x] in print(x);
+            let x = f(),y = ["hi",x] in print(y[1]);
         "#,
     );
     println!("{}", llvm);
