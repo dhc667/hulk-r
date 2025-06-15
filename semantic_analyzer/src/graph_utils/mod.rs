@@ -6,3 +6,6 @@ pub use graph::parent_map_to_adj;
 
 pub mod lca;
 pub use lca::LCA;
+
+pub mod topological_sort;
+pub use topological_sort::TopologicalSort;
