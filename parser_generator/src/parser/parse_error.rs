@@ -23,22 +23,17 @@ impl<TokenType: Debug> ParseError<TokenType> {
             .map(|(index, _)| index)
             .collect::<Vec<usize>>();
 
-        let line = if newline_indices.is_empty() {
-            0
+        let (line, column) = if newline_indices.is_empty() {
+            (0, *loc)
         } else {
             let line = newline_indices.binary_search(loc);
-            let line = match line {
-                Ok(idx) => idx,
-                Err(idx) => idx - 1,
-            };
-            line
+
+            match line {
+                Ok(idx) => (idx, 0),
+                Err(idx) => (idx, loc - newline_indices.get(idx - 1).unwrap_or(&0)),
+            }
         };
 
-        let column = if newline_indices.is_empty() {
-            loc
-        } else {
-            &(loc - newline_indices[line])
-        };
 
         format!("Unexpected token {:?} at {}:{}", ty, line, column)
     }
