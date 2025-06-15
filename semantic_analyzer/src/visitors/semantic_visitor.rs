@@ -19,6 +19,7 @@ use ast::{
 use error_handler::error::semantic::definition::{
     UndefinedFunction, UndefinedType, UndefinedVariable,
 };
+use error_handler::error::semantic::inheritance::{InvalidIfElseType, InvalidListLiteralType};
 use error_handler::error::semantic::iterable::{InvalidIndexing, NonIterableType};
 use error_handler::error::semantic::member_access::{
     AccessingPrivateMember, FieldNotFound, MethodNotFound,
@@ -153,8 +154,15 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
         node.condition.accept(self);
         let then_type = node.then_expression.accept(self);
         let else_type = node.else_expression.accept(self);
-        self.type_checker
-            .get_common_supertype(&then_type, &else_type)
+        let common_type = self
+            .type_checker
+            .get_common_supertype(&then_type, &else_type);
+
+        if common_type == Some(Type::BuiltIn(BuiltInType::Object)) {
+            self.errors
+                .push(InvalidIfElseType::new(node.if_token.position()).into());
+        }
+        common_type
     }
 
     // Loops
@@ -230,6 +238,10 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
             result_type = self
                 .type_checker
                 .get_common_supertype(&result_type, &item_type)
+        }
+        if result_type == Some(Type::BuiltIn(BuiltInType::Object)) {
+            self.errors
+                .push(InvalidListLiteralType::new(node.left_bracket.position()).into());
         }
         match result_type {
             Some(result_type) => {

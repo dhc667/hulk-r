@@ -1,7 +1,7 @@
-type A { 
-	method(x: Boolean): Boolean => { x; }; 
-} 
+function id(x: Object): Object => x;
 
-let a = new A() in {
-	3 + a.method(true); 
-};
+[1, "false"];
+
+if (true) 1 else false;
+
+type Object {}
