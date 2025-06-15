@@ -69,7 +69,9 @@ impl ErrorHandler {
         let line_start = self.line_breaks[line_number];
         let line_end = self.line_breaks[line_number + 1];
 
-        let line_text = &self.program_text[line_start..line_end].trim_end_matches('\n');
+        let line_text = &self.program_text[line_start..line_end]
+            .trim_end_matches('\n')
+            .trim_start_matches("\n");
         let col = pos - line_start;
         let pointer_line = format!("{}{}", " ".repeat(col), "^",);
 

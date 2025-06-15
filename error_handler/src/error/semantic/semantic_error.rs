@@ -7,7 +7,7 @@ use crate::error::{
             UndefinedFunction, UndefinedType, UndefinedTypeOrProtocol, UndefinedVariable,
         },
         destructive_assignment::{
-            InvalidReassigmentExpression, InvalidAssigmentTarget, InvalidReassignmentType,
+            InvalidAssigmentTarget, InvalidReassigmentExpression, InvalidReassignmentType,
             ListInvalidReassignmentType,
         },
         function::{

@@ -1,3 +1,4 @@
+use error_handler::error_handler::ErrorHandler;
 use generated_parser::ProgramParser;
 use generator::CodeGenerator;
 
@@ -17,16 +18,18 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     //  NOTE: the parser -> semantic analyzer -> generator steps will eventually
     //        be abstracted away into a single struct or function
 
+    let mut error_handler = ErrorHandler::new(&content);
     let p = ProgramParser::new();
     let ast = p.parse(&content);
 
     let mut ast = match ast {
         Ok(ast) => ast,
         Err(errors) => {
-            for error in errors {
-                println!("{}", error);
+            error_handler.extend_errors(errors);
+            for err in error_handler.get_error_messages() {
+                println!("{}", err);
             }
-            return Err("Parsing errors found".into());
+            return Err("Sintactic errors found".into());
         }
     };
 
@@ -34,8 +37,9 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     let analysis_result = semantic_analyzer.analyze_program_ast(&mut ast);
 
     if let Err(errors) = analysis_result {
-        for error in errors {
-            println!("{}", error);
+        error_handler.extend_errors(errors);
+        for err in error_handler.get_error_messages() {
+            println!("{}", err);
         }
         return Err("Semantic errors found".into());
     }
