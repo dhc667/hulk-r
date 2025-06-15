@@ -114,11 +114,11 @@ fn iterable_parameter() {
     let answ = p
         .parse(
             "
-function add(c: Number*): Number => let sum = 0 in {
-    for (i in c) {
-        sum := sum + i;
+function add(c: Number*, l: Number): Number => let sum = 0, i = 0 in {
+    while (i < l) {
+        sum := c[i];
     };
-    i;
+    sum;
 };
 
 add([1, 2, 3]);

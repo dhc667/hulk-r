@@ -16,7 +16,7 @@ fn test_invalid_token() {
     assert_eq!(
         errors,
         vec![
-            "Sintactic Error: Unrecognized token at location: 0, token: `@`, expected: r#``(?:[^`]|.)*``#, r#`[0-9]+(.[0-9]+)?`#, r#`[A-Za-z][A-Za-z_0-9]*`#, `!`, `(`, `+`, `-`, `[`, `constant`, `false`, `for`, `function`, `if`, `let`, `new`, `true`, `type`, `while`, `{`"
+            "Sintactic Error: Unrecognized token at location: 0, token: `@`, expected: r#``(?:[^`]|.)*``#, r#`[0-9]+(.[0-9]+)?`#, r#`[A-Za-z][A-Za-z_0-9]*`#, `!`, `(`, `+`, `-`, `[`, `constant`, `false`, `function`, `if`, `let`, `new`, `true`, `type`, `while`, `{`"
         ]
     );
 }

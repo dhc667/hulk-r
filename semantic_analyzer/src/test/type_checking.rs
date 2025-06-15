@@ -384,6 +384,7 @@ pub fn call_var_with_method_name() {
 }
 
 #[test]
+#[ignore = "for is disabled"]
 pub fn iterate_non_iterable() {
     let p = Parser::new();
     let mut answ = p
