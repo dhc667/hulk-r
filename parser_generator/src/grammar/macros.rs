@@ -4,10 +4,10 @@ macro_rules! prod {
         #[allow(non_snake_case, unused_variables)]
         {
             let $lhs = $p.get_or_create_non_terminal(stringify!($lhs).to_string());
-            $p.production(*$lhs.as_non_terminal_id().unwrap(), Vec::new(), $compute)
+            $p.production(*$lhs.as_non_terminal_id().unwrap(), vec![], $compute)
         }
     }};
-    
+
     ($p: ident, $lhs: ident -> $($rhs: ident)+, $compute: expr) => {{
         #[allow(non_snake_case, unused_variables)]
         {
@@ -35,19 +35,14 @@ macro_rules! productions {
 #[macro_export]
 macro_rules! terminals {
     ($p:ident, $default_action:expr, $(($ty:ident, $re:expr $(, $action:expr)?)),+ $(,)?) => {{
-        use lexer::lexer_generator::rule::Rule;
-        let mut rules = Vec::new();
+        let mut rules: Vec<(TokenType, String)> = Vec::new();
         $(
             // Pick the override if provided, otherwise use the default
             let action = $crate::terminals!(@pick_action $default_action $(, $action)?);
             $p.define_terminal(TokenType::$ty, action, Some(stringify!($ty).to_string())).unwrap();
-            rules.push((TokenType::$ty, $re));
+            rules.push((TokenType::$ty, $re.to_string()));
         )+
-        let rules: Vec<Rule<TokenType>> = rules
-            .into_iter()
-            .map(|(tok, s)| (tok, s.to_string()))
-            .map(|(tok, re)| Rule::new(tok, re))
-            .collect();
+
         rules
     }};
 
@@ -58,17 +53,11 @@ macro_rules! terminals {
 
 #[macro_export]
 macro_rules! skip {
-    ($(($ty: ident, $re: expr)),+ $(,)?) => {{
-        use lexer::lexer_generator::rule::Rule;
-        let mut rules = Vec::new();
+    ($(($ty: ident, $re: expr)),* $(,)?) => {{
+        let mut rules: Vec<(TokenType, String)> = Vec::new();
         $(
-            rules.push(($ty, $re));
-        )+
-        let rules: Vec<Rule<TokenType>> = rules
-            .into_iter()
-            .map(|(tok, s)| (tok, s.to_string()))
-            .map(|(tok, re)| Rule::new_skip(tok, re))
-            .collect();
+            rules.push((TokenType::$ty, $re.to_string()));
+        )*
 
         rules
     }};
@@ -77,10 +66,9 @@ macro_rules! skip {
 #[macro_export]
 macro_rules! grammar {
     (
-        token_type: $TokenType:ty,
+        token_type: $T:ty,
         return_type: $R:ty,
-        lexer_type: $Lexer:ty,
-        rule_type: $Rule:ty,
+        lexer_definer_type: $LexDef:ty,
         first_symbol: $first_symbol:ident,
         default_token_action: $tok_action:expr,
 
@@ -92,16 +80,17 @@ macro_rules! grammar {
             $(($term_name:ident, $regex:expr $(, $specific_tok_action:expr)?)),+ $(,)?
         }
 
-        $(
-            SKIP $skip_name:ident $skip_re:literal;
-        )*
+        skip: {
+            $(($skip_term_name:ident, $skip_re:literal)),* $(,)?
+        }
+
     ) => {{
         #[allow(unused_mut)]
         {
             use $crate::Grammar;
-            use $Lexer as Lexer;
-            use $Rule as Rule;
-            use $TokenType as TokenType;
+            use $crate::DefineLexer;
+            use $T as TokenType;
+            use $LexDef as LexerDefiner;
 
             let mut p: Grammar<TokenType, $R> = Grammar::new();
 
@@ -118,20 +107,21 @@ macro_rules! grammar {
             // Register productions
             $crate::productions!(p, $($lhs -> $rhs1 $($rhs)* = $action);+);
 
-            // Register skip rules
-            let mut skip_rules: Vec<Rule<TokenType>> = Vec::new();
-            $(
-                skip_rules.push(Rule::new_skip(TokenType::$skip_name, $skip_re.to_string()));
-            )*
+            let skip_rules = $crate::skip!($(($skip_term_name, $skip_re)),*);
 
-            term_rules.extend(skip_rules);
 
             match p.build_parser() {
                 Err(err) => {
                     panic!("Parser building errors: \n{}", err.join("\n\n"))
                 },
                 Ok(parser) => {
-                    (Lexer::new(term_rules), parser)
+
+                    let mut lex_def = LexerDefiner::new();
+                    lex_def.rules(term_rules);
+                    lex_def.skip_rules(skip_rules);
+                    let lexer = lex_def.compile();
+
+                    (lexer, parser)
                 }
             }
         }

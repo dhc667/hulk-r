@@ -26,14 +26,12 @@ pub enum TokenType {
     Boolean,
     Number,
 
-
     // literals
     BooleanLiteral,
     NumberLiteral,
     StringLiteral,
 
-
-    // operators 
+    // operators
     Lpar,
     Rpar,
     Lbrace,

@@ -1,15 +1,15 @@
-use lexer::lexer_generator::lexer::Lexer;
-use lexer::lexer_generator::rule::Rule;
-use crate::{Parser, Token, grammar};
+use crate::{
+    Parser, Token, grammar,
+    test::{LexerDefiner, LexerWrapper},
+};
 
 use crate::test::expression_list::{TokenType, return_type::ReturnType};
 
-pub fn lexer_parser() -> (Lexer<TokenType>, Parser<TokenType, ReturnType>) {
+pub fn lexer_parser() -> (LexerWrapper<TokenType>, Parser<TokenType, ReturnType>) {
     let (lexer, parser) = grammar! {
         token_type: TokenType,
         return_type: ReturnType,
-        lexer_type: Lexer,
-        rule_type: Rule,
+        lexer_definer_type: LexerDefiner,
         first_symbol: L,
         default_token_action: |tok: &Token<TokenType>| match tok.slice.parse::<i32>() {
             Ok(i) => ReturnType::Expression(i),
@@ -20,13 +20,13 @@ pub fn lexer_parser() -> (Lexer<TokenType>, Parser<TokenType, ReturnType>) {
             L -> L Comma E = collect_L__L_Comma_E;
             L -> E = collect_L__E;
             E -> E Plus T = |mut v| ReturnType::Expression(
-                v.remove(0).as_expression().unwrap() + 
+                v.remove(0).as_expression().unwrap() +
                 v.remove(1).as_expression().unwrap()
             );
             E -> T = |mut v| v.remove(0);
 
             T -> T Times F = |mut v| ReturnType::Expression(
-                v.remove(0).as_expression().unwrap() * 
+                v.remove(0).as_expression().unwrap() *
                 v.remove(1).as_expression().unwrap()
             );
             T -> F = |mut v| v.remove(0);
@@ -44,7 +44,9 @@ pub fn lexer_parser() -> (Lexer<TokenType>, Parser<TokenType, ReturnType>) {
             (Comma, r",")
         }
 
-        SKIP __Whitespace__ r"\s+";
+        skip: {
+            (__Whitespace__, r"\s+"),
+        }
     };
 
     (lexer, parser)

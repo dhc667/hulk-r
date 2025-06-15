@@ -1,8 +1,6 @@
-use lexer::lexer_generator::lexer::Lexer;
-use lexer::lexer_generator::rule::Rule;
-
 use crate::parser::Parser;
-use crate::test::helpers::parse;
+use crate::test::LexerWrapper;
+use crate::test::helpers::{LexerDefiner, parse};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum TokenType {
@@ -17,12 +15,11 @@ enum ReturnType {
     Empty,
 }
 
-fn lexer_parser() -> (Lexer<TokenType>, Parser<TokenType, ReturnType>) {
-    let (lexer, parser) = grammar!(
+fn lexer_parser() -> (LexerWrapper<TokenType>, Parser<TokenType, ReturnType>) {
+    let (lexer, parser) = grammar! {
         token_type: TokenType,
         return_type: ReturnType,
-        lexer_type: Lexer,
-        rule_type: Rule,
+        lexer_definer_type: LexerDefiner,
         first_symbol: S,
         default_token_action: |_: &_| ReturnType::Empty,
 
@@ -34,11 +31,13 @@ fn lexer_parser() -> (Lexer<TokenType>, Parser<TokenType, ReturnType>) {
 
         terminals: {
             (A, r"a"),
-            (SEMICOLON, r";")
+            (SEMICOLON, r";"),
         }
 
-        SKIP WHITESPACE r"\s+";
-    );
+        skip: {
+            (WHITESPACE, r"\s+"),
+        }
+    };
 
     (lexer, parser)
 }

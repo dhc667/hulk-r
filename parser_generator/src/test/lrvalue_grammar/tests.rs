@@ -1,4 +1,4 @@
-use crate::Token;
+use crate::Lex;
 
 use crate::test::lrvalue_grammar::grammar;
 
@@ -6,12 +6,7 @@ use crate::test::lrvalue_grammar::grammar;
 fn simple_parse() {
     let (lexer, parser) = grammar::lexer_parser();
 
-    let tokens = lexer
-        .split("A = B")
-        .unwrap()
-        .iter()
-        .map(|chunk| Token::new(chunk.ty, chunk.slice.to_string(), chunk.start, chunk.end))
-        .collect();
+    let tokens = lexer.split("A = B").unwrap();
 
     parser.parse(tokens).unwrap();
 }
@@ -20,12 +15,7 @@ fn simple_parse() {
 fn complex_parse() {
     let (lexer, parser) = grammar::lexer_parser();
 
-    let tokens = lexer
-        .split("**A = B")
-        .unwrap()
-        .iter()
-        .map(|chunk| Token::new(chunk.ty, chunk.slice.to_string(), chunk.start, chunk.end))
-        .collect();
+    let tokens = lexer.split("**A = B").unwrap();
 
     parser.parse(tokens).unwrap();
 }

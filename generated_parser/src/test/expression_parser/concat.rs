@@ -1,6 +1,5 @@
 use crate::test::expression_parser::ExpressionParser;
 
-
 #[test]
 fn simple_concat() {
     let p = ExpressionParser::new();

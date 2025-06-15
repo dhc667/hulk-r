@@ -6,30 +6,32 @@ use ast::{
     NewExpr, ReturnStatement, UnOp, While,
     typing::{self, BuiltInType},
 };
-use lexer::lexer_generator::{lexer::Lexer, rule::Rule};
 use parser_generator::{Parser, Token, grammar};
 
+use crate::parsing_helpers;
+
+#[allow(unused_imports)]
 use crate::{
-    get_last, get_pos, parsing_helpers, tok_to_boolean_literal, tok_to_number_literal,
-    tok_to_string_literal,
+    get_last, get_pos,
+    lexer_wrapper::{LexerDefiner, LexerWrapper},
+    tok_to_boolean_literal, tok_to_number_literal, tok_to_string_literal,
+    type_name_from_default_token,
     types::{
         BlockBody, BlockBodyItemReturn, Instruction, ReturnType, TokenType, TypeMemberDefinition,
     },
 };
 
-pub fn lexer_parser() -> (Lexer<TokenType>, Parser<TokenType, ReturnType>) {
+pub fn lexer_parser() -> (LexerWrapper, Parser<TokenType, ReturnType>) {
     grammar!(
         token_type: TokenType,
         return_type: ReturnType,
-        lexer_type: Lexer,
-        rule_type: Rule,
+        lexer_definer_type: LexerDefiner,
         first_symbol: Program,
         default_token_action: |tok: &Token<TokenType>| {
             ReturnType::DefaultToken(tok.clone())
         },
 
         productions: {
-
             Program -> InstructionList
                 = |mut v| {
                     let instructions = v.pop().unwrap().try_into_instruction_list().unwrap();
@@ -118,7 +120,7 @@ pub fn lexer_parser() -> (Lexer<TokenType>, Parser<TokenType, ReturnType>) {
                     ReturnType::ParameterList(l)
                 }
             ;
-            ParameterList -> Parameter 
+            ParameterList -> Parameter
                 = |mut v| {
                     let id = v.pop().unwrap().try_into_identifier_nt().unwrap();
                     let mut l = Vec::new();
@@ -470,7 +472,7 @@ pub fn lexer_parser() -> (Lexer<TokenType>, Parser<TokenType, ReturnType>) {
                     ReturnType::Type(typing::Type::Iterable(Box::new(ty)))
                 }
             ;
-            TypeNT -> Object = get_last;
+            // TypeNT -> Object = get_last;
             TypeNT -> Boolean = get_last;
             TypeNT -> String = get_last;
             TypeNT -> Number = get_last;
@@ -870,9 +872,9 @@ pub fn lexer_parser() -> (Lexer<TokenType>, Parser<TokenType, ReturnType>) {
                 ReturnType::Keyword(Keyword::Return(get_pos(tok)))
             }),
 
-            (Object, "Object", |_: &Token<TokenType>| {
-                ReturnType::Type(typing::Type::BuiltIn(BuiltInType::Object))
-            }),
+            // (Object, "Object", |_: &Token<TokenType>| {
+            //     ReturnType::Type(typing::Type::BuiltIn(BuiltInType::Object))
+            // }),
             (Number, "Number", |_: &Token<TokenType>| {
                 ReturnType::Type(typing::Type::BuiltIn(BuiltInType::Number))
             }),
@@ -968,6 +970,9 @@ pub fn lexer_parser() -> (Lexer<TokenType>, Parser<TokenType, ReturnType>) {
             (Identifier, "[A-Za-z][A-Za-z0-9_-_]*"),
         }
 
-        SKIP __Whitespace__ r"(\s|\t|\n)+";
+        skip: {
+            (__Whitespace__, r"(\s|\t|\n)+")
+        }
+
     )
 }

@@ -1,4 +1,4 @@
-use lexer::lexer_generator::{lexer::Lexer, rule::Rule};
+use super::helpers::LexerDefiner;
 
 #[derive(PartialEq, Eq, Hash, Debug, Clone, Copy)]
 enum TokenType {
@@ -11,8 +11,7 @@ fn undefined_nt() {
     grammar! {
         token_type: TokenType,
         return_type: (),
-        lexer_type: Lexer,
-        rule_type: Rule,
+        lexer_definer_type: LexerDefiner,
         first_symbol: S,
         default_token_action: |_: &_| {},
 
@@ -24,5 +23,7 @@ fn undefined_nt() {
         terminals: {
             (A, "A"),
         }
+
+        skip: {}
     };
 }

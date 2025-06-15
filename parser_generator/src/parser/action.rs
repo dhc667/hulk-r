@@ -1,4 +1,4 @@
-use crate::parser::{ProductionId, StateId};
+use crate::{ProductionId, StateId};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum Action {

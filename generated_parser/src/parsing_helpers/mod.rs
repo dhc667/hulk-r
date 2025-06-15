@@ -1,6 +1,7 @@
-mod tokens;
 use ast::Program;
-pub use tokens::*;
+
+pub mod tokens;
+pub(crate) use tokens::*;
 
 mod binops;
 pub use binops::*;
@@ -10,7 +11,7 @@ pub use type_definition::to_type_definition;
 
 use crate::types::{Instruction, ReturnType};
 
-pub fn get_last(mut v: Vec<ReturnType>) -> ReturnType{
+pub fn get_last(mut v: Vec<ReturnType>) -> ReturnType {
     v.pop().unwrap()
 }
 
@@ -25,5 +26,5 @@ pub fn program_from_instructions(instructions: Vec<Instruction>) -> Program {
         }
     }
 
-    return Program::new(definitions, expressions)
+    return Program::new(definitions, expressions);
 }

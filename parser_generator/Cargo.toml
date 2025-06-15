@@ -5,3 +5,6 @@ edition = "2024"
 
 [dev-dependencies]
 lexer = { path = "../lexer" }
+
+[features]
+debug-utils = []

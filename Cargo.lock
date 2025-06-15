@@ -389,8 +389,8 @@ name = "runner"
 version = "0.1.0"
 dependencies = [
  "ast",
+ "generated_parser",
  "generator",
- "parser",
  "semantic_analyzer",
 ]
 

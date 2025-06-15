@@ -1,5 +1,9 @@
 use ast::{
-    typing::Type, ArrowExpression, ArrowOperator, Assignment, BinaryOperator, Block, BlockBodyItem, BooleanLiteral, DataMemberDef, Definition, DestructiveAssignment, DotOperator, Expression, FunctionCall, FunctionDef, FunctionSignature, GroupingOperator, Identifier, InheritanceIndicator, Keyword, ListLiteral, NumberLiteral, Program, StringLiteral, TypeName, UnaryOperator
+    ArrowExpression, ArrowOperator, Assignment, BinaryOperator, Block, BlockBodyItem,
+    BooleanLiteral, DataMemberDef, Definition, DestructiveAssignment, DotOperator, Expression,
+    FunctionCall, FunctionDef, FunctionSignature, GroupingOperator, Identifier,
+    InheritanceIndicator, Keyword, ListLiteral, NumberLiteral, Program, StringLiteral,
+    UnaryOperator, typing::Type,
 };
 use parser_generator::Token;
 
@@ -318,7 +322,9 @@ impl ReturnType {
         }
     }
 
-    pub fn try_into_optional_inheritance_indicator(self) -> Result<Option<InheritanceIndicator>, Self> {
+    pub fn try_into_optional_inheritance_indicator(
+        self,
+    ) -> Result<Option<InheritanceIndicator>, Self> {
         if let Self::OptionalInheritanceIndicator(v) = self {
             Ok(v)
         } else {
@@ -342,7 +348,7 @@ pub struct BlockBodyItemReturn {
 #[derive(Debug)]
 pub enum Instruction {
     Expression(Expression),
-    Definition(Definition)
+    Definition(Definition),
 }
 
 #[derive(Debug)]
@@ -350,4 +356,3 @@ pub enum TypeMemberDefinition {
     FunctionMemberDef(FunctionDef),
     DataMemberDef(DataMemberDef),
 }
-

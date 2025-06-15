@@ -1,15 +1,14 @@
-use std::{collections::HashSet, fmt::Debug, hash::Hash};
+use std::collections::HashSet;
 
 use crate::{
-    SymbolId,
-    parser_generator::{
-        ParserGenerator,
-        item::{LR0Item, LR1Item, LR1ItemSetBuilder},
+    SymbolId, TerminalId,
+    table_builder::{
+        TableBuilder,
+        items::{LR0Item, LR1Item, LR1ItemSetBuilder},
     },
-    symbol::TerminalId,
 };
 
-impl<TokenType: Eq + Hash + Copy + Debug, R> ParserGenerator<TokenType, R> {
+impl<'b> TableBuilder<'b> {
     // SetOfItems CLOSURE(I)
     pub(crate) fn lr1_closure(&self, i: HashSet<LR1Item>) -> HashSet<LR1Item> {
         let mut i = LR1ItemSetBuilder::from(i);
@@ -18,9 +17,9 @@ impl<TokenType: Eq + Hash + Copy + Debug, R> ParserGenerator<TokenType, R> {
             let mut to_add = LR1ItemSetBuilder::new();
 
             // for ( each item [A -> p.Bs, a] in I )
-            for (core, follow) in i.items.iter() {
-                let production_id = core.production_id;
-                let production = self.productions.get(&production_id).unwrap();
+            for (core, follow) in i.iter() {
+                let production_id = core.production_id();
+                let production = self.productions.get(production_id).unwrap();
 
                 let b = self.symbol_right_of_dot(core);
                 if b.is_none() || !b.unwrap().is_non_terminal_id() {
@@ -33,7 +32,7 @@ impl<TokenType: Eq + Hash + Copy + Debug, R> ParserGenerator<TokenType, R> {
                     production
                         .rhs
                         .iter()
-                        .skip(core.dot_position + 1)
+                        .skip(core.dot_position() + 1)
                         .into_iter(),
                     follow,
                 );
@@ -54,7 +53,7 @@ impl<TokenType: Eq + Hash + Copy + Debug, R> ParserGenerator<TokenType, R> {
             }
         }
 
-        return i.to_hash_set();
+        return i.to_hash_set().unwrap();
     }
 
     // SetOfItems CLOSURE(I)
@@ -102,12 +101,13 @@ impl<TokenType: Eq + Hash + Copy + Debug, R> ParserGenerator<TokenType, R> {
     ) -> HashSet<TerminalId> {
         let first_symbol = symbols.next();
 
-        // we check if there are no symbols
-        let mut new_follow = vec![self.epsilon].into_iter().collect();
-        if first_symbol != None {
+        let mut new_follow = if first_symbol.is_none() {
+            vec![self.epsilon].into_iter().collect()
+        } else {
             let symbols = vec![first_symbol.unwrap()].into_iter().chain(symbols);
-            new_follow = self.compute_first(symbols);
-        }
+
+            self.compute_first(symbols)
+        };
 
         if new_follow.contains(&self.epsilon) {
             new_follow.remove(&self.epsilon);

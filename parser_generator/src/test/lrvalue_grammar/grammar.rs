@@ -1,17 +1,13 @@
-use lexer::lexer_generator::lexer::Lexer;
-use lexer::lexer_generator::rule::Rule;
-
+use crate::test::{LexerDefiner, LexerWrapper};
 use crate::{Parser, Token, grammar};
 
 use crate::test::lrvalue_grammar::token_type::TokenType;
 
-
-pub fn lexer_parser() -> (Lexer<TokenType>, Parser<TokenType, ()>) {
+pub fn lexer_parser() -> (LexerWrapper<TokenType>, Parser<TokenType, ()>) {
     let (lexer, parser) = grammar! {
         token_type: TokenType,
         return_type: (),
-        lexer_type: Lexer,
-        rule_type: Rule,
+        lexer_definer_type: LexerDefiner,
         first_symbol: S,
         default_token_action: |tok: &Token<TokenType>| {
             eprintln!("Parsed token {:?}", tok.ty);
@@ -31,7 +27,10 @@ pub fn lexer_parser() -> (Lexer<TokenType>, Parser<TokenType, ()>) {
             (Aster, r"\*")
         }
 
-        SKIP __Whitespace__ r"\s+";
+        skip: {
+            (__Whitespace__, r"\s+")
+        }
+
     };
 
     (lexer, parser)

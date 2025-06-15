@@ -46,11 +46,7 @@ pub(crate) fn plus_minus_unary(mut v: Vec<ReturnType>) -> ReturnType {
 
 pub(crate) fn tok_to_string_literal(tok: &Token<TokenType>) -> ReturnType {
     let pos = get_pos(tok);
-    ReturnType::StringLiteral(StringLiteral::new(
-        pos.start,
-        pos.end,
-        &tok.slice
-    ))
+    ReturnType::StringLiteral(StringLiteral::new(pos.start, pos.end, &tok.slice))
 }
 
 pub(crate) fn tok_to_boolean_literal(tok: &Token<TokenType>) -> ReturnType {

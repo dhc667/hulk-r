@@ -16,6 +16,11 @@ where
     TokenType: Eq + Hash,
 {
     pub fn new(ty: TokenType, slice: String, start: usize, end: usize) -> Self {
-        Self { ty, slice, start, end }
+        Self {
+            ty,
+            slice,
+            start,
+            end,
+        }
     }
 }

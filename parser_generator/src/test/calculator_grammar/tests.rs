@@ -41,7 +41,9 @@ fn parenthesis_test() {
 
 #[test]
 fn complex_test() {
-    let answ = parse("2 - 2 + 3*2 - 6 / 3 / 2 - 6 - 1 + (4 + 3) / 7").unwrap().unwrap();
+    let answ = parse("2 - 2 + 3*2 - 6 / 3 / 2 - 6 - 1 + (4 + 3) / 7")
+        .unwrap()
+        .unwrap();
 
     assert_eq!(answ, -1);
 }

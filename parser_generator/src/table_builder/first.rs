@@ -1,34 +1,30 @@
-use std::{
-    collections::{HashMap, HashSet}, fmt::Debug, hash::Hash
-};
+use std::collections::{HashMap, HashSet};
 
-use crate::{
-    Production, SymbolId,
-    parser_generator::{ParserGenerator, parsing_table::get_name_or_default},
-    symbol::{NonTerminalId, TerminalId},
-};
+use crate::{NonTerminalId, Production, SymbolId, TerminalId};
 
-impl<TokenType: Eq + Hash + Copy + Debug, R> ParserGenerator<TokenType, R> {
+use crate::table_builder::TableBuilder;
+
+impl<'b> TableBuilder<'b> {
     pub(crate) fn compute_first<'a>(
         &self,
         symbols: impl Iterator<Item = &'a SymbolId>,
     ) -> HashSet<TerminalId> {
         let mut answ = HashSet::new();
-        let mut epsilon_found = false;
+        let mut epsilon_found = true;
 
         for s in symbols {
+            if !epsilon_found {
+                break;
+            } else {
+                epsilon_found = false;
+            }
+
             for f in self.first.get(&s).unwrap_or(&HashSet::new()) {
                 if *f != self.epsilon {
                     answ.insert(*f);
                 } else {
                     epsilon_found = true;
                 }
-            }
-
-            if !epsilon_found {
-                break;
-            } else {
-                epsilon_found = false;
             }
         }
 
@@ -43,7 +39,8 @@ impl<TokenType: Eq + Hash + Copy + Debug, R> ParserGenerator<TokenType, R> {
         self.compute_terminal_firsts();
         self.compute_non_terminal_firsts();
 
-        // self.dbg_first();
+        #[cfg(test)]
+        self.dbg_first()
     }
 
     fn compute_terminal_firsts(&mut self) {
@@ -98,7 +95,7 @@ impl<TokenType: Eq + Hash + Copy + Debug, R> ParserGenerator<TokenType, R> {
 
     fn update_first_with_production(
         first: &mut HashMap<SymbolId, HashSet<TerminalId>>,
-        production: &Production<R>,
+        production: &Production,
         epsilon: TerminalId,
     ) -> bool {
         let symbol_id = SymbolId::from(production.lhs);
@@ -116,19 +113,21 @@ impl<TokenType: Eq + Hash + Copy + Debug, R> ParserGenerator<TokenType, R> {
             if !epsilon_found {
                 break;
             }
+
             epsilon_found = false;
 
-            let current_first = first.get(&symbol);
-            if current_first.is_none() {
+            let symbol_first = first.get(&symbol);
+            if symbol_first.is_none() {
                 break;
             }
-            let current_first = current_first.unwrap();
+            let symbol_first = symbol_first.unwrap();
 
-            for terminal in current_first {
+            for terminal in symbol_first {
                 if *terminal == epsilon {
                     epsilon_found = true;
+                } else {
+                    changed |= new_non_terminal_first.insert(*terminal);
                 }
-                changed |= new_non_terminal_first.insert(*terminal);
             }
         }
 
@@ -141,20 +140,28 @@ impl<TokenType: Eq + Hash + Copy + Debug, R> ParserGenerator<TokenType, R> {
         changed
     }
 
+    //  NOTE: Useful for debugging
+    //
+    /// prints the first sets to standard error
+    #[cfg(test)]
     fn dbg_first(&self) {
         let str = self
             .first
             .iter()
             .map(|(s_id, set)| {
+                use crate::debugging_helpers::get_name_or_default;
+
                 format!(
                     "{}: {}",
                     get_name_or_default(s_id, &self.symbols),
                     set.iter()
                         .map(|t| get_name_or_default(&SymbolId::from(*t), &self.symbols))
-                        .collect::<Vec<String>>().join(", ")
+                        .collect::<Vec<String>>()
+                        .join(", ")
                 )
             })
-            .collect::<Vec<String>>().join("\n");
+            .collect::<Vec<String>>()
+            .join("\n");
 
         eprintln!("{}", str);
     }

@@ -2,7 +2,7 @@ use ast::{Identifier, InheritanceIndicator, Keyword, TypeDef, TypeName};
 use parser_generator::Token;
 
 use crate::{
-    get_pos,
+    parsing_helpers::tokens::get_pos,
     types::{ReturnType, TokenType, TypeMemberDefinition},
 };
 

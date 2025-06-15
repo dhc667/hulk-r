@@ -5,6 +5,8 @@ pub enum TokenType {
     Identifier,
     LParen,
     RParen,
+    LBrace,
+    RBrace,
     Comma,
     __Whitespace__,
-} 
+}

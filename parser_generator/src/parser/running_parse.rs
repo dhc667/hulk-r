@@ -1,6 +1,6 @@
 use std::hash::Hash;
 
-use crate::{Token, parser::StateId};
+use crate::{StateId, Token};
 
 #[derive(Debug)]
 pub struct Parse<TokenType: Eq + Hash, R> {

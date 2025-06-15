@@ -1,4 +1,4 @@
-mod token_type;
 mod grammar;
+mod token_type;
 
 mod tests;

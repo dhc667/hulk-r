@@ -1,7 +1,6 @@
 use ast::Expression;
-use parser_generator::ParseError;
 
-use crate::{parser, ProgramParser};
+use crate::ProgramParser;
 
 mod additions;
 mod concat;
@@ -26,16 +25,22 @@ mod function_member;
 
 mod destructive_assignment;
 
+mod strings;
+
 struct ExpressionParser {
     parser: ProgramParser,
 }
 
 impl ExpressionParser {
     fn new() -> Self {
-        Self { parser: ProgramParser::new() }
+        Self {
+            parser: ProgramParser::new(),
+        }
     }
 
     fn parse(&self, input: &str) -> Result<Expression, Vec<String>> {
-        self.parser.parse(&(input.to_string() + ";")).map(|mut program| program.expressions.pop().unwrap())
+        self.parser
+            .parse(&(input.to_string() + ";"))
+            .map(|mut program| program.expressions.pop().unwrap())
     }
 }

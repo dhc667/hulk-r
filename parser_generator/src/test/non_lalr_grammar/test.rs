@@ -1,8 +1,7 @@
-
-use lexer::lexer_generator::{lexer::Lexer, rule::Rule};
-use crate::{grammar, Token};
-
-use crate::test::non_lalr_grammar::token_type::TokenType;
+use crate::{
+    Token,
+    test::{LexerDefiner, non_lalr_grammar::token_type::TokenType},
+};
 
 #[test]
 #[should_panic]
@@ -11,8 +10,7 @@ pub fn lexer_parser() {
     grammar! {
         token_type: TokenType,
         return_type: (),
-        lexer_type: Lexer,
-        rule_type: Rule,
+        lexer_definer_type: LexerDefiner,
         first_symbol: S,
         default_token_action: |tok: &Token<TokenType>| {
             eprintln!("Parsed token {:?}", tok.ty);
@@ -34,5 +32,7 @@ pub fn lexer_parser() {
             (d, "d"),
             (e, "e"),
         }
+
+        skip: {}
     };
 }

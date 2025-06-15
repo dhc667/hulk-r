@@ -1,13 +1,13 @@
-use lexer::lexer_generator::{lexer::Lexer, rule::Rule};
+use crate::{
+    Parser, Token,
+    test::{LexerDefiner, LexerWrapper, calculator_grammar::token_type::TokenType},
+};
 
-use crate::{test::calculator_grammar::token_type::TokenType, Parser, Token};
-
-pub fn lexer_parser() -> (Lexer<TokenType>, Parser<TokenType, Option<i32>>) {
+pub fn lexer_parser() -> (LexerWrapper<TokenType>, Parser<TokenType, Option<i32>>) {
     let (lexer, parser) = grammar! {
         token_type: TokenType,
         return_type: Option<i32>,
-        lexer_type: Lexer,
-        rule_type: Rule,
+        lexer_definer_type: LexerDefiner,
         first_symbol: E,
         default_token_action: |tok: &Token<TokenType>| match tok.slice.parse::<i32>() {
             Ok(i) => Some(i),
@@ -37,7 +37,10 @@ pub fn lexer_parser() -> (Lexer<TokenType>, Parser<TokenType, Option<i32>>) {
             (Rpar, r"\)")
         }
 
-        SKIP __Whitespace__ r"\s+";
+        skip: {
+            (__Whitespace__, r"\s+"),
+        }
+
     };
 
     (lexer, parser)
