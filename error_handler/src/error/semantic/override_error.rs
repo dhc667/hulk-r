@@ -9,6 +9,16 @@ pub struct FieldOverride {
     pub position: usize,
 }
 
+impl FieldOverride {
+    pub fn new(field: String, type_name: String, position: usize) -> Self {
+        Self {
+            field,
+            type_name,
+            position,
+        }
+    }
+}
+
 impl fmt::Display for FieldOverride {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -36,6 +46,16 @@ pub struct InvalidMethodOverride {
     pub method: String,
     pub type_name: String,
     pub position: usize,
+}
+
+impl InvalidMethodOverride {
+    pub fn new(method: String, type_name: String, position: usize) -> Self {
+        Self {
+            method,
+            type_name,
+            position,
+        }
+    }
 }
 
 impl fmt::Display for InvalidMethodOverride {

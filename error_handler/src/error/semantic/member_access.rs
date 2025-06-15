@@ -9,6 +9,16 @@ pub struct AccessingPrivateMember {
     pub position: usize,
 }
 
+impl AccessingPrivateMember {
+    pub fn new(member: String, type_name: String, position: usize) -> Self {
+        Self {
+            member,
+            type_name,
+            position,
+        }
+    }
+}
+
 impl fmt::Display for AccessingPrivateMember {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -37,6 +47,12 @@ pub struct FieldNotFound {
     pub position: usize,
 }
 
+impl FieldNotFound {
+    pub fn new(member: String, position: usize) -> Self {
+        Self { member, position }
+    }
+}
+
 impl fmt::Display for FieldNotFound {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Could not find data member `{}`.", self.member)
@@ -59,6 +75,12 @@ impl From<FieldNotFound> for HulkError {
 pub struct MethodNotFound {
     pub method: String,
     pub position: usize,
+}
+
+impl MethodNotFound {
+    pub fn new(method: String, position: usize) -> Self {
+        Self { method, position }
+    }
 }
 
 impl fmt::Display for MethodNotFound {

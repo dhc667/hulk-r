@@ -8,6 +8,12 @@ pub struct UndefinedVariable {
     pub position: usize,
 }
 
+impl UndefinedVariable {
+    pub fn new(name: String, position: usize) -> Self {
+        Self { name, position }
+    }
+}
+
 impl fmt::Display for UndefinedVariable {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Variable `{}` is not defined.", self.name)
@@ -30,6 +36,12 @@ impl From<UndefinedVariable> for HulkError {
 pub struct UndefinedFunction {
     pub name: String,
     pub position: usize,
+}
+
+impl UndefinedFunction {
+    pub fn new(name: String, position: usize) -> Self {
+        Self { name, position }
+    }
 }
 
 impl fmt::Display for UndefinedFunction {
@@ -56,6 +68,12 @@ pub struct UndefinedType {
     pub position: usize,
 }
 
+impl UndefinedType {
+    pub fn new(name: String, position: usize) -> Self {
+        Self { name, position }
+    }
+}
+
 impl fmt::Display for UndefinedType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Type `{}` is not defined.", self.name)
@@ -78,6 +96,12 @@ impl From<UndefinedType> for HulkError {
 pub struct UndefinedTypeOrProtocol {
     pub name: String,
     pub position: usize,
+}
+
+impl UndefinedTypeOrProtocol {
+    pub fn new(name: String, position: usize) -> Self {
+        Self { name, position }
+    }
 }
 
 impl fmt::Display for UndefinedTypeOrProtocol {

@@ -10,6 +10,17 @@ pub struct TypeParamsInvalidAmount {
     pub position: usize,
 }
 
+impl TypeParamsInvalidAmount {
+    pub fn new(name: String, expected: usize, provided: usize, position: usize) -> Self {
+        Self {
+            name,
+            expected,
+            provided,
+            position,
+        }
+    }
+}
+
 impl fmt::Display for TypeParamsInvalidAmount {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -39,6 +50,24 @@ pub struct TypeParamInvalidType {
     pub expected: String,
     pub got: String,
     pub position: usize,
+}
+
+impl TypeParamInvalidType {
+    pub fn new(
+        name: String,
+        param: String,
+        expected: String,
+        got: String,
+        position: usize,
+    ) -> Self {
+        Self {
+            name,
+            param,
+            expected,
+            got,
+            position,
+        }
+    }
 }
 
 impl fmt::Display for TypeParamInvalidType {

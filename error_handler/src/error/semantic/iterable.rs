@@ -7,6 +7,15 @@ pub struct NonIterableType {
     pub position: usize,
 }
 
+impl NonIterableType {
+    pub fn new(type_name: String, position: usize) -> Self {
+        Self {
+            type_name,
+            position,
+        }
+    }
+}
+
 impl Display for NonIterableType {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "Cannot iterate over type `{}`.", self.type_name)
@@ -31,6 +40,15 @@ impl From<NonIterableType> for HulkError {
 pub struct InvalidIndexing {
     pub index_type: String,
     pub position: usize,
+}
+
+impl InvalidIndexing {
+    pub fn new(index_type: String, position: usize) -> Self {
+        Self {
+            index_type,
+            position,
+        }
+    }
 }
 
 impl Display for InvalidIndexing {

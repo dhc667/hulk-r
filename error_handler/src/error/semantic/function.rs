@@ -8,6 +8,12 @@ pub struct FuncAlreadyDefined {
     position: usize,
 }
 
+impl FuncAlreadyDefined {
+    pub fn new(name: String, position: usize) -> Self {
+        Self { name, position }
+    }
+}
+
 impl fmt::Display for FuncAlreadyDefined {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Function `{}` is already defined.", self.name)
@@ -32,6 +38,17 @@ pub struct FuncParamsInvalidAmount {
     expected: usize,
     provided: usize,
     position: usize,
+}
+
+impl FuncParamsInvalidAmount {
+    pub fn new(name: String, expected: usize, provided: usize, position: usize) -> Self {
+        Self {
+            name,
+            expected,
+            provided,
+            position,
+        }
+    }
 }
 
 impl fmt::Display for FuncParamsInvalidAmount {
@@ -65,6 +82,24 @@ pub struct FuncParamInvalidType {
     pub position: usize,
 }
 
+impl FuncParamInvalidType {
+    pub fn new(
+        name: String,
+        param: String,
+        expected: String,
+        got: String,
+        position: usize,
+    ) -> Self {
+        Self {
+            name,
+            param,
+            expected,
+            got,
+            position,
+        }
+    }
+}
+
 impl fmt::Display for FuncParamInvalidType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -93,6 +128,17 @@ pub struct FuncReturnTypeInvalid {
     expected: String,
     found: String,
     position: usize,
+}
+
+impl FuncReturnTypeInvalid {
+    pub fn new(name: String, expected: String, found: String, position: usize) -> Self {
+        Self {
+            name,
+            expected,
+            found,
+            position,
+        }
+    }
 }
 
 impl fmt::Display for FuncReturnTypeInvalid {

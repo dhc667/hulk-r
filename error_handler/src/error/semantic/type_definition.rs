@@ -8,6 +8,12 @@ pub struct TypeOrProtocolAlreadyDefined {
     pub position: usize,
 }
 
+impl TypeOrProtocolAlreadyDefined {
+    pub fn new(name: String, position: usize) -> Self {
+        Self { name, position }
+    }
+}
+
 impl fmt::Display for TypeOrProtocolAlreadyDefined {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Already exists a type or protocol `{}`.", self.name)
@@ -31,6 +37,16 @@ pub struct TypeMemberAlreadyDefined {
     pub member: String,
     pub type_name: String,
     pub position: usize,
+}
+
+impl TypeMemberAlreadyDefined {
+    pub fn new(member: String, type_name: String, position: usize) -> Self {
+        Self {
+            member,
+            type_name,
+            position,
+        }
+    }
 }
 
 impl fmt::Display for TypeMemberAlreadyDefined {

@@ -9,6 +9,12 @@ pub struct VarDefinitionTypeMismatch {
     pub position: usize,
 }
 
+impl VarDefinitionTypeMismatch {
+    pub fn new(from: String, to: String, position: usize) -> Self {
+        Self { from, to, position }
+    }
+}
+
 impl fmt::Display for VarDefinitionTypeMismatch {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Cannot assign `{}` to `{}`.", self.from, self.to)
@@ -31,6 +37,12 @@ impl From<VarDefinitionTypeMismatch> for HulkError {
 pub struct VarAlreadyDefined {
     pub name: String,
     pub position: usize,
+}
+
+impl VarAlreadyDefined {
+    pub fn new(name: String, position: usize) -> Self {
+        Self { name, position }
+    }
 }
 
 impl fmt::Display for VarAlreadyDefined {

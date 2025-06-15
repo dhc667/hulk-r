@@ -8,6 +8,12 @@ pub struct InvalidReassigmentTarget {
     pub position: usize,
 }
 
+impl InvalidReassigmentTarget {
+    pub fn new(target: String, position: usize) -> Self {
+        Self { target, position }
+    }
+}
+
 impl fmt::Display for InvalidReassigmentTarget {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "`{}` is not a valid reassignment target.", self.target)
@@ -32,6 +38,17 @@ pub struct InvalidReassignmentType {
     pub expected: String,
     pub got: String,
     pub position: usize,
+}
+
+impl InvalidReassignmentType {
+    pub fn new(name: String, expected: String, got: String, position: usize) -> Self {
+        Self {
+            name,
+            expected,
+            got,
+            position,
+        }
+    }
 }
 
 impl fmt::Display for InvalidReassignmentType {
@@ -63,6 +80,12 @@ pub struct ListInvalidReassignmentType {
     pub position: usize,
 }
 
+impl ListInvalidReassignmentType {
+    pub fn new(from: String, to: String, position: usize) -> Self {
+        Self { from, to, position }
+    }
+}
+
 impl fmt::Display for ListInvalidReassignmentType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -88,6 +111,12 @@ impl From<ListInvalidReassignmentType> for HulkError {
 #[derive(Debug, Clone)]
 pub struct InvalidReassigmentExpression {
     pub position: usize,
+}
+
+impl InvalidReassigmentExpression {
+    pub fn new(position: usize) -> Self {
+        Self { position }
+    }
 }
 
 impl fmt::Display for InvalidReassigmentExpression {

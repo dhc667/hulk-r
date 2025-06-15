@@ -8,6 +8,12 @@ pub struct InheritanceInvalidParent {
     pub position: usize,
 }
 
+impl InheritanceInvalidParent {
+    pub fn new(name: String, position: usize) -> Self {
+        Self { name, position }
+    }
+}
+
 impl fmt::Display for InheritanceInvalidParent {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -34,6 +40,12 @@ impl From<InheritanceInvalidParent> for HulkError {
 pub struct InheritanceCycle {
     cycle: Vec<String>,
     position: usize,
+}
+
+impl InheritanceCycle {
+    pub fn new(cycle: Vec<String>, position: usize) -> Self {
+        Self { cycle, position }
+    }
 }
 
 impl fmt::Display for InheritanceCycle {
