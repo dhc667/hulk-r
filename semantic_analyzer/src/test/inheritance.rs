@@ -1,4 +1,9 @@
-use ast::typing::{BuiltInType, Type};
+use std::collections::HashMap;
+
+use ast::{
+    Definition,
+    typing::{BuiltInType, Type},
+};
 use error_handler::error_handler::ErrorHandler;
 use parser::parser::Parser;
 
@@ -305,4 +310,136 @@ fn redeclare_object() {
         error_handler.get_raw_errors(),
         vec!["Semantic Error: Already exists a type or protocol `Object`."]
     )
+}
+
+#[test]
+fn sort_definitions() {
+    let p = Parser::new();
+
+    let mut answ = p
+        .parse(
+            "
+          type B inherits A {}
+          type A {}
+          type C inherits B {}
+          type D inherits C {}
+          ",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    semantic_analyzer.analyze_program_ast(&mut answ).unwrap();
+
+    let definitions = answ.definitions;
+
+    let type_indexes = definitions
+        .iter()
+        .enumerate()
+        .filter_map(|(i, def)| match def {
+            Definition::TypeDef(type_def) => Some((type_def.name.id.clone(), i)),
+            _ => None,
+        })
+        .collect::<HashMap<_, _>>();
+
+    assert_eq!(type_indexes.len(), 4);
+    assert!(type_indexes["A"] < type_indexes["B"]);
+    assert!(type_indexes["A"] < type_indexes["C"]);
+    assert!(type_indexes["A"] < type_indexes["D"]);
+}
+
+#[test]
+fn sort_definitions2() {
+    let p = Parser::new();
+
+    let mut answ = p
+        .parse(
+            "
+          type B inherits A {}
+          type A {}
+          type C inherits B {}
+          type D inherits C {}
+          type E inherits D {}
+          ",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    semantic_analyzer.analyze_program_ast(&mut answ).unwrap();
+
+    let definitions = answ.definitions;
+
+    let type_indexes = definitions
+        .iter()
+        .enumerate()
+        .filter_map(|(i, def)| match def {
+            Definition::TypeDef(type_def) => Some((type_def.name.id.clone(), i)),
+            _ => None,
+        })
+        .collect::<HashMap<_, _>>();
+
+    assert_eq!(type_indexes.len(), 5);
+    assert!(type_indexes["A"] < type_indexes["B"]);
+    assert!(type_indexes["A"] < type_indexes["C"]);
+    assert!(type_indexes["A"] < type_indexes["D"]);
+    assert!(type_indexes["A"] < type_indexes["E"]);
+}
+
+#[test]
+fn sort_definitions3() {
+    let p = Parser::new();
+
+    let mut answ = p
+        .parse(
+            "
+          type Shirt inherits Hoodie {}
+          type Underwear inherits Pants {}
+          type Shoes inherits School {}
+          type School {}
+          type Socks inherits Shoes {}
+          
+          function foo(): Number {
+            return 3;
+          }
+          
+          type Hoodie inherits School {}
+          type Pants inherits Belt {}
+          type Belt {}
+          ",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    semantic_analyzer.analyze_program_ast(&mut answ).unwrap();
+
+    let definitions = answ.definitions;
+
+    let type_indexes = definitions
+        .iter()
+        .enumerate()
+        .filter_map(|(i, def)| match def {
+            Definition::TypeDef(type_def) => Some((type_def.name.id.clone(), i)),
+            Definition::FunctionDef(func_def) => {
+                Some((func_def.function_def.identifier.id.clone(), i))
+            }
+            _ => None,
+        })
+        .collect::<HashMap<_, _>>();
+
+    assert!(type_indexes["School"] < type_indexes["Hoodie"]);
+    assert!(type_indexes["School"] < type_indexes["Shoes"]);
+    assert!(type_indexes["School"] < type_indexes["Socks"]);
+    assert!(type_indexes["School"] < type_indexes["Shirt"]);
+
+    assert!(type_indexes["Hoodie"] < type_indexes["Shirt"]);
+    assert!(type_indexes["Shoes"] < type_indexes["Socks"]);
+
+    assert!(type_indexes["Belt"] < type_indexes["Pants"]);
+    assert!(type_indexes["Pants"] < type_indexes["Underwear"]);
+
+    assert!(
+        type_indexes
+            .iter()
+            .all(|(_, &index)| { index <= type_indexes["foo"] }),
+        "Function `foo` should be the last definition"
+    );
 }
