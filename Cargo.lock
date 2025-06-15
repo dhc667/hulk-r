@@ -117,6 +117,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f"
 
 [[package]]
+name = "error_handler"
+version = "0.1.0"
+
+[[package]]
 name = "fixedbitset"
 version = "0.5.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -127,6 +131,7 @@ name = "generated_parser"
 version = "0.1.0"
 dependencies = [
  "ast",
+ "error_handler",
  "lexer",
  "parser_generator",
 ]
@@ -238,6 +243,7 @@ dependencies = [
 name = "lexer"
 version = "0.1.0"
 dependencies = [
+ "error_handler",
  "lalrpop",
  "lalrpop-util 0.22.1",
 ]
@@ -304,6 +310,7 @@ name = "parser"
 version = "0.1.0"
 dependencies = [
  "ast",
+ "error_handler",
  "lalrpop",
  "lalrpop-util 0.21.0",
 ]
@@ -312,6 +319,7 @@ dependencies = [
 name = "parser_generator"
 version = "0.1.0"
 dependencies = [
+ "error_handler",
  "lexer",
 ]
 
@@ -389,6 +397,7 @@ name = "runner"
 version = "0.1.0"
 dependencies = [
  "ast",
+ "error_handler",
  "generated_parser",
  "generator",
  "semantic_analyzer",
@@ -420,6 +429,7 @@ name = "semantic_analyzer"
 version = "0.1.0"
 dependencies = [
  "ast",
+ "error_handler",
  "generator",
  "parser",
 ]

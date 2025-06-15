@@ -1,5 +1,7 @@
 use std::{collections::HashMap, fmt::Debug, hash::Hash};
 
+use error_handler::error::error::HulkError;
+
 use crate::{
     RegexParser,
     lexer_generator::{
@@ -61,7 +63,7 @@ where
     pub fn split<'a>(
         &self,
         input: &'a str,
-    ) -> Result<Tokens<'a, TokenKind>, (Tokens<'a, TokenKind>, Vec<String>)> {
+    ) -> Result<Tokens<'a, TokenKind>, (Tokens<'a, TokenKind>, Vec<HulkError>)> {
         let mut result = self.engine.scan(input);
 
         result.tokens = result

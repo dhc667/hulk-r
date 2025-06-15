@@ -1,6 +1,7 @@
 use std::vec;
 
 use ast::typing::to_string;
+use error_handler::error_handler::ErrorHandler;
 use parser::parser::Parser;
 
 use crate::semantic_analyzer::SemanticAnalyzer;
@@ -90,11 +91,7 @@ fn type_defintion_and_usage() {
 
 #[test]
 fn inherited_member_resolve() {
-    let p = Parser::new();
-
-    let mut answ = p
-        .parse(
-            "
+    let program = "
             type A {
                 field = 3;
                 method() => { 3; }; 
@@ -109,12 +106,16 @@ fn inherited_member_resolve() {
                 a.field2; 
                 a.method(); 
                 a.method2();
-            };",
-        )
-        .unwrap();
+            };";
 
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     let a_def = semantic_analyzer
         .type_definitions
@@ -140,21 +141,17 @@ fn inherited_member_resolve() {
     assert!(b_def.members.contains_key("method2"));
 
     assert_eq!(
-        result.err().unwrap(),
+        error_handler.get_raw_errors(),
         vec![
-            "Could not find data member field".to_string(),
-            "Cannot access member field2 of type B. Properties are private, even to inherited types.".to_string()
+            "Semantic Error: Could not find data member `field`.",
+            "Semantic Error: Cannot access member `field2` of type `B`. Properties are private, even to inherited types."
         ]
     );
 }
 
 #[test]
 fn inherited_member_resolve_with_ambiguity() {
-    let p = Parser::new();
-
-    let mut answ = p
-        .parse(
-            "
+    let program = "
             type A {
                 field = 3;
                 method() => { 3; }; 
@@ -167,12 +164,16 @@ fn inherited_member_resolve_with_ambiguity() {
             let a = new B() in {
                 a.field; 
                 a.method(); 
-            };",
-        )
-        .unwrap();
+            };";
 
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     let a_def = semantic_analyzer
         .type_definitions
@@ -198,21 +199,17 @@ fn inherited_member_resolve_with_ambiguity() {
     assert!(b_def.members.contains_key("method"));
 
     assert_eq!(
-        result.err().unwrap(),
+        error_handler.get_raw_errors(),
         vec![
-            "Semantic Error: Cannot declare field field in type B, as it overrides parent definition.".to_string(),
-            "Cannot access member field of type B. Properties are private, even to inherited types.".to_string()
+            "Semantic Error: Cannot declare field `field` in type `B`, as it overrides parent definition.",
+            "Semantic Error: Cannot access member `field` of type `B`. Properties are private, even to inherited types."
         ]
     );
 }
 
 #[test]
 fn several_inheritance_member_usage() {
-    let p = Parser::new();
-
-    let mut answ = p
-        .parse(
-            "
+    let program = "
             type A {
                 field = 3;
                 method() => { 3; }; 
@@ -233,12 +230,16 @@ fn several_inheritance_member_usage() {
                 a.method(); 
                 a.method2(); 
                 a.method3();
-            };",
-        )
-        .unwrap();
+            };";
 
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     let a_def = semantic_analyzer
         .type_definitions
@@ -275,22 +276,18 @@ fn several_inheritance_member_usage() {
     assert!(c_def.members.contains_key("method3"));
 
     assert_eq!(
-        result.err().unwrap(),
+        error_handler.get_raw_errors(),
         vec![
-            "Could not find data member field".to_string(),
-            "Could not find data member field2".to_string(),
-            "Cannot access member field3 of type C. Properties are private, even to inherited types.".to_string()
+            "Semantic Error: Could not find data member `field`.",
+            "Semantic Error: Could not find data member `field2`.",
+            "Semantic Error: Cannot access member `field3` of type `C`. Properties are private, even to inherited types."
         ]
     );
 }
 
 #[test]
 fn inherited_member_in_operation() {
-    let p = Parser::new();
-
-    let mut answ = p
-        .parse(
-            "
+    let program = "
             type A {
                 field = 3;
                 method() => { 3; }; 
@@ -302,12 +299,16 @@ fn inherited_member_in_operation() {
             
             let a = new B(), b = a.field + a.method2() in {
                 b;
-            };",
-        )
-        .unwrap();
+            };";
 
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     let a_def = semantic_analyzer
         .type_definitions
@@ -347,8 +348,8 @@ fn inherited_member_in_operation() {
     assert!(b_def.members.contains_key("method2"));
 
     assert_eq!(
-        result.err().unwrap(),
-        vec!["Could not find data member field".to_string()]
+        error_handler.get_raw_errors(),
+        vec!["Semantic Error: Could not find data member `field`.".to_string()]
     );
 }
 
@@ -394,29 +395,26 @@ fn infered_type_usage() {
 
 #[test]
 fn infered_type_usage_with_indefinition() {
-    let p = Parser::new();
-
-    let mut answ = p
-        .parse(
-            "
+    let program = "
             type A {} 
             type B inherits A {} 
             type C inherits A {}
 
             let b = new B(), c = new C(), a = [f, c] in {
                 a;
-            };",
-        )
-        .unwrap();
-
+            };";
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
         .analyze_program_ast(&mut answ)
         .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     assert_eq!(
-        semantic_analyzer.errors,
-        vec!["Variable f is not defined".to_string(),]
+        error_handler.get_raw_errors(),
+        vec!["Semantic Error: Variable `f` is not defined.".to_string(),]
     )
 }
 
@@ -475,11 +473,7 @@ fn accessing_methods_with_arguments_and_ambiguity() {
 
 #[test]
 fn accesing_methods_with_invalid_amount_parameters() {
-    let p = Parser::new();
-
-    let mut answ = p
-        .parse(
-            "
+    let program = "
             type A { 
                 method(x: Number) => { x; }; 
             } 
@@ -490,29 +484,29 @@ fn accesing_methods_with_invalid_amount_parameters() {
             let a = new B() in {
                 a.method(3, 4); 
                 a.method2(4, 5); 
-            };",
-        )
-        .unwrap();
+            };";
 
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     assert_eq!(
-        result.err().unwrap(),
+        error_handler.get_raw_errors(),
         vec![
-            "Function method expects 1 parameters, but 2 were provided".to_string(),
-            "Function method2 expects 1 parameters, but 2 were provided".to_string()
+            "Semantic Error: Function `method` expects 1 parameters, but 2 were provided.",
+            "Semantic Error: Function `method2` expects 1 parameters, but 2 were provided."
         ]
     );
 }
 
 #[test]
 fn accesing_methods_with_invalid_parameter_types() {
-    let p = Parser::new();
-
-    let mut answ = p
-        .parse(
-            "
+    let program = "
             type A { 
                 method(x: Number) => { x; }; 
             }
@@ -523,26 +517,27 @@ fn accesing_methods_with_invalid_parameter_types() {
             let a = new B() in {
                 a.method(true); 
                 a.method2(4.0); 
-            };",
-        )
-        .unwrap();
-
+            };";
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     assert_eq!(
-        result.err().unwrap(),
-        vec!["Function method expects parameter 0 of type Number, but got Boolean".to_string()]
+        error_handler.get_raw_errors(),
+        vec![
+            "Semantic Error: Function `method` expects parameter `0` of type `Number`, but got `Boolean`."
+        ]
     );
 }
 
 #[test]
 fn invalid_method_use() {
-    let p = Parser::new();
-
-    let mut answ = p
-        .parse(
-            "
+    let program = "
             type A { 
                 method(x: Number) => { x; }; 
             } 
@@ -550,42 +545,44 @@ fn invalid_method_use() {
             let a = new A() in {
                 a.method(3); 
                 a.method2(4); 
-            };",
-        )
-        .unwrap();
-
+            };";
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     assert_eq!(
-        result.err().unwrap(),
-        vec!["Could not find method method2".to_string()]
+        error_handler.get_raw_errors(),
+        vec!["Semantic Error: Could not find method `method2`."]
     );
 }
 
 #[test]
 fn type_mismatch_when_using_method() {
-    let p = Parser::new();
-
-    let mut answ = p
-        .parse(
-            "
+    let program = "
             type A { 
                 method(x: Boolean): Boolean => { x; }; 
             } 
             
             let a = new A() in {
                 3 + a.method(true); 
-            };",
-        )
-        .unwrap();
-
+            };";
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     assert_eq!(
-        result.err().unwrap(),
-        vec!["Type mismatch: Cannot apply + to operands of type Number and Boolean".to_string()]
+        error_handler.get_raw_errors(),
+        vec!["Semantic Error: Cannot apply `+` to operands of type `Number` and `Boolean`."]
     );
 }
 
@@ -603,53 +600,50 @@ fn declaration_of_type_with_arguments() {
 
 #[test]
 fn declaration_of_type_with_arguments_and_usage() {
-    let p = Parser::new();
-
-    let mut answ = p
-        .parse(
-            "
+    let program = "
             type A(x: Number) { field = x; } 
             
             let a = new A(3) in {
                 a.field; 
-            };",
-        )
-        .unwrap();
-
+            };";
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
-
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
     assert_eq!(
-        result.err().unwrap(),
+        error_handler.get_raw_errors(),
         vec![
-            "Cannot access member field of type A. Properties are private, even to inherited types."
+            "Semantic Error: Cannot access member `field` of type `A`. Properties are private, even to inherited types."
         ]
     );
 }
 
 #[test]
 fn declaration_of_type_with_arguments_and_usage2() {
-    let p = Parser::new();
-
-    let mut answ = p
-        .parse(
-            "
+    let program = "
             type A(x: Number) { field = x; } 
             
             let a = new A(3) in {
                 true && a.field; 
-            };",
-        )
-        .unwrap();
-
+            };";
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     assert_eq!(
-        result.err().unwrap(),
+        error_handler.get_raw_errors(),
         vec![
-            "Cannot access member field of type A. Properties are private, even to inherited types.".to_string(),
-            "Type mismatch: Cannot apply && to operands of type Boolean and Number".to_string()
+            "Semantic Error: Cannot apply `&&` to operands of type `Boolean` and `Number`.",
+            "Semantic Error: Cannot access member `field` of type `A`. Properties are private, even to inherited types.",
         ]
     );
 }
@@ -680,11 +674,7 @@ fn declaration_of_type_with_reference_to_self() {
 
 #[test]
 fn declaration_of_type_with_reference_to_self_wrong() {
-    let p = Parser::new();
-
-    let mut answ = p
-        .parse(
-            "
+    let program = "
             type A(x: Boolean) { 
                 field = x; 
                 method() => { self.field + 3; }; 
@@ -692,26 +682,25 @@ fn declaration_of_type_with_reference_to_self_wrong() {
             
             let a = new A(true) in {
                 a.method(); 
-            };",
-        )
-        .unwrap();
-
+            };";
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     assert_eq!(
-        result.err().unwrap(),
-        vec!["Type mismatch: Cannot apply + to operands of type Boolean and Number".to_string()]
+        error_handler.get_raw_errors(),
+        vec!["Semantic Error: Cannot apply `+` to operands of type `Boolean` and `Number`."]
     );
 }
 
 #[test]
 fn declaration_of_type_with_self_inherited_access() {
-    let p = Parser::new();
-
-    let mut answ = p
-        .parse(
-            "
+    let program = "
             type A { 
                 field = 3; 
             } 
@@ -721,26 +710,25 @@ fn declaration_of_type_with_self_inherited_access() {
             
             let a = new B() in {
                 a.method();  
-            };",
-        )
-        .unwrap();
-
+            };";
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     assert_eq!(
-        result.err().unwrap(),
-        vec!["Could not find data member field".to_string()]
+        error_handler.get_raw_errors(),
+        vec!["Semantic Error: Could not find data member `field`.".to_string()]
     );
 }
 
 #[test]
 fn declaration_of_type_with_self_inherited_access_wrong() {
-    let p = Parser::new();
-
-    let mut answ = p
-        .parse(
-            "
+    let program = "
             type A { 
                 field = 3; 
             } 
@@ -750,18 +738,21 @@ fn declaration_of_type_with_self_inherited_access_wrong() {
             
             let a = new B() in {
                 a.method() && true;  
-            };",
-        )
-        .unwrap();
-
+            };";
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     assert_eq!(
-        result.err().unwrap(),
+        error_handler.get_raw_errors(),
         vec![
-            "Could not find data member field".to_string(),
-            "Type mismatch: Cannot apply && to operands of type Number and Boolean".to_string()
+            "Semantic Error: Could not find data member `field`.",
+            "Semantic Error: Cannot apply `&&` to operands of type `Number` and `Boolean`."
         ]
     );
 }
@@ -818,11 +809,7 @@ fn super_constructor_call2() {
 
 #[test]
 fn super_constructor_with_wrong_arguments() {
-    let p = Parser::new();
-
-    let mut answ = p
-        .parse(
-            "
+    let program = "
             type A(x: Boolean) { 
                 field = x; 
             } 
@@ -831,26 +818,26 @@ fn super_constructor_with_wrong_arguments() {
             
             let a = new B(2) in {
                 a;  
-            };",
-        )
-        .unwrap();
+            };";
 
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     assert_eq!(
-        result.err().unwrap(),
-        vec!["Type A expects parameter 0 of type Boolean, but got Number".to_string()]
+        error_handler.get_raw_errors(),
+        vec!["Semantic Error: Type `A` expects parameter `0` of type `Boolean`, but got `Number`."]
     );
 }
 
 #[test]
 fn nested_super_constructor_call() {
-    let p = Parser::new();
-
-    let mut answ = p
-        .parse(
-            "
+    let program = "
             type A(x: Number) { 
                 field = x; 
             } 
@@ -865,43 +852,46 @@ fn nested_super_constructor_call() {
                 a.field;  
                 a.field2;
                 a.field3;
-            };",
-        )
-        .unwrap();
+            };";
 
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     assert_eq!(
-        result.err().unwrap(),
+        error_handler.get_raw_errors(),
         vec![
-            "Could not find data member field".to_string(),
-            "Could not find data member field2".to_string(),
-            "Cannot access member field3 of type C. Properties are private, even to inherited types.".to_string()
+            "Semantic Error: Could not find data member `field`.".to_string(),
+            "Semantic Error: Could not find data member `field2`.".to_string(),
+            "Semantic Error: Cannot access member `field3` of type `C`. Properties are private, even to inherited types.".to_string()
         ]
     );
 }
 
 #[test]
 fn dassigning_to_self() {
-    let p = Parser::new();
-
-    let mut answ = p
-        .parse(
-            "
+    let program = "
             type A { 
                 method() => { self := 5; };
             }
-            ",
-        )
-        .unwrap();
-
+            ";
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     assert_eq!(
-        result.err().unwrap(),
-        vec!["Semantic Error: `self` is not a valid assignment target".to_string()]
+        error_handler.get_raw_errors(),
+        vec!["Semantic Error: `self` is not a valid assignment target.".to_string()]
     );
 }
 
@@ -980,11 +970,7 @@ fn mutate_field_in_list() {
 
 #[test]
 fn mutate_field_in_list_incorrect_typing() {
-    let p = Parser::new();
-
-    let mut answ = p
-        .parse(
-            "
+    let program = "
             type A {
                 array: Number  = [1];
                 getArray() => { self.array; };
@@ -992,27 +978,26 @@ fn mutate_field_in_list_incorrect_typing() {
             let a: A* = [new A(), new A()] in {
                 a[0].getArray()[0] + 1;
             };
-        ",
-        )
-        .unwrap();
+        ";
 
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     assert_eq!(
-        result.err().unwrap(),
-        vec!["Type mismatch: Cannot assign Number* to Number".to_string()]
+        error_handler.get_raw_errors(),
+        vec!["Semantic Error: Cannot assign `Number*` to `Number`.".to_string()]
     );
 }
 
 #[test]
 fn operation_on_element_without_indexing() {
-    let p = Parser::new();
-
-    let mut answ = p
-        .parse(
-            "
+    let program = "
             type A {
                 array: Number*  = [1];
                 getArray() => { self.array; };
@@ -1020,170 +1005,163 @@ fn operation_on_element_without_indexing() {
             let a: A* = [new A(), new A()] in {
                 a[0].getArray() + 1;
             };
-        ",
-        )
-        .unwrap();
-
+        ";
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     assert_eq!(
-        result.err().unwrap(),
-        vec!["Type mismatch: Cannot apply + to operands of type Number* and Number".to_string()]
+        error_handler.get_raw_errors(),
+        vec![
+            "Semantic Error: Cannot apply `+` to operands of type `Number*` and `Number`."
+                .to_string()
+        ]
     );
 }
 
 #[test]
 fn unknown_annotation() {
-    let p = Parser::new();
-
-    let mut answ = p
-        .parse(
-            "
+    let program = "
             let a: Boniato = 1 in {a;};
-        ",
-        )
-        .unwrap();
-
+        ";
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     assert_eq!(
-        result.err().unwrap(),
-        vec!["Semantic Error: Type or protocol Boniato is not defined.".to_string()]
+        error_handler.get_raw_errors(),
+        vec!["Semantic Error: Type or protocol `Boniato` is not defined.".to_string()]
     );
 }
 
 #[test]
 fn unknown_annotation_in_method_param() {
-    let p = Parser::new();
-
-    let mut answ = p
-        .parse(
-            "
+    let program = "
             type A {
                 method(x: Number, y: Boniato, z: Malanga): Number {
                     x;
                 }
             }
-        ",
-        )
-        .unwrap();
-
+        ";
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     assert_eq!(
-        result.err().unwrap(),
+        error_handler.get_raw_errors(),
         vec![
-            "Semantic Error: Type or protocol Boniato is not defined.".to_string(),
-            "Semantic Error: Type or protocol Malanga is not defined.".to_string()
+            "Semantic Error: Type or protocol `Boniato` is not defined.".to_string(),
+            "Semantic Error: Type or protocol `Malanga` is not defined.".to_string()
         ]
     );
 }
 
 #[test]
 fn unknown_annotation_in_method_return() {
-    let p = Parser::new();
-
-    let mut answ = p
-        .parse(
-            "
+    let program = "
             type A {
                 method(x: Number, y: Number, z: Number): Boniato {
                     x;
                 }
             }
-        ",
-        )
-        .unwrap();
-
+        ";
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     assert_eq!(
-        result.err().unwrap(),
-        vec!["Semantic Error: Type or protocol Boniato is not defined.".to_string(),]
+        error_handler.get_raw_errors(),
+        vec!["Semantic Error: Type or protocol `Boniato` is not defined.".to_string(),]
     );
 }
 
 #[test]
 fn unknown_annotation_in_type_arg() {
-    let p = Parser::new();
-
-    let mut answ = p
-        .parse(
-            "
+    let program = "
             type A(x: Boniato, y: Number){}
-        ",
-        )
-        .unwrap();
-
+        ";
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     assert_eq!(
-        result.err().unwrap(),
-        vec!["Semantic Error: Type or protocol Boniato is not defined.".to_string(),]
+        error_handler.get_raw_errors(),
+        vec!["Semantic Error: Type or protocol `Boniato` is not defined.".to_string(),]
     );
 }
 
 #[test]
 fn reassign_nonexisting_property() {
-    let p = Parser::new();
-
-    let mut answ = p
-        .parse(
-            "
+    let program = "
             type A {
                 x=3;
             }
             let a = new A() in {
                 a.y := 1;
             };
-        ",
-        )
-        .unwrap();
-
+        ";
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     assert_eq!(
-        result.err().unwrap(),
-        vec!["Could not find data member y".to_string()]
+        error_handler.get_raw_errors(),
+        vec!["Semantic Error: Could not find data member `y`."]
     );
 }
 
 #[test]
 fn use_field_without_self() {
-    let p = Parser::new();
-
-    let mut answ = p
-        .parse(
-            "
+    let program = "
             type A {
                 x=3;
                 method(): Number {
                     x;
                 }
             }
-        ",
-        )
-        .unwrap();
-
+        ";
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     assert_eq!(
-        result.err().unwrap(),
-        vec!["Variable x is not defined".to_string()]
+        error_handler.get_raw_errors(),
+        vec!["Semantic Error: Variable `x` is not defined.".to_string()]
     );
 }
 
@@ -1213,11 +1191,7 @@ fn field_with_same_name_as_param() {
 
 #[test]
 fn field_override_errors() {
-    let p = Parser::new();
-
-    let mut answ = p
-        .parse(
-            "
+    let program = "
             type A {
                 x = 1;
                 method():Number => 1;
@@ -1226,76 +1200,75 @@ fn field_override_errors() {
                 x = 2;
                 method():Number => 2;
             }
-            ",
-        )
-        .unwrap();
-
+            ";
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     assert_eq!(
-        result.err().unwrap(),
+        error_handler.get_raw_errors(),
         vec![
-            "Semantic Error: Cannot declare field x in type B, as it overrides parent definition."
-                .to_string(),
+            "Semantic Error: Cannot declare field `x` in type `B`, as it overrides parent definition."
         ]
     );
 }
 
 #[test]
 fn method_incorrect_override() {
-    let p = Parser::new();
-
-    let mut answ = p
-        .parse(
-            "
+    let program = "
             type A {
                 foo():Number => 1;
             }
             type B inherits A {
                 foo():Boolean => true;
             }
-            ",
-        )
-        .unwrap();
-
+            ";
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     assert_eq!(
-        result.err().unwrap(),
+        error_handler.get_raw_errors(),
         vec![
-            "Semantic Error: Method foo in type B, does not properly overrides parent definition."
-                .to_string(),
+            "Semantic Error: Method `foo` in type `B`, does not properly overrides parent definition."
         ]
     );
 }
 
 #[test]
 fn method_incorrect_override_diferent_amount() {
-    let p = Parser::new();
-
-    let mut answ = p
-        .parse(
-            "
+    let program = "
             type A {
                 foo():Number => 1;
             }
             type B inherits A {
                 foo(x: Number):Number => x;
             }
-            ",
-        )
-        .unwrap();
+            ";
 
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     assert_eq!(
-        result.err().unwrap(),
+        error_handler.get_raw_errors(),
         vec![
-            "Semantic Error: Method foo in type B, does not properly overrides parent definition."
-                .to_string(),
+            "Semantic Error: Method `foo` in type `B`, does not properly overrides parent definition."
         ]
     );
 }
@@ -1371,58 +1344,57 @@ fn method_override_variant_3() {
 
 #[test]
 fn field_override_should_fail() {
-    let p = Parser::new();
-    let mut answ = p
-        .parse(
-            r#"
+    let program = r#"
         type A { x = 1; }
         type B inherits A { x = 2; }
-    "#,
-        )
-        .unwrap();
+    "#;
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
+
     assert_eq!(
-        result.err().unwrap(),
+        error_handler.get_raw_errors(),
         vec![
-            "Semantic Error: Cannot declare field x in type B, as it overrides parent definition."
-                .to_string()
+            "Semantic Error: Cannot declare field `x` in type `B`, as it overrides parent definition."
         ]
     );
 }
 
 #[test]
 fn method_override_wrong_arg_count() {
-    let p = Parser::new();
-    let mut answ = p
-        .parse(
-            "
+    let program = "
         type A { 
             foo(x: Number): Number => x; 
         }
         type B inherits A { 
             foo(x: Number, y: Number): Number => x; 
         }
-    ",
-        )
-        .unwrap();
+    ";
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
+
     assert_eq!(
-        result.err().unwrap(),
+        error_handler.get_raw_errors(),
         vec![
-            "Semantic Error: Method foo in type B, does not properly overrides parent definition."
-                .to_string()
+            "Semantic Error: Method `foo` in type `B`, does not properly overrides parent definition."
         ]
     );
 }
 
 #[test]
 fn method_override_wrong_return_covariance() {
-    let p = Parser::new();
-    let mut answ = p
-        .parse(
-            r#"
+    let program = r#"
         type A { 
             foo(x: Number): Object => x; 
         }
@@ -1432,41 +1404,48 @@ fn method_override_wrong_return_covariance() {
         type C inherits B { 
             foo(x: Number): Boolean => true; 
         }
-    "#,
-        )
-        .unwrap();
+    "#;
+
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
+
     assert_eq!(
-        result.err().unwrap(),
+        error_handler.get_raw_errors(),
         vec![
-            "Semantic Error: Method foo in type C, does not properly overrides parent definition."
-                .to_string()
+            "Semantic Error: Method `foo` in type `C`, does not properly overrides parent definition."
         ]
     );
 }
 
 #[test]
 fn complicated_inheritance_chain() {
-    let p = Parser::new();
-    let mut answ = p
-        .parse(
-            "
+    let program = "
         type A { foo(x: Object): Object => x; }
         type B inherits A { foo(x: Number): Object => x; }
         type C inherits B { foo(x: Number): Number => x; }
         type D inherits C { foo(x: Number): Number => x; }
         type E inherits D { foo(x: Number): Number => x; }
-    ",
-        )
-        .unwrap();
+    ";
+
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     assert_eq!(
-        result.err().unwrap(),
+        error_handler.get_raw_errors(),
         vec![
-            "Semantic Error: Method foo in type B, does not properly overrides parent definition."
+            "Semantic Error: Method `foo` in type `B`, does not properly overrides parent definition."
         ]
     )
 }
@@ -1490,11 +1469,7 @@ fn complicated_inheritance_cycle_should_fail() {
 
 #[test]
 fn override_from_far_ancestor() {
-    let p = Parser::new();
-
-    let mut answ = p
-        .parse(
-            "
+    let program = "
             type A {
                 foo(x: Number):Object => x;
                 x = 1;
@@ -1504,17 +1479,21 @@ fn override_from_far_ancestor() {
                 foo(x: Object):Number => 3;
                 x = 2;
             }
-            ",
-        )
-        .unwrap();
+            ";
 
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     assert_eq!(
-        result.err().unwrap(),
+        error_handler.get_raw_errors(),
         vec![
-            "Semantic Error: Cannot declare field x in type B, as it overrides parent definition."
+            "Semantic Error: Cannot declare field `x` in type `B`, as it overrides parent definition."
                 .to_string(),
         ]
     );

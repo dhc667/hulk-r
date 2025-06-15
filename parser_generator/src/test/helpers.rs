@@ -1,5 +1,6 @@
 use std::{fmt::Debug, hash::Hash};
 
+use error_handler::error::error::HulkError;
 use lexer::lexer_generator::{lexer::Lexer, lexer_chunk::LexerChunk, rule::Rule};
 
 use crate::{
@@ -35,7 +36,7 @@ impl<T: Hash + Eq + Copy + Debug> LexerWrapper<T> {
 }
 
 impl<T: Hash + Eq + Copy + Debug> Lex<T> for LexerWrapper<T> {
-    fn split(&self, input: &str) -> Result<Vec<Token<T>>, Vec<String>> {
+    fn split(&self, input: &str) -> Result<Vec<Token<T>>, Vec<HulkError>> {
         let answ = self.lexer.split(input);
         let answ = answ.map(|chks| chks.iter().map(chunk_to_token).collect());
         let answ = answ.map_err(|(_, errs)| errs);

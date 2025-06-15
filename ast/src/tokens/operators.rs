@@ -1,6 +1,8 @@
 use std::fmt::Display;
 use std::fmt::Formatter;
 
+use crate::tokens::token_position::TokenPositionTrait;
+
 use super::*;
 
 #[derive(Debug)]
@@ -29,6 +31,31 @@ pub enum BinaryOperator {
     ColonEqual(TokenPosition),
 }
 
+impl TokenPositionTrait for BinaryOperator {
+    fn position(&self) -> usize {
+        match self {
+            BinaryOperator::Plus(pos) => pos.start,
+            BinaryOperator::Minus(pos) => pos.start,
+            BinaryOperator::Divide(pos) => pos.start,
+            BinaryOperator::FloorDivide(pos) => pos.start,
+            BinaryOperator::Times(pos) => pos.start,
+            BinaryOperator::Modulo(pos) => pos.start,
+            BinaryOperator::At(pos) => pos.start,
+            BinaryOperator::AtAt(pos) => pos.start,
+            BinaryOperator::EqualEqual(pos) => pos.start,
+            BinaryOperator::Less(pos) => pos.start,
+            BinaryOperator::LessEqual(pos) => pos.start,
+            BinaryOperator::Greater(pos) => pos.start,
+            BinaryOperator::GreaterEqual(pos) => pos.start,
+            BinaryOperator::NotEqual(pos) => pos.start,
+            BinaryOperator::Or(pos) => pos.start,
+            BinaryOperator::And(pos) => pos.start,
+            BinaryOperator::Equal(pos) => pos.start,
+            BinaryOperator::ColonEqual(pos) => pos.start,
+        }
+    }
+}
+
 impl Display for BinaryOperator {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -54,12 +81,21 @@ impl Display for BinaryOperator {
     }
 }
 
-#[derive(Clone, Copy)]
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum UnaryOperator {
     Plus(TokenPosition),
     Minus(TokenPosition),
     Not(TokenPosition),
+}
+
+impl TokenPositionTrait for UnaryOperator {
+    fn position(&self) -> usize {
+        match self {
+            UnaryOperator::Plus(pos) => pos.start,
+            UnaryOperator::Minus(pos) => pos.start,
+            UnaryOperator::Not(pos) => pos.start,
+        }
+    }
 }
 
 impl Display for UnaryOperator {
@@ -80,6 +116,19 @@ pub enum GroupingOperator {
     CloseBrace(TokenPosition),
     OpenBracket(TokenPosition),
     CloseBracket(TokenPosition),
+}
+
+impl TokenPositionTrait for GroupingOperator {
+    fn position(&self) -> usize {
+        match self {
+            GroupingOperator::OpenParen(pos) => pos.start,
+            GroupingOperator::CloseParen(pos) => pos.start,
+            GroupingOperator::OpenBrace(pos) => pos.start,
+            GroupingOperator::CloseBrace(pos) => pos.start,
+            GroupingOperator::OpenBracket(pos) => pos.start,
+            GroupingOperator::CloseBracket(pos) => pos.start,
+        }
+    }
 }
 
 impl Display for GroupingOperator {
@@ -106,6 +155,12 @@ impl ArrowOperator {
     }
 }
 
+impl TokenPositionTrait for ArrowOperator {
+    fn position(&self) -> usize {
+        self.position.start
+    }
+}
+
 #[derive(Debug)]
 pub struct DotOperator {
     pub position: TokenPosition,
@@ -120,5 +175,11 @@ impl DotOperator {
 impl Display for DotOperator {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, ".")
+    }
+}
+
+impl TokenPositionTrait for DotOperator {
+    fn position(&self) -> usize {
+        self.position.start
     }
 }

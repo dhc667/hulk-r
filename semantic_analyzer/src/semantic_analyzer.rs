@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
 use ast::{VisitableDefinition, VisitableExpression, typing::TypeAnnotation};
+use error_handler::error::error::HulkError;
+use error_handler::error::semantic::inheritance::InheritanceCycle;
 use generator::context::Context;
 
 use crate::def_info::{FuncInfo, TypeInfo, VarInfo};
@@ -15,7 +17,7 @@ pub struct SemanticAnalyzer {
     pub type_hierarchy: HashMap<String, TypeAnnotation>,
     pub func_definitions: Context<FuncInfo>,
     pub var_definitions: Context<VarInfo>,
-    pub errors: Vec<String>,
+    pub errors: Vec<HulkError>,
 }
 
 impl SemanticAnalyzer {
@@ -29,7 +31,10 @@ impl SemanticAnalyzer {
         }
     }
 
-    pub fn analyze_program_ast(&mut self, program: &mut ast::Program) -> Result<(), Vec<String>> {
+    pub fn analyze_program_ast(
+        &mut self,
+        program: &mut ast::Program,
+    ) -> Result<(), Vec<HulkError>> {
         // Define types in the global context
         let mut type_definer_visitor = GlobalDefinerVisitor::new(
             &mut self.type_definitions,
@@ -56,10 +61,7 @@ impl SemanticAnalyzer {
 
         // Check for cycles in the inheritance graph
         if let Some(cycle) = get_cycle(&inheritance_visitor.type_hierarchy) {
-            self.errors.push(format!(
-                "Inheritance cycle detected: {:?}",
-                cycle.join(" -> ")
-            ));
+            self.errors.push(InheritanceCycle::new(cycle, 0).into());
             return Err(self.errors.clone());
         }
 

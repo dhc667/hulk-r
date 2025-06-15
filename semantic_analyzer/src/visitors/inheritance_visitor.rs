@@ -4,6 +4,10 @@ use ast::{
     ConstantDef, DefinitionVisitor, GlobalFunctionDef, ProtocolDef, TypeDef, VisitableDefinition,
     typing::{BuiltInType, Type, TypeAnnotation},
 };
+use error_handler::error::{
+    error::HulkError,
+    semantic::{definition::UndefinedType, inheritance::InheritanceInvalidParent},
+};
 use generator::context::Context;
 
 use crate::def_info::TypeInfo;
@@ -20,14 +24,14 @@ use crate::def_info::TypeInfo;
 pub struct InheritanceVisitor<'a> {
     pub type_hierarchy: &'a mut HashMap<String, TypeAnnotation>,
     pub type_definitions: &'a mut Context<TypeInfo>,
-    pub errors: &'a mut Vec<String>,
+    pub errors: &'a mut Vec<HulkError>,
 }
 
 impl<'a> InheritanceVisitor<'a> {
     pub fn new(
         type_hierarchy: &'a mut HashMap<String, TypeAnnotation>,
         type_definitions: &'a mut Context<TypeInfo>,
-        errors: &'a mut Vec<String>,
+        errors: &'a mut Vec<HulkError>,
     ) -> Self {
         let instance = InheritanceVisitor {
             type_hierarchy,
@@ -71,10 +75,13 @@ impl<'a> DefinitionVisitor<()> for InheritanceVisitor<'a> {
                 match self.type_definitions.get_value(&parent_name) {
                     Some(parent_type) => match parent_type {
                         TypeInfo::BuiltIn(_) => {
-                            self.errors.push(format!(
-                                "Type {} is a built-in type and cannot be inherited from",
-                                parent_name
-                            ));
+                            self.errors.push(
+                                InheritanceInvalidParent::new(
+                                    parent_name.clone(),
+                                    node.name.position.start.clone(),
+                                )
+                                .into(),
+                            );
                         }
                         TypeInfo::Defined(parent_def) => {
                             self.type_hierarchy
@@ -82,8 +89,13 @@ impl<'a> DefinitionVisitor<()> for InheritanceVisitor<'a> {
                         }
                     },
                     None => {
-                        self.errors
-                            .push(format!("Type {} is not defined", parent_name));
+                        self.errors.push(
+                            UndefinedType::new(
+                                parent_name.clone(),
+                                node.name.position.start.clone(),
+                            )
+                            .into(),
+                        );
                     }
                 }
             }

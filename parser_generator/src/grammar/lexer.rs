@@ -1,9 +1,10 @@
+use error_handler::error::error::HulkError;
 use std::{fmt::Debug, hash::Hash};
 
 use crate::Token;
 
 pub trait Lex<T: Hash + Debug + Eq + Copy> {
-    fn split(&self, input: &str) -> Result<Vec<Token<T>>, Vec<String>>;
+    fn split(&self, input: &str) -> Result<Vec<Token<T>>, Vec<HulkError>>;
 }
 
 pub trait DefineLexer<T: Hash + Debug + Eq + Copy, Lexer: Lex<T>> {

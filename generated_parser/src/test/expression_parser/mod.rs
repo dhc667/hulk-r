@@ -1,4 +1,5 @@
 use ast::Expression;
+use error_handler::error::error::HulkError;
 
 use crate::ProgramParser;
 
@@ -38,7 +39,7 @@ impl ExpressionParser {
         }
     }
 
-    fn parse(&self, input: &str) -> Result<Expression, Vec<String>> {
+    fn parse(&self, input: &str) -> Result<Expression, Vec<HulkError>> {
         self.parser
             .parse(&(input.to_string() + ";"))
             .map(|mut program| program.expressions.pop().unwrap())

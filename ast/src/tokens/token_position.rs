@@ -9,3 +9,13 @@ impl TokenPosition {
         TokenPosition { start, end }
     }
 }
+
+pub trait TokenPositionTrait {
+    fn position(&self) -> usize;
+}
+
+impl TokenPositionTrait for TokenPosition {
+    fn position(&self) -> usize {
+        self.start
+    }
+}

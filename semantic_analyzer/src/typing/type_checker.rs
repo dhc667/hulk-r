@@ -2,7 +2,16 @@ use std::collections::HashMap;
 
 use ast::{
     BinaryOperator, UnaryOperator,
+    token_position::TokenPositionTrait,
     typing::{BuiltInType, Type, TypeAnnotation, to_string},
+};
+use error_handler::error::{
+    error::HulkError,
+    semantic::{
+        function::{FuncParamInvalidType, FuncParamsInvalidAmount},
+        operator::{BinOpError, UnOpError},
+        type_constructor::{TypeParamInvalidType, TypeParamsInvalidAmount},
+    },
 };
 
 use super::{generics::GenericType, get_binary_op_functor_type, get_unary_op_functor_type};
@@ -164,7 +173,7 @@ impl TypeChecker {
         op: &BinaryOperator,
         left: &TypeAnnotation,
         right: &TypeAnnotation,
-        errors: &mut Vec<String>,
+        errors: &mut Vec<HulkError>,
     ) -> TypeAnnotation {
         let accepted_types = vec![
             Some(Type::BuiltIn(BuiltInType::String)),
@@ -180,12 +189,15 @@ impl TypeChecker {
             .any(|t| self.conforms(right, &t.clone()));
 
         if !left_ok || !right_ok {
-            errors.push(format!(
-                "Type mismatch: Cannot apply {} to operands of type {} and {}",
-                op,
-                to_string(left),
-                to_string(right)
-            ));
+            errors.push(
+                BinOpError::new(
+                    op.to_string(),
+                    to_string(left),
+                    to_string(right),
+                    op.position(),
+                )
+                .into(),
+            );
         }
         Some(Type::BuiltIn(BuiltInType::String))
     }
@@ -207,7 +219,7 @@ impl TypeChecker {
         op: &BinaryOperator,
         left: &TypeAnnotation,
         right: &TypeAnnotation,
-        errors: &mut Vec<String>,
+        errors: &mut Vec<HulkError>,
     ) -> TypeAnnotation {
         // special case for concatenation operators, we should do something more general here
         if matches!(op, BinaryOperator::At(_) | BinaryOperator::AtAt(_)) {
@@ -219,12 +231,15 @@ impl TypeChecker {
         if !self.conforms(&left, &functor.parameter_types[0])
             || !self.conforms(&right, &functor.parameter_types[1])
         {
-            errors.push(format!(
-                "Type mismatch: Cannot apply {} to operands of type {} and {}",
-                op,
-                to_string(&left),
-                to_string(&right)
-            ));
+            errors.push(
+                BinOpError::new(
+                    op.to_string(),
+                    to_string(left),
+                    to_string(right),
+                    op.position(),
+                )
+                .into(),
+            );
         }
         *functor.return_type.clone()
     }
@@ -244,16 +259,12 @@ impl TypeChecker {
         &self,
         op: &UnaryOperator,
         operand: &TypeAnnotation,
-        errors: &mut Vec<String>,
+        errors: &mut Vec<HulkError>,
     ) -> TypeAnnotation {
         let functor = get_unary_op_functor_type(&op);
 
         if !self.conforms(&operand, &functor.parameter_types[0]) {
-            errors.push(format!(
-                "Type mismatch: Cannot apply {} to operand of type {}",
-                op,
-                to_string(&operand)
-            ));
+            errors.push(UnOpError::new(op.to_string(), to_string(operand), op.position()).into());
         }
         *functor.return_type.clone()
     }
@@ -274,16 +285,19 @@ impl TypeChecker {
         &self,
         fn_info: &FuncInfo,
         parameters: &Vec<TypeAnnotation>,
-    ) -> Result<(), Vec<String>> {
+    ) -> Result<(), Vec<HulkError>> {
         let mut errors = Vec::new();
         let functor = fn_info.get_functor_type();
         if functor.parameter_types.len() != parameters.len() {
-            errors.push(format!(
-                "Function {} expects {} parameters, but {} were provided",
-                fn_info.name,
-                functor.parameter_types.len(),
-                parameters.len()
-            ));
+            errors.push(
+                FuncParamsInvalidAmount::new(
+                    fn_info.name.id.clone(),
+                    functor.parameter_types.len(),
+                    parameters.len(),
+                    fn_info.name.position.start,
+                )
+                .into(),
+            );
             return Err(errors);
         }
         for (i, (expected, provided)) in functor
@@ -292,14 +306,17 @@ impl TypeChecker {
             .zip(parameters.iter())
             .enumerate()
         {
-            if !self.conforms(expected, provided) {
-                errors.push(format!(
-                    "Function {} expects parameter {} of type {}, but got {}",
-                    fn_info.name,
-                    i,
-                    to_string(expected),
-                    to_string(provided)
-                ));
+            if !self.conforms(provided, expected) {
+                errors.push(
+                    FuncParamInvalidType::new(
+                        fn_info.name.id.clone(),
+                        i,
+                        to_string(expected),
+                        to_string(provided),
+                        fn_info.name.position.start,
+                    )
+                    .into(),
+                );
             }
         }
         if errors.is_empty() {
@@ -325,15 +342,18 @@ impl TypeChecker {
         &self,
         type_definition: &DefinedTypeInfo,
         parameters: &Vec<TypeAnnotation>,
-    ) -> Result<(), Vec<String>> {
+    ) -> Result<(), Vec<HulkError>> {
         let mut errors = Vec::new();
         if type_definition.arguments_types.len() != parameters.len() {
-            errors.push(format!(
-                "Type {} has {} parameters, but {} were provided",
-                type_definition.name.id,
-                type_definition.arguments_types.len(),
-                parameters.len()
-            ));
+            errors.push(
+                TypeParamsInvalidAmount::new(
+                    type_definition.name.id.clone(),
+                    type_definition.arguments_types.len(),
+                    parameters.len(),
+                    type_definition.name.position.start,
+                )
+                .into(),
+            );
             return Err(errors);
         }
         for (i, (expected, provided)) in type_definition
@@ -343,13 +363,16 @@ impl TypeChecker {
             .enumerate()
         {
             if !self.conforms(expected, provided) {
-                errors.push(format!(
-                    "Type {} expects parameter {} of type {}, but got {}",
-                    type_definition.name.id,
-                    i,
-                    to_string(expected),
-                    to_string(provided)
-                ));
+                errors.push(
+                    TypeParamInvalidType::new(
+                        type_definition.name.id.clone(),
+                        i,
+                        to_string(expected),
+                        to_string(provided),
+                        type_definition.name.position.start,
+                    )
+                    .into(),
+                );
             }
         }
         if errors.is_empty() {

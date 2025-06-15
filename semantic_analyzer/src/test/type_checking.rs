@@ -1,4 +1,5 @@
 use ast::typing::{BuiltInType, Type, to_string};
+use error_handler::error_handler::ErrorHandler;
 use parser::parser::Parser;
 
 use crate::semantic_analyzer::SemanticAnalyzer;
@@ -36,63 +37,70 @@ pub fn simple_typing() {
 
 #[test]
 pub fn binary_op_error() {
+    let program = "let x = 1 in { x + true ;};";
+    let mut error_handler = ErrorHandler::new(program);
     let p = Parser::new();
-    let mut answ = p.parse("let x = 1 in { x + true ;};").unwrap();
-
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
         .analyze_program_ast(&mut answ)
         .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     assert_eq!(
-        semantic_analyzer.errors,
-        vec!["Type mismatch: Cannot apply + to operands of type Number and Boolean".to_string()]
+        error_handler.get_raw_errors(),
+        vec!["Semantic Error: Cannot apply `+` to operands of type `Number` and `Boolean`."]
     );
 }
 
 #[test]
 pub fn unary_op_error() {
+    let program = "let x = true in { -x ;};";
+    let mut error_handler = ErrorHandler::new(program);
     let p = Parser::new();
-    let mut answ = p.parse("let x = true in { -x ;};").unwrap();
-
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
         .analyze_program_ast(&mut answ)
         .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     assert_eq!(
-        semantic_analyzer.errors,
-        vec!["Type mismatch: Cannot apply - to operand of type Boolean".to_string()]
+        error_handler.get_raw_errors(),
+        vec!["Semantic Error: Cannot apply `-` to operand of type `Boolean`.".to_string()]
     );
 }
 
 #[test]
 pub fn dassing_error() {
-    let p = Parser::new();
-    let mut answ = p.parse("let x = true in { x:=3 ;};").unwrap();
+    let program = "let x = true in { x:=3 ;};";
 
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
         .analyze_program_ast(&mut answ)
         .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     assert_eq!(
-        semantic_analyzer.errors,
-        vec!["Type mismatch: x is Boolean but is being reassigned with Number".to_string()]
+        error_handler.get_raw_errors(),
+        vec!["Semantic Error: `x` has type `Boolean` but is being reassigned with type `Number`."]
     );
 }
 
 #[test]
 pub fn simple_inference_test() {
+    let program = "let x = if (true) true else 3 in { x + 1 ;};";
+    let mut error_handler = ErrorHandler::new(program);
     let p = Parser::new();
-    let mut answ = p
-        .parse("let x = if (true) true else 3 in { x + 1 ;};")
-        .unwrap();
-
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
         .analyze_program_ast(&mut answ)
         .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     let dec = &answ.expressions[0]
         .as_let_in()
@@ -101,8 +109,8 @@ pub fn simple_inference_test() {
         .identifier;
 
     assert_eq!(
-        semantic_analyzer.errors,
-        vec!["Type mismatch: Cannot apply + to operands of type Object and Number".to_string()]
+        error_handler.get_raw_errors(),
+        vec!["Semantic Error: Cannot apply `+` to operands of type `Object` and `Number`."]
     );
     assert_eq!(dec.info.ty, Some(Type::BuiltIn(BuiltInType::Object)));
 }
@@ -318,47 +326,43 @@ pub fn list_indexing_typing() {
 
 #[test]
 pub fn list_indexing_typing_error() {
-    let p = Parser::new();
-    let mut answ = p
-        .parse(
-            "
+    let program = "
         let result = let x = [1, 2, 3] in x[true] in {
             result;
-        };",
-        )
-        .unwrap();
-
+        };";
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
         .analyze_program_ast(&mut answ)
         .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     assert_eq!(
-        semantic_analyzer.errors,
-        vec!["Type mismatch: Cannot use index of type Boolean to access iterable".to_string()]
+        error_handler.get_raw_errors(),
+        vec!["Semantic Error: Cannot use index of type `Boolean` to access iterable."]
     );
 }
 
 #[test]
 pub fn list_indexing_typing_error_2() {
-    let p = Parser::new();
-    let mut answ = p
-        .parse(
-            "
+    let program = "
         let result = let x = [1, 2, 3] in let y = true in x[true] in {
             result;
-        };",
-        )
-        .unwrap();
-
+        };";
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
         .analyze_program_ast(&mut answ)
         .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     assert_eq!(
-        semantic_analyzer.errors,
-        vec!["Type mismatch: Cannot use index of type Boolean to access iterable".to_string()]
+        error_handler.get_raw_errors(),
+        vec!["Semantic Error: Cannot use index of type `Boolean` to access iterable."]
     );
 }
 
@@ -386,23 +390,23 @@ pub fn call_var_with_method_name() {
 #[test]
 #[ignore = "for is disabled"]
 pub fn iterate_non_iterable() {
-    let p = Parser::new();
-    let mut answ = p
-        .parse(
-            "
+    let program = "
             for(a in 3){
                 a;
             };
-        ",
-        )
-        .unwrap();
-
+        ";
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     assert_eq!(
-        result.err().unwrap(),
-        vec!["Semantic Error: Cannot iterate over type Number".to_string()]
+        error_handler.get_raw_errors(),
+        vec!["Semantic Error: Cannot iterate over type `Number`.".to_string()]
     )
 }
 
@@ -470,77 +474,78 @@ pub fn annotate_function_accessed_object() {
 
 #[test]
 pub fn unknown_annotation_in_constructor_called() {
-    let p = Parser::new();
-    let mut answ = p
-        .parse(
-            "
+    let program = "
             type Point(a: Number, b: Bool){x=a;y=b;}
             let a = new Point(4, false) in 
                 let x = if(a.y) 1 else 2 in 
                     x;
-        ",
-        )
-        .unwrap();
-
+        ";
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     assert_eq!(
-        result.err().unwrap(),
+        error_handler.get_raw_errors(),
         vec![
-            "Semantic Error: Type or protocol Bool is not defined.",
-            "Cannot access member y of type Point. Properties are private, even to inherited types."
+            "Semantic Error: Type or protocol `Bool` is not defined.",
+            "Semantic Error: Cannot access member `y` of type `Point`. Properties are private, even to inherited types."
         ]
     )
 }
 
 #[test]
 pub fn unknown_annotation_in_func_called() {
-    let p = Parser::new();
-    let mut answ = p
-        .parse(
-            "
+    let program = "
             function foo(a: Number, b: Bool): Number => a;
             foo(1, false) + true;
-        ",
-        )
-        .unwrap();
+        ";
 
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     assert_eq!(
-        result.err().unwrap(),
+        error_handler.get_raw_errors(),
         vec![
-            "Semantic Error: Type or protocol Bool is not defined.",
-            "Type mismatch: Cannot apply + to operands of type Number and Boolean"
+            "Semantic Error: Type or protocol `Bool` is not defined.",
+            "Semantic Error: Cannot apply `+` to operands of type `Number` and `Boolean`."
         ]
     )
 }
 
 #[test]
 pub fn unknown_annotation_in_method_called() {
-    let p = Parser::new();
-    let mut answ = p
-        .parse(
-            "
+    let program = "
             type A{
                 method(x: Bool): Number => 3;
             }
             let a = new A() in 
                 a.method(true) + false;
-        ",
-        )
-        .unwrap();
-
+        ";
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     assert_eq!(
-        result.err().unwrap(),
+        error_handler.get_raw_errors(),
         vec![
-            "Semantic Error: Type or protocol Bool is not defined.",
-            "Type mismatch: Cannot apply + to operands of type Number and Boolean"
+            "Semantic Error: Type or protocol `Bool` is not defined.",
+            "Semantic Error: Cannot apply `+` to operands of type `Number` and `Boolean`."
         ]
     )
 }
@@ -647,26 +652,26 @@ fn concat_checks5() {
 
 #[test]
 fn concat_checks6() {
-    let p = Parser::new();
-    let mut answ = p
-        .parse(
-            r#"
+    let program = r#"
             let x = [1, 2, 3], y = [4, 5] in {
                 x @ y;
                 x @@ y;
             };
-        "#,
-        )
-        .unwrap();
-
+        "#;
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     assert_eq!(
-        result.err().unwrap(),
+        error_handler.get_raw_errors(),
         vec![
-            "Type mismatch: Cannot apply @ to operands of type Number* and Number*",
-            "Type mismatch: Cannot apply @@ to operands of type Number* and Number*"
+            "Semantic Error: Cannot apply `@` to operands of type `Number*` and `Number*`.",
+            "Semantic Error: Cannot apply `@@` to operands of type `Number*` and `Number*`."
         ]
     );
 }

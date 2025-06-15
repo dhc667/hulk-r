@@ -1,5 +1,7 @@
 use std::fmt::Display;
 
+use crate::token_position::TokenPositionTrait;
+
 use super::*;
 
 #[derive(Clone, Copy, Debug)]
@@ -40,6 +42,28 @@ impl Display for Keyword {
             Keyword::Return(_) => write!(f, "return"),
             Keyword::For(_) => write!(f, "for"),
             Keyword::New(_) => write!(f, "new"),
+        }
+    }
+}
+
+impl TokenPositionTrait for Keyword {
+    fn position(&self) -> usize {
+        match self {
+            Keyword::Let(pos)
+            | Keyword::If(pos)
+            | Keyword::Else(pos)
+            | Keyword::While(pos)
+            | Keyword::In(pos)
+            | Keyword::Elif(pos)
+            | Keyword::Function(pos)
+            | Keyword::Type(pos)
+            | Keyword::Constant(pos)
+            | Keyword::Protocol(pos)
+            | Keyword::Inherits(pos)
+            | Keyword::Extends(pos)
+            | Keyword::Return(pos)
+            | Keyword::For(pos)
+            | Keyword::New(pos) => pos.position(),
         }
     }
 }

@@ -2,6 +2,12 @@ use ast::{
     Identifier,
     typing::{TypeAnnotation, to_string},
 };
+use error_handler::error::semantic::{
+    definition::UndefinedVariable,
+    destructive_assignment::{
+        InvalidAssigmentTarget, InvalidReassignmentType, ListInvalidReassignmentType,
+    },
+};
 
 use super::SemanticVisitor;
 
@@ -26,27 +32,24 @@ impl<'a> SemanticVisitor<'a> {
         let def_value = self.var_definitions.get_value(&variable_id);
         match def_value {
             None => {
-                let message = format!("Variable {} is not defined", variable_id);
-                self.errors.push(message);
+                let error = UndefinedVariable::new(variable_id.clone(), variable.position.start);
+                self.errors.push(error.into());
                 expr_type.clone()
             }
             Some(def) if def.is_constant => {
-                let message = format!(
-                    "Semantic Error: `{}` is not a valid assignment target",
-                    variable_id
-                );
+                let error = InvalidAssigmentTarget::new(variable_id, variable.position.start);
 
-                self.errors.push(message);
+                self.errors.push(error.into());
                 assignee_type.clone()
             }
             Some(def) if !self.type_checker.conforms(&expr_type, &def.ty) => {
-                let message = format!(
-                    "Type mismatch: {} is {} but is being reassigned with {}",
+                let error = InvalidReassignmentType::new(
                     variable_id,
                     to_string(&def.ty),
-                    to_string(&expr_type)
+                    to_string(&expr_type),
+                    variable.position.start,
                 );
-                self.errors.push(message);
+                self.errors.push(error.into());
                 assignee_type.clone()
             }
             Some(_) => assignee_type.clone(),
@@ -73,13 +76,13 @@ impl<'a> SemanticVisitor<'a> {
     ) -> TypeAnnotation {
         let member_name = field.id.clone();
         if !self.type_checker.conforms(&expr_type, &assignee_type) {
-            let message = format!(
-                "Type mismatch: {} is {} but is being reassigned with {}",
+            let error = InvalidReassignmentType::new(
                 member_name,
-                to_string(&field.info.ty),
-                to_string(&expr_type)
+                to_string(&assignee_type),
+                to_string(&expr_type),
+                field.position.start,
             );
-            self.errors.push(message);
+            self.errors.push(error.into());
         }
         assignee_type.clone()
     }
@@ -97,14 +100,15 @@ impl<'a> SemanticVisitor<'a> {
         &mut self,
         assignee_type: &TypeAnnotation,
         expr_type: &TypeAnnotation,
+        position: usize,
     ) -> TypeAnnotation {
         if !self.type_checker.conforms(&expr_type, &assignee_type) {
-            let message = format!(
-                "Type mismatch: Cannot assign {} to list element of type {}",
+            let error = ListInvalidReassignmentType::new(
                 to_string(&expr_type),
-                to_string(&assignee_type)
+                to_string(&assignee_type),
+                position,
             );
-            self.errors.push(message);
+            self.errors.push(error.into());
         }
         assignee_type.clone()
     }

@@ -1,9 +1,14 @@
 use ast::typing::{Type, TypeAnnotation};
+use error_handler::error::{error::HulkError, semantic::definition::UndefinedTypeOrProtocol};
 
 pub trait GetConformable {
     fn is_type_defined(&self, ty: &Type) -> bool;
 
-    fn get_conformable(&self, annotation: &TypeAnnotation) -> Result<TypeAnnotation, String> {
+    fn get_conformable(
+        &self,
+        annotation: &TypeAnnotation,
+        position: usize,
+    ) -> Result<TypeAnnotation, HulkError> {
         let ty = if let Some(annotation) = annotation.as_ref() {
             annotation
         } else {
@@ -20,9 +25,6 @@ pub trait GetConformable {
         if self.is_type_defined(&ty) {
             return Ok(annotation.clone());
         }
-        Err(format!(
-            "Semantic Error: Type or protocol {} is not defined.",
-            ty.to_string()
-        ))
+        Err(UndefinedTypeOrProtocol::new(ty.to_string(), position).into())
     }
 }

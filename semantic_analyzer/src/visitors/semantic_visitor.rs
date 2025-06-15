@@ -10,10 +10,22 @@ mod var_definition;
 
 use std::collections::HashMap;
 
+use ast::tokens::token_position::TokenPositionTrait;
 use ast::{
     VisitableExpression,
     typing::{BuiltInType, Type, TypeAnnotation, to_string},
     *,
+};
+use error_handler::error::semantic::definition::{
+    UndefinedFunction, UndefinedType, UndefinedVariable,
+};
+use error_handler::error::semantic::iterable::{InvalidIndexing, NonIterableType};
+use error_handler::error::semantic::member_access::{
+    AccessingPrivateMember, FieldNotFound, MethodNotFound,
+};
+use error_handler::error::semantic::override_error::{FieldOverride, InvalidMethodOverride};
+use error_handler::error::{
+    error::HulkError, semantic::destructive_assignment::InvalidReassigmentExpression,
 };
 use generator::context::Context;
 
@@ -40,7 +52,7 @@ pub struct SemanticVisitor<'a> {
     pub var_definitions: &'a mut Context<VarInfo>,
     pub func_definitions: &'a mut Context<FuncInfo>,
     pub type_checker: TypeChecker,
-    pub errors: &'a mut Vec<String>,
+    pub errors: &'a mut Vec<HulkError>,
 }
 
 impl<'a> SemanticVisitor<'a> {
@@ -49,7 +61,7 @@ impl<'a> SemanticVisitor<'a> {
         type_hierarchy: &'a HashMap<String, TypeAnnotation>,
         var_definitions: &'a mut Context<VarInfo>,
         func_definitions: &'a mut Context<FuncInfo>,
-        errors: &'a mut Vec<String>,
+        errors: &'a mut Vec<HulkError>,
     ) -> Self {
         let mut flattened_hierarchy = HashMap::new();
         for type_key in type_hierarchy.keys() {
@@ -95,12 +107,11 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
                 self.handle_field_reassign(&member.member, &assignee_type, &expr_type)
             }
             Expression::ListIndexing(_) => {
-                self.handle_list_element_reassign(&assignee_type, &expr_type)
+                self.handle_list_element_reassign(&assignee_type, &expr_type, node.op.position())
             }
             _ => {
-                let message =
-                    format!("Semantic Error: only variables and self properties can be assigned",);
-                self.errors.push(message);
+                let error = InvalidReassigmentExpression::new(node.op.position());
+                self.errors.push(error.into());
                 None
             }
         }
@@ -160,10 +171,8 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
         let identifier_type = match &iterable_type {
             Some(Type::Iterable(inner_type)) => Some(inner_type.as_ref().clone()),
             ty => {
-                self.errors.push(format!(
-                    "Semantic Error: Cannot iterate over type {}",
-                    to_string(&ty)
-                ));
+                self.errors
+                    .push(NonIterableType::new(to_string(ty), node.element.position.start).into());
                 None
             }
         };
@@ -191,8 +200,8 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
                 def.ty.clone()
             }
             None => {
-                let message = format!("Variable {} is not defined", node.id);
-                self.errors.push(message);
+                let error = UndefinedVariable::new(node.id.clone(), node.position.start);
+                self.errors.push(error.into());
                 None
             }
         }
@@ -241,8 +250,9 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
         // Resolve the member info
         let member_info = self.find_member_info(member_name.clone(), &ty);
         let Some(member_info) = member_info.cloned() else {
-            self.errors
-                .push(format!("Could not find data member {}", member_name));
+            self.errors.push(
+                FieldNotFound::new(node.member.id.clone(), node.member.position.start).into(),
+            );
             return None;
         };
 
@@ -261,11 +271,10 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
                 return member_info.ty.clone();
             }
         }
-        self.errors.push(format!(
-            "Cannot access member {} of type {}. Properties are private, even to inherited types.",
-            member_name,
-            to_string(&ty)
-        ));
+        self.errors.push(
+            AccessingPrivateMember::new(member_name, to_string(&ty), node.member.position.start)
+                .into(),
+        );
         member_info.ty.clone()
     }
 
@@ -279,7 +288,7 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
         let func_info = self.find_method_info(func_name.clone(), &ty);
         let Some(func_info) = func_info else {
             self.errors
-                .push(format!("Could not find method {}", func_name));
+                .push(MethodNotFound::new(func_name, node.member.identifier.position.start).into());
             return None;
         };
         return self.handle_function_call(
@@ -302,18 +311,15 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
 
         let index_type = node.index.accept(self);
         if index_type != Some(Type::BuiltIn(BuiltInType::Number)) {
-            let message = format!(
-                "Type mismatch: Cannot use index of type {} to access iterable",
-                to_string(&index_type)
-            );
-            self.errors.push(message);
+            let error = InvalidIndexing::new(to_string(&index_type), node.open_brace.position());
+            self.errors.push(error.into());
         };
         return member_type;
     }
 
     fn visit_function_call(&mut self, node: &mut FunctionCall) -> TypeAnnotation {
         if node.identifier.id == "print" {
-            return self.handle_print(&mut node.arguments);
+            return self.handle_print(&mut node.arguments, node.identifier.position.start);
         }
         // Check if the function is defined
         let function_def = self
@@ -321,8 +327,9 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
             .get_value(&node.identifier.id)
             .cloned();
         let Some(fn_info) = function_def else {
-            let message = format!("Function {} is not defined", node.identifier.id);
-            self.errors.push(message);
+            let error =
+                UndefinedFunction::new(node.identifier.id.clone(), node.identifier.position.start);
+            self.errors.push(error.into());
             return None;
         };
         self.handle_function_call(fn_info, &mut node.identifier, &mut node.arguments)
@@ -367,7 +374,7 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
             return Some(Type::Defined(type_def.name.clone()));
         }
         self.errors
-            .push(format!("Type {} is not defined", &node.type_name));
+            .push(UndefinedType::new(node.type_name.clone(), node.new_token.position()).into());
         None
     }
 }
@@ -424,11 +431,14 @@ impl<'a> DefinitionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
             let member_type = member.default_value.accept(self);
 
             if !self.check_field_override(&member.identifier.id, &node.name.id) {
-                self.errors.push(format!(
-                    "Semantic Error: Cannot declare field {} in type {}, as it overrides parent definition.",
-                    &member.identifier.id,
-                    &node.name.id
-                ));
+                self.errors.push(
+                    FieldOverride::new(
+                        member.identifier.id.clone(),
+                        node.name.id.clone(),
+                        member.identifier.position.start,
+                    )
+                    .into(),
+                );
             }
             self.handle_field_definition(&mut member.identifier, member_type.clone());
 
@@ -457,11 +467,14 @@ impl<'a> DefinitionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
         for method in &mut node.function_member_defs {
             self.var_definitions.push_open_frame();
             if !self.check_method_override(&method.identifier.id, &node.name.id) {
-                self.errors.push(format!(
-                    "Semantic Error: Method {} in type {}, does not properly overrides parent definition.",
-                    &method.identifier.id,
-                    &node.name.id
-                ));
+                self.errors.push(
+                    InvalidMethodOverride::new(
+                        method.identifier.id.clone(),
+                        node.name.id.clone(),
+                        method.identifier.position.start,
+                    )
+                    .into(),
+                );
             }
             self.handle_fn_def(method, Some(&node.name));
             self.var_definitions.pop_frame();

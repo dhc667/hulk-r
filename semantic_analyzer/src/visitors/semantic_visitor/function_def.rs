@@ -2,6 +2,7 @@ use ast::{
     FunctionDef, TypeName, VisitableExpression,
     typing::{TypeAnnotation, to_string},
 };
+use error_handler::error::semantic::function::FuncReturnTypeInvalid;
 
 use crate::def_info::VarInfo;
 
@@ -63,12 +64,15 @@ impl<'a> SemanticVisitor<'a> {
             .type_checker
             .conforms(&body_type, &fn_info.get_functor_type().return_type)
         {
-            self.errors.push(format!(
-                "Type mismatch: Function {} returns {} but {} was found",
-                fn_def.identifier.id,
-                to_string(&fn_info.get_functor_type().return_type),
-                to_string(&body_type)
-            ));
+            self.errors.push(
+                FuncReturnTypeInvalid::new(
+                    fn_def.identifier.id.clone(),
+                    to_string(&fn_info.get_functor_type().return_type),
+                    to_string(&body_type),
+                    fn_def.identifier.position.start,
+                )
+                .into(),
+            );
         }
         // annotate the function identifier with return type in the AST
         fn_def.identifier.set_type_if_none(body_type.clone());

@@ -1,12 +1,18 @@
 use std::vec;
 
+use error_handler::error_handler::ErrorHandler;
+
 use crate::parser::Parser;
 
 fn parse_and_get_errors(input: &str) -> Vec<String> {
+    let mut error_handler = ErrorHandler::new(input);
     let parser = Parser::new();
     match parser.parse(input) {
         Ok(_) => vec![],
-        Err(errors) => errors,
+        Err(errors) => {
+            error_handler.extend_errors(errors);
+            error_handler.get_raw_errors()
+        }
     }
 }
 
@@ -16,7 +22,7 @@ fn test_invalid_token() {
     assert_eq!(
         errors,
         vec![
-            "Sintactic Error: Unrecognized token at location: 0, token: `@`, expected: r#``(?:[^`]|.)*``#, r#`[0-9]+(.[0-9]+)?`#, r#`[A-Za-z][A-Za-z_0-9]*`#, `!`, `(`, `+`, `-`, `[`, `constant`, `false`, `function`, `if`, `let`, `new`, `true`, `type`, `while`, `{`"
+            "Sintactic Error: Unrecognized token `@` found, expected: r#``(?:[^`]|.)*``#, r#`[0-9]+(.[0-9]+)?`#, r#`[A-Za-z][A-Za-z_0-9]*`#, `!`, `(`, `+`, `-`, `[`, `constant`, `false`, `function`, `if`, `let`, `new`, `true`, `type`, `while`, `{`"
         ]
     );
 }
@@ -26,9 +32,7 @@ fn test_unrecognized_eof() {
     let errors = parse_and_get_errors("type Foo {");
     assert_eq!(
         errors,
-        vec![
-            "Sintactic Error: Unrecognized EOF at location: 10, expected: r#`[A-Za-z][A-Za-z_0-9]*`#, `}`"
-        ]
+        vec!["Sintactic Error: Unrecognized EOF found, expected: r#`[A-Za-z][A-Za-z_0-9]*`#, `}`"]
     );
 }
 
@@ -38,7 +42,7 @@ fn test_unrecognized_token() {
     assert_eq!(
         errors,
         vec![
-            "Sintactic Error: Unrecognized token at location: 5, token: `123`, expected: r#`[A-Za-z][A-Za-z_0-9]*`#"
+            "Sintactic Error: Unrecognized token `123` found, expected: r#`[A-Za-z][A-Za-z_0-9]*`#"
         ]
     );
 }
@@ -49,7 +53,7 @@ fn test_extra_token() {
     assert_eq!(
         errors,
         vec![
-            "Sintactic Error: Unrecognized EOF at location: 17, expected: `!=`, `%`, `&&`, `(`, `*`, `+`, `-`, `.`, `/`, `:=`, `;`, `<`, `<=`, `==`, `>`, `>=`, `@`, `@@`, `[`, `||`"
+            "Sintactic Error: Unrecognized EOF found, expected: `!=`, `%`, `&&`, `(`, `*`, `+`, `-`, `.`, `/`, `:=`, `;`, `<`, `<=`, `==`, `>`, `>=`, `@`, `@@`, `[`, `||`"
         ]
     );
 }
@@ -60,7 +64,7 @@ fn test_multiple_errors() {
     assert_eq!(
         errors,
         vec![
-            "Sintactic Error: Unrecognized token at location: 5, token: `123`, expected: r#`[A-Za-z][A-Za-z_0-9]*`#"
+            "Sintactic Error: Unrecognized token `123` found, expected: r#`[A-Za-z][A-Za-z_0-9]*`#"
         ]
     );
 }

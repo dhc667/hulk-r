@@ -6,6 +6,7 @@ use ast::{
     VisitableDefinition, VisitableExpression, While,
     typing::{Type, TypeAnnotation},
 };
+use error_handler::error::error::HulkError;
 use generator::context::Context;
 
 use crate::{
@@ -16,14 +17,14 @@ use crate::{
 pub struct AnnotationVisitor<'a> {
     pub type_definitions: &'a mut Context<TypeInfo>,
     pub func_definitions: &'a mut Context<FuncInfo>,
-    pub errors: &'a mut Vec<String>,
+    pub errors: &'a mut Vec<HulkError>,
 }
 
 impl<'a> AnnotationVisitor<'a> {
     pub fn new(
         type_definitions: &'a mut Context<TypeInfo>,
         func_definitions: &'a mut Context<FuncInfo>,
-        errors: &'a mut Vec<String>,
+        errors: &'a mut Vec<HulkError>,
     ) -> Self {
         Self {
             type_definitions,
@@ -33,7 +34,7 @@ impl<'a> AnnotationVisitor<'a> {
     }
 
     fn fix_annotation(&mut self, id: &mut Identifier) {
-        match self.get_conformable(&id.info.ty) {
+        match self.get_conformable(&id.info.ty, id.position.start) {
             Ok(_) => {}
             Err(message) => {
                 self.errors.push(message);
@@ -90,7 +91,7 @@ impl<'a> DefinitionVisitor<()> for AnnotationVisitor<'a> {
         // check type arguments
         let mut args_to_fix = vec![];
         for (i, arg) in node.parameter_list.iter_mut().enumerate() {
-            match self.get_conformable(&arg.info.ty) {
+            match self.get_conformable(&arg.info.ty, arg.position.start) {
                 Ok(_) => {}
                 Err(message) => {
                     self.errors.push(message);
@@ -111,7 +112,8 @@ impl<'a> DefinitionVisitor<()> for AnnotationVisitor<'a> {
         // check fields declarations
         let mut members_to_fix = vec![];
         for member in node.data_member_defs.iter_mut() {
-            match self.get_conformable(&member.identifier.info.ty) {
+            match self.get_conformable(&member.identifier.info.ty, member.identifier.position.start)
+            {
                 Ok(_) => {}
                 Err(message) => {
                     self.errors.push(message);
@@ -132,7 +134,7 @@ impl<'a> DefinitionVisitor<()> for AnnotationVisitor<'a> {
         for func in &mut node.function_member_defs {
             // check return type
             let mut fix_return_type = false;
-            match self.get_conformable(&func.identifier.info.ty) {
+            match self.get_conformable(&func.identifier.info.ty, func.identifier.position.start) {
                 Ok(_) => {}
                 Err(message) => {
                     self.errors.push(message);
@@ -144,7 +146,7 @@ impl<'a> DefinitionVisitor<()> for AnnotationVisitor<'a> {
             // check arg types
             let mut args_to_fix = vec![];
             for (i, arg) in &mut func.parameters.iter_mut().enumerate() {
-                match self.get_conformable(&arg.info.ty) {
+                match self.get_conformable(&arg.info.ty, arg.position.start) {
                     Ok(_) => {}
                     Err(message) => {
                         self.errors.push(message);
@@ -169,7 +171,7 @@ impl<'a> DefinitionVisitor<()> for AnnotationVisitor<'a> {
         let func = &mut node.function_def;
         // check return type
         let mut fix_return_type = false;
-        match self.get_conformable(&func.identifier.info.ty) {
+        match self.get_conformable(&func.identifier.info.ty, func.identifier.position.start) {
             Ok(_) => {}
             Err(message) => {
                 self.errors.push(message);
@@ -181,7 +183,7 @@ impl<'a> DefinitionVisitor<()> for AnnotationVisitor<'a> {
         // check arg types
         let mut args_to_fix = vec![];
         for (i, arg) in &mut func.parameters.iter_mut().enumerate() {
-            match self.get_conformable(&arg.info.ty) {
+            match self.get_conformable(&arg.info.ty, arg.position.start) {
                 Ok(_) => {}
                 Err(message) => {
                     self.errors.push(message);

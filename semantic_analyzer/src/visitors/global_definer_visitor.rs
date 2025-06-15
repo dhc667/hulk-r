@@ -2,6 +2,13 @@ use ast::{
     DefinitionVisitor, TypeName, VisitableDefinition,
     typing::{BuiltInType, Type, TypeAnnotation},
 };
+use error_handler::error::{
+    error::HulkError,
+    semantic::{
+        function::FuncAlreadyDefined,
+        type_definition::{TypeMemberAlreadyDefined, TypeOrProtocolAlreadyDefined},
+    },
+};
 use generator::context::Context;
 
 use std::collections::HashMap;
@@ -17,7 +24,7 @@ pub struct GlobalDefinerVisitor<'a> {
     pub type_definitions: &'a mut Context<TypeInfo>,
     pub var_definitions: &'a mut Context<VarInfo>,
     pub func_defintions: &'a mut Context<FuncInfo>,
-    pub errors: &'a mut Vec<String>,
+    pub errors: &'a mut Vec<HulkError>,
 }
 
 impl<'a> GlobalDefinerVisitor<'a> {
@@ -25,7 +32,7 @@ impl<'a> GlobalDefinerVisitor<'a> {
         type_definitions: &'a mut Context<TypeInfo>,
         var_definitions: &'a mut Context<VarInfo>,
         func_defintions: &'a mut Context<FuncInfo>,
-        errors: &'a mut Vec<String>,
+        errors: &'a mut Vec<HulkError>,
     ) -> Self {
         let instance = GlobalDefinerVisitor {
             type_definitions,
@@ -56,8 +63,13 @@ impl<'a> DefinitionVisitor<()> for GlobalDefinerVisitor<'a> {
     fn visit_type_def(&mut self, node: &mut ast::TypeDef) -> () {
         let type_name = node.name.id.clone();
         if self.type_definitions.is_defined(&type_name) {
-            self.errors
-                .push(format!("Already exists a type or protocol {}", type_name));
+            self.errors.push(
+                TypeOrProtocolAlreadyDefined::new(
+                    type_name.clone(),
+                    node.name.position.start.clone(),
+                )
+                .into(),
+            );
             return;
         }
 
@@ -66,10 +78,14 @@ impl<'a> DefinitionVisitor<()> for GlobalDefinerVisitor<'a> {
         for member in &node.data_member_defs {
             let member_name = member.identifier.id.clone();
             if members_info.contains_key(&member_name) {
-                self.errors.push(format!(
-                    "Member {} is already defined in type {}",
-                    member_name, type_name
-                ));
+                self.errors.push(
+                    TypeMemberAlreadyDefined::new(
+                        member_name.clone(),
+                        type_name.clone(),
+                        member.identifier.position.start.clone(),
+                    )
+                    .into(),
+                );
                 continue;
             }
             members_info.insert(
@@ -85,10 +101,14 @@ impl<'a> DefinitionVisitor<()> for GlobalDefinerVisitor<'a> {
         for member in &node.function_member_defs {
             let member_name = member.identifier.id.clone();
             if members_info.contains_key(&member_name) {
-                self.errors.push(format!(
-                    "Member {} is already defined in type {}",
-                    member_name, type_name
-                ));
+                self.errors.push(
+                    TypeMemberAlreadyDefined::new(
+                        member_name.clone(),
+                        type_name.clone(),
+                        member.identifier.position.start.clone(),
+                    )
+                    .into(),
+                );
                 continue;
             }
             members_info.insert(member_name, DefinitionInfo::Func(FuncInfo::from(member)));
@@ -110,10 +130,13 @@ impl<'a> DefinitionVisitor<()> for GlobalDefinerVisitor<'a> {
             .func_defintions
             .is_defined(&node.function_def.identifier.id)
         {
-            self.errors.push(format!(
-                "Function {} is already defined",
-                node.function_def.identifier.id
-            ));
+            self.errors.push(
+                FuncAlreadyDefined::new(
+                    node.function_def.identifier.id.clone(),
+                    node.function_def.identifier.position.start.clone(),
+                )
+                .into(),
+            );
             return;
         }
 

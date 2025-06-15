@@ -1,4 +1,4 @@
-mod token_position;
+pub mod token_position;
 pub use token_position::TokenPosition;
 
 mod keywords;
