@@ -27,6 +27,7 @@ impl GeneratorVisitor {
             HandleType::Literal(LlvmType::Object) | HandleType::Register(LlvmType::Object) => {
                 self.get_object_un_op_visitor_result(op, inner_result)
             }
+            _ => panic!("Unsupported operand type for unary operator"),       
         }
     }
 

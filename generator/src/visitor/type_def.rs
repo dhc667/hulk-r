@@ -407,6 +407,7 @@ pub fn generate_constructor(visitor: &mut GeneratorVisitor, node: &mut ast::Type
                 param_name,
                 crate::visitor::Variable::new_object(param_alloca),
             ),
+            _ => panic!("Invalid LLVM type for constructor parameter"),
         }
     }
 
@@ -683,6 +684,7 @@ pub fn generate_method_definitions(
                     param_name,
                     crate::visitor::Variable::new_object(param_alloca),
                 ),
+                _ => panic!("Invalid LLVM type for method parameter"),
             }
         }
         // Generate the function body (either an arrow expression or a block)

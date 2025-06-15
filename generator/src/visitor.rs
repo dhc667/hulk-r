@@ -1,6 +1,7 @@
 mod assignment;
 mod bin_op;
 mod block;
+mod for_exp;
 mod if_else;
 mod print;
 mod type_def;
@@ -23,6 +24,7 @@ use ast::{
     Definition, DefinitionVisitor, Expression, ExpressionVisitor, ListIndexing,
     VisitableDefinition, VisitableExpression,
 };
+
 
 pub struct VisitorResult {
     pub result_handle: Option<LlvmHandle>,
@@ -75,6 +77,13 @@ impl Variable {
             llvm_name,
         }
     }
+
+    pub fn new_list(llvm_name: String) -> Variable {
+        Variable {
+            var_type: LlvmType::List,
+            llvm_name,
+        }
+    }
 }
 
 /// The main code generation visitor for the Hulk language.
@@ -119,6 +128,8 @@ pub struct GeneratorVisitor {
 
     /// Maps (type_name, function_name) to the LLVM function signature.
     function_member_signature_types: HashMap<(String, String), String>,
+
+    functions_args_types: HashMap<String, Vec<String>>,
 }
 
 impl GeneratorVisitor {
@@ -140,6 +151,7 @@ impl GeneratorVisitor {
             original_type_for_definition: HashMap::new(),
             tmp_counter: Cell::new(0),
             function_member_signature_types: HashMap::new(),
+            functions_args_types: HashMap::new(),
         }
     }
 
@@ -330,9 +342,125 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
         self.handle_while(condition_result, body_result)
     }
 
-    fn visit_for(&mut self, _node: &mut ast::For) -> VisitorResult {
-        todo!()
+    fn visit_for(&mut self, node: &mut ast::For) -> VisitorResult {
+        let iterable_result = node.iterable.accept(self);
+        let element_id = node.element.id.clone();
+        let body_result = node.body.accept(self);
+
+
+        let iterable_result_handle = iterable_result
+            .result_handle
+            .expect("Expected a result handle for iterable expression of for loop");
+
+        let index_var = self.generate_tmp_variable();
+        let init_code = format!("  {} = alloca i64\n  store i64 0, i64* {}\n", index_var, index_var);
+
+        let length_ptr = self.generate_tmp_variable();
+        let length_var = self.generate_tmp_variable();
+
+        let llvm_elem_type = "i64";
+
+        let length_ptr_code = format!("  {} = getelementptr inbounds {}, {}* {}, i64 0\n",
+                                      length_ptr, llvm_elem_type, llvm_elem_type,
+                                      iterable_result_handle.llvm_name);
+
+        let length_code = format!("  {} = load {}, {}* {}\n",
+                                  length_var, llvm_elem_type, llvm_elem_type, length_ptr);
+
+        let condition_name = self.generate_tmp_variable();
+
+        let condition_code = format!("{cond} = icmp slt i32 %{index}, %{length}",
+                                     cond = condition_name,
+                                     index = index_var,
+                                     length = length_var
+        );
+
+        
+        
+        let (loop_label, body_label, loop_exit_label) = self.generate_loop_labels();
+
+        let loop_setup = init_code.to_string()
+                + length_ptr_code.as_str()
+                + length_code.as_str()
+                + self.branch_jump_statement(&loop_label).as_str()
+                + &self.block_start(&loop_label)
+                + condition_code.as_str()
+                + &self.branch_choice_statement(
+                &condition_name,
+                &body_label,
+                &loop_exit_label,
+        );
+
+
+        let body_code = self.block_start(&body_label)
+            + &body_result.preamble
+            + &self.branch_jump_statement(&loop_label);
+    
+        let exit_code = self.block_start(&loop_exit_label);
+    
+        let preamble = loop_setup + &body_code + &exit_code;
+    
+        VisitorResult {
+            preamble,
+            result_handle: None,
+        }
     }
+    //
+    // pub(crate) fn handle_while(
+    //     &mut self,
+    //     condition_result: VisitorResult,
+    //     body_result: VisitorResult,
+    // ) -> VisitorResult {
+    //     let condition_result_handle = condition_result
+    //         .result_handle
+    //         .expect("Expected a result handle for condition of while statement");
+    //
+    //     let (loop_label, body_label, loop_exit_label) = self.generate_loop_labels();
+    //
+    //     // here we assume the type of the handle returned by the condition is i1, SA is
+    //     // responsible for this
+    //     let loop_setup = self.branch_jump_statement(&loop_label)
+    //         + &self.block_start(&loop_label)
+    //         + &condition_result.preamble
+    //         + &self.branch_choice_statement(
+    //         &condition_result_handle.llvm_name,
+    //         &body_label,
+    //         &loop_exit_label,
+    //     );
+    //
+    //     let body_code = self.block_start(&body_label)
+    //         + &body_result.preamble
+    //         + &self.branch_jump_statement(&loop_label);
+    //
+    //     let exit_code = self.block_start(&loop_exit_label);
+    //
+    //     let preamble = loop_setup + &body_code + &exit_code;
+    //
+    //     VisitorResult {
+    //         preamble,
+    //         result_handle: None,
+    //     }
+    // }
+    //
+    // /// # Description
+    // ///
+    // /// Uses the same global tmp_variable id to create globally unique loop, body,
+    // /// loop_exit labels
+    // ///
+    // /// # Examples
+    // ///
+    // /// - If we generate a temporary variable %.0, and then generate these labels, we'll get
+    // /// loop.1, body.1, loop_exit.1
+    // /// - If we generate the labels first, we'll get loop.0, body.0, loop_exit.0
+    // pub(crate) fn generate_loop_labels(&mut self) -> (String, String, String) {
+    //     let l = format!("loop.{}", self.tmp_variable_id);
+    //     let b = format!("body.{}", self.tmp_variable_id);
+    //     let le = format!("loop_exit.{}", self.tmp_variable_id);
+    //
+    //     self.tmp_variable_id += 1;
+    //
+    //     (l, b, le)
+    // }
 
     fn visit_un_op(&mut self, node: &mut ast::UnOp) -> VisitorResult {
         let inner_result = node.rhs.accept(self);
@@ -601,8 +729,17 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
 
         let mut preamble = String::new();
         let mut arg_values = Vec::new();
-        let mut arg_types = Vec::new();
-        for arg in node.arguments.iter_mut() {
+
+
+        let arg_types = {
+            // Clone so we don't hold the borrow on self while mutably borrowing self in the loop
+            self.functions_args_types
+                .get(&node.identifier.id)
+                .unwrap_or_else(|| panic!("Function {} not found", node.identifier.id))
+                .clone()
+        };
+
+        for (i, arg) in node.arguments.iter_mut().enumerate() {
             let arg_result = arg.accept(self);
             preamble += &arg_result.preamble;
             let handle = arg_result
@@ -610,32 +747,6 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
                 .expect("Function argument must have a result");
             arg_values.push(handle.llvm_name);
 
-            let arg_type = match arg {
-                ast::Expression::NumberLiteral(_) => "double".to_string(),
-                ast::Expression::BooleanLiteral(_) => "i1".to_string(),
-                ast::Expression::StringLiteral(_) => "i8*".to_string(),
-                ast::Expression::Variable(id) => match &id.info.ty {
-                    Some(ty) => match ty {
-                        ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Number) => {
-                            "double".to_string()
-                        }
-                        ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Bool) => {
-                            "i1".to_string()
-                        }
-                        ast::typing::Type::BuiltIn(ast::typing::BuiltInType::String) => {
-                            "i8*".to_string()
-                        }
-                        ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Object) => {
-                            "i8*".to_string()
-                        }
-                        ast::typing::Type::Defined(name) => format!("%{}_type*", name.id.clone()),
-                        _ => "i8*".to_string(),
-                    },
-                    None => "i8*".to_string(),
-                },
-                _ => "i8*".to_string(),
-            };
-            arg_types.push(arg_type);
         }
 
         let ret_type = match &node.identifier.info.ty {
@@ -736,26 +847,12 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
 
         self.string_constants.push(global_str_code.clone());
 
-        // for x in self.string_constants.iter() {
-        //     println!("global string aaaaaaa =======: {}", x.clone());
-        // }
-
-        // Create local variable to store the string
+        // Create a heap-allocated string using malloc
         let local_str_var = self.generate_tmp_variable();
-        let alloca_code = format!(
-            "{} = alloca [{} x i8], align 1\n",
+        let malloc_code = format!(
+            "{} = call i8* @malloc(i64 {})\n",
             local_str_var,
             str_len + 1
-        );
-
-        // Get pointer to local variable
-        let local_ptr_var = self.generate_tmp_variable();
-        let local_gep_code = format!(
-            "{} = getelementptr inbounds [{} x i8], [{} x i8]* {}, i64 0, i64 0\n",
-            local_ptr_var,
-            str_len + 1,
-            str_len + 1,
-            local_str_var
         );
 
         // Get pointer to the global string constant
@@ -768,20 +865,124 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
             global_str_name
         );
 
-        // Copy the string to local variable using strcpy
+        // Copy the string to heap variable using strcpy
         let strcpy_code = format!(
             "call i8* @strcpy(i8* {}, i8* {})\n",
-            local_ptr_var, global_ptr_var
+            local_str_var, global_ptr_var
         );
 
         VisitorResult {
-            preamble: alloca_code + &local_gep_code + &global_gep_code + &strcpy_code,
-            result_handle: Some(LlvmHandle::new_string_register(local_ptr_var)), // Return pointer to local string
+            preamble: malloc_code + &global_gep_code + &strcpy_code,
+            result_handle: Some(LlvmHandle::new_string_register(local_str_var)), // Return pointer to heap string
         }
     }
-    fn visit_list_literal(&mut self, _node: &mut ast::ListLiteral) -> VisitorResult {
-        todo!()
+    fn visit_list_literal(&mut self, node: &mut ast::ListLiteral) -> VisitorResult {
+        let type_name = match &node.list_type {
+            Some(ty) => to_string(&Some(ty.clone())),
+            None => panic!("Object type not found for data member access"),
+        };
+
+        let mut preamble = String::new();
+        let mut element_handles = Vec::new();
+
+        for element in node.elements.iter_mut() {
+            let e_result = element.accept(self);
+            preamble += &e_result.preamble;
+            if let Some(handle) = e_result.result_handle {
+                element_handles.push(handle);
+            }
+        }
+
+        let list_len = element_handles.len();
+        let tmp_var_id = self.tmp_counter.get();
+        self.tmp_counter.set(tmp_var_id + 1);
+
+        let llvm_elem_type = match &node.list_type {
+            Some(ast_type) => self.llvm_type_str_from_ast_type(ast_type),
+            None => "i64".to_string(), // fallback, though shouldn't happen
+        };
+
+        // Allocate memory for the array using malloc
+        // e.g., %list_ptr = call i8* @malloc(i64 size)
+        let type_size = self.llvm_type_size(&llvm_elem_type);
+        let total_size = type_size * list_len + 8;
+        let ptr_var = format!("%list_ptr_{}", tmp_var_id);
+        preamble += &format!(
+            "{ptr_var} = call i8* @malloc(i64 {})\n",
+            total_size
+        );
+        // Bitcast to the appropriate pointer type
+        let array_ptr = format!("%casted_list_ptr_{}", tmp_var_id);
+        preamble += &format!(
+            "{array_ptr} = bitcast i8* {ptr_var} to {elem_type}*\n",
+            ptr_var=ptr_var,
+            array_ptr=array_ptr,
+            elem_type=llvm_elem_type
+        );
+        
+        // Store the length of the array at index 0
+        let length_ptr = format!("%length_ptr_{}", tmp_var_id);
+        let length_value = format!("%length_val_{}", tmp_var_id);
+        preamble += &format!(
+            "{length_value} = add i64 {}, 0\n",
+            element_handles.len()
+        );
+        preamble += &format!(
+            "{length_ptr} = getelementptr inbounds {elem_type}, {elem_type}* {array_ptr}, i64 0\n",
+            length_ptr=length_ptr,
+            elem_type=llvm_elem_type,
+            array_ptr=array_ptr
+        );
+        
+        // Always store length as i64 to ensure consistency, converting if needed
+        if llvm_elem_type == "i64" {
+            preamble += &format!(
+                "store i64 {length_value}, i64* {length_ptr}\n",
+                length_value=length_value,
+                length_ptr=length_ptr
+            );
+        } else {
+            // If the element type is not i64, we need to bitcast the pointer
+            let casted_length_ptr = format!("%casted_length_ptr_{}", tmp_var_id);
+            preamble += &format!(
+                "{casted_length_ptr} = bitcast {elem_type}* {length_ptr} to i64*\n",
+                casted_length_ptr=casted_length_ptr,
+                elem_type=llvm_elem_type,
+                length_ptr=length_ptr
+            );
+            preamble += &format!(
+                "store i64 {length_value}, i64* {casted_length_ptr}\n",
+                length_value=length_value,
+                casted_length_ptr=casted_length_ptr
+            );
+        }
+
+        // Store elements into the array memory
+        for (i, handle) in element_handles.iter().enumerate() {
+            let elem_ptr = format!("%elem_ptr_{}_{}", tmp_var_id, i);
+            preamble += &format!(
+                "{elem_ptr} = getelementptr inbounds {elem_type}, {elem_type}* {array_ptr}, i64 {idx}\n",
+                elem_ptr=elem_ptr,
+                elem_type=llvm_elem_type,
+                array_ptr=array_ptr,
+                idx=i+1
+            );
+            preamble += &format!(
+                "store {elem_type} {value}, {elem_type}* {elem_ptr}\n",
+                elem_type=llvm_elem_type,
+                value=handle.llvm_name
+            );
+        }
+
+        // Return the pointer to the start of the list as the handle
+        VisitorResult {
+            preamble,
+            result_handle: Some(crate::llvm_types::LlvmHandle::new_list_register(
+                array_ptr,
+            )),
+        }
     }
+
 
     fn visit_empty_expression(&mut self) -> VisitorResult {
         VisitorResult {
@@ -851,8 +1052,89 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
         }
     }
 
-    fn visist_list_indexing(&mut self, _node: &mut ListIndexing) -> VisitorResult {
-        todo!()
+    fn visist_list_indexing(&mut self, node: &mut ListIndexing) -> VisitorResult {
+        let mut preamble = String::new();
+
+        // Visit the list expression to get the list handle
+        let list_result = node.list.accept(self);
+        preamble += &list_result.preamble;
+        let list_handle = match list_result.result_handle {
+            Some(h) => h,
+            None => panic!("Expected handle for list expression"),
+        };
+
+        // Visit the index expression to get the index value
+        let index_result = node.index.accept(self);
+        preamble += &index_result.preamble;
+        let index_handle = match index_result.result_handle {
+            Some(h) => h,
+            None => panic!("Expected handle for index expression"),
+        };
+
+        let elem_type = match &node.list_type {
+            Some(ast_type) => self.llvm_type_str_from_ast_type(ast_type),
+            None => panic!("Expected list type for list indexing"),
+        };
+
+        let tmp_var_id = self.tmp_counter.get();
+        self.tmp_counter.set(tmp_var_id + 1);
+
+        let casted_list_ptr = if list_handle.llvm_name.contains("list_ptr") {
+            list_handle.llvm_name.clone()
+        } else {
+            let casted_ptr = format!("%list_elem_ptr_{}", tmp_var_id);
+            preamble += &format!(
+                "  {} = bitcast i8* {} to {}*\n",
+                casted_ptr, list_handle.llvm_name, elem_type
+            );
+            casted_ptr
+        };
+        
+        // Compute pointer to the indexed element
+        let elem_ptr = format!("%elem_ptr_{}", tmp_var_id);
+        
+        // Cast the index to i64
+        let casted_index = format!("%casted_index_{}", tmp_var_id);
+        preamble += &format!(
+            "  {} = fptosi {} {} to i64\n", 
+            casted_index, "double", index_handle.llvm_name
+        );
+        
+        // Create a new temporary variable for the adjusted index
+        let adjusted_index = format!("%adjusted_index_{}", tmp_var_id);
+        preamble += &format!(
+            "  {} = add i64 {}, 1\n",
+            adjusted_index, casted_index
+        );
+        
+        preamble += &format!(
+            "  {} = getelementptr inbounds {}, {}* {}, i64 {}\n",
+            elem_ptr, elem_type, elem_type, casted_list_ptr, adjusted_index
+        );
+
+        // Load the value from the array
+        let loaded_val = format!("%loaded_elem_{}", tmp_var_id);
+        preamble += &format!(
+            "  {} = load {}, {}* {}\n",
+            loaded_val, elem_type, elem_type, elem_ptr
+        );
+        
+        // Create the appropriate handle type based on the element type
+        let handle_type = match elem_type.as_str() {
+            "double" => HandleType::Register(LlvmType::F64),
+            "i1" => HandleType::Register(LlvmType::I1),
+            "i8*" => HandleType::Register(LlvmType::String),
+            s if s.ends_with("*") && s.starts_with("%") => HandleType::Register(LlvmType::Object),
+            _ => HandleType::Register(LlvmType::F64),
+        };
+
+        VisitorResult {
+            preamble,
+            result_handle: Some(LlvmHandle {
+                handle_type,
+                llvm_name: loaded_val,
+            }),
+        }
     }
 }
 
@@ -915,6 +1197,8 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
         };
 
         preamble += &format!("define {} @{}(", return_type, func_name);
+        
+        let mut param_type_vec:Vec<String> = Vec::new();
 
         for (i, param) in node.function_def.parameters.iter().enumerate() {
             if i > 0 {
@@ -938,7 +1222,13 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
                 None => "i8*".to_string(),
             };
             preamble += &format!("{} %{}", llvm_type, param.id);
+            param_type_vec.push(llvm_type);
+
         }
+        
+        self.functions_args_types.insert(node.function_def.identifier.id.clone(), param_type_vec);
+
+
         preamble += ") {\n";
         preamble += "entry:\n";
 
@@ -976,6 +1266,7 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
                 LlvmType::Object => self
                     .context
                     .define(param.id.clone(), Variable::new_object(param_ptr)),
+                _ => panic!("Unsuported type")
             };
         }
 
@@ -994,7 +1285,15 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
 
         if return_type != "void" {
             if let Some(result_handle) = &body_result.result_handle {
+                // if return_type == "i8*" && result_handle.llvm_name.starts_with("%") {
+                //     let load_var = self.generate_tmp_variable();
+                //     preamble += &format!(
+                //         "  {} = load i8*, i8** {}, align 8\n  ret i8* {}\n",
+                //         load_var, result_handle.llvm_name, load_var
+                //     );
+                // } else {
                 preamble += &format!("  ret {} {}\n", return_type, result_handle.llvm_name);
+                // }
             } else {
                 match return_type.as_str() {
                     "double" => preamble += "  ret double 0.0\n",
@@ -1070,6 +1369,7 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
                     constant_name, init_value.llvm_name
                 );
             }
+            _ => panic!("Unsuported type")
         }
 
         VisitorResult {
@@ -1145,7 +1445,7 @@ impl GeneratorVisitor {
             }
             ast::typing::Type::Iterable(inner_type_box) => {
                 format!(
-                    "{}*",
+                    "{}",
                     self.llvm_type_str_from_ast_type(inner_type_box.as_ref())
                 )
             }

@@ -4,6 +4,7 @@ pub enum LlvmType {
     I1,
     String, // Now represents %string_type*
     Object,
+    List,
 }
 
 impl LlvmType {
@@ -13,6 +14,7 @@ impl LlvmType {
             LlvmType::I1 => "i1",
             LlvmType::String => "%i8*",
             LlvmType::Object => "i8*",
+            LlvmType::List => "i8*",
         }
     }
 }
@@ -48,6 +50,13 @@ impl HandleType {
     pub fn register_object() -> HandleType {
         HandleType::Register(LlvmType::Object)
     }
+    pub fn literal_list() -> HandleType {
+        HandleType::Literal(LlvmType::List)
+    }
+
+    pub fn register_list() -> HandleType {
+        HandleType::Register(LlvmType::List)
+    }
 
     pub fn inner_type(&self) -> LlvmType {
         match self {
@@ -60,6 +69,9 @@ impl HandleType {
             }
             HandleType::Register(LlvmType::Object) | HandleType::Literal(LlvmType::Object) => {
                 LlvmType::Object
+            }
+            HandleType::Register(LlvmType::List) | HandleType::Literal(LlvmType::List) => {
+                LlvmType::List
             }
         }
     }
@@ -128,5 +140,13 @@ impl LlvmHandle {
 
     pub fn new_object_register(name: String) -> LlvmHandle {
         LlvmHandle::new(HandleType::register_object(), name)
+    }
+
+    pub fn new_list_literal(value: String) -> LlvmHandle {
+        LlvmHandle::new(HandleType::literal_list(), value)
+    }
+
+    pub fn new_list_register(name: String) -> LlvmHandle {
+        LlvmHandle::new(HandleType::register_list(), name)
     }
 }

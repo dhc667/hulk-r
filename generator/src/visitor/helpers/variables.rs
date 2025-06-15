@@ -43,6 +43,7 @@ impl GeneratorVisitor {
             LlvmType::I1 => LlvmHandle::new_i1_register(target_register_name),
             LlvmType::String => LlvmHandle::new_string_register(target_register_name),
             LlvmType::Object => LlvmHandle::new_object_register(target_register_name),
+            LlvmType::List => LlvmHandle::new_list_register(target_register_name),
         };
 
         (preamble, result_handle)
@@ -67,6 +68,7 @@ impl GeneratorVisitor {
             LlvmType::I1 => ("i1", 1),
             LlvmType::String => ("i8*", 8),
             LlvmType::Object => ("i8*", 8),
+            LlvmType::List => ("i8*", 8),
         }
     }
 }
