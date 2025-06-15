@@ -27,14 +27,16 @@ fn dfs_visit<V: DfsVisitable>(
             visitor.after_visit_child(node, h);
         }
     }
+    visitor.after_visit(node, h);
 }
 
 /// # Description
 /// The `DfsVisitable` trait defines methods that can be implemented to handle events during a depth-first search (DFS) traversal.
 /// It allows for custom behavior when visiting nodes and after visiting child nodes.
 pub trait DfsVisitable {
-    fn before_visit(&mut self, node: usize, h: usize);
-    fn after_visit_child(&mut self, node: usize, h: usize);
+    fn before_visit(&mut self, _node: usize, _h: usize) {}
+    fn after_visit_child(&mut self, _node: usize, _h: usize) {}
+    fn after_visit(&mut self, _node: usize, _h: usize) {}
 }
 
 /// # Description
