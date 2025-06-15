@@ -434,7 +434,7 @@ fn return_string_from_function() {
     let llvm = generate_code(
         r#"
             function f(): String { return let a = "a" in { a:="hello";  (a @" world");}; }
-            let x = f(),y = [1,2,3] in print(x);
+            let x = f() in print(x);
         "#,
     );
     println!("{}", llvm);
