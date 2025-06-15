@@ -971,7 +971,8 @@ pub fn lexer_parser() -> (LexerWrapper, Parser<TokenType, ReturnType>) {
         }
 
         skip: {
-            (__Whitespace__, r"(\s|\t|\n|\r)+")
+            (__Whitespace__, r"(\s|\t|\n|\r)+"),
+            (__SingleLineComments__, r"//[^\n-\n]*"),
         }
 
     )
