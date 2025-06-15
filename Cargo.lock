@@ -426,6 +426,7 @@ name = "semantic_analyzer"
 version = "0.1.0"
 dependencies = [
  "ast",
+ "error_handler",
  "generator",
  "parser",
 ]

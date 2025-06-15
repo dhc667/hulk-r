@@ -76,20 +76,14 @@ impl From<FuncParamsInvalidAmount> for HulkError {
 #[derive(Debug, Clone)]
 pub struct FuncParamInvalidType {
     pub name: String,
-    pub param: String,
+    pub param: usize,
     pub expected: String,
     pub got: String,
     pub position: usize,
 }
 
 impl FuncParamInvalidType {
-    pub fn new(
-        name: String,
-        param: String,
-        expected: String,
-        got: String,
-        position: usize,
-    ) -> Self {
+    pub fn new(name: String, param: usize, expected: String, got: String, position: usize) -> Self {
         Self {
             name,
             param,

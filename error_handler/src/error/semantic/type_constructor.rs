@@ -46,20 +46,14 @@ impl From<TypeParamsInvalidAmount> for HulkError {
 #[derive(Debug, Clone)]
 pub struct TypeParamInvalidType {
     pub name: String,
-    pub param: String,
+    pub param: usize,
     pub expected: String,
     pub got: String,
     pub position: usize,
 }
 
 impl TypeParamInvalidType {
-    pub fn new(
-        name: String,
-        param: String,
-        expected: String,
-        got: String,
-        position: usize,
-    ) -> Self {
+    pub fn new(name: String, param: usize, expected: String, got: String, position: usize) -> Self {
         Self {
             name,
             param,
@@ -74,7 +68,7 @@ impl fmt::Display for TypeParamInvalidType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "Type `{}` expects parameter `{}` of type `{}`, but got {}.",
+            "Type `{}` expects parameter `{}` of type `{}`, but got `{}`.",
             self.name, self.param, self.expected, self.got
         )
     }

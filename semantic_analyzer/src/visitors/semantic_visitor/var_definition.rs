@@ -2,6 +2,9 @@ use ast::{
     Identifier,
     typing::{TypeAnnotation, to_string},
 };
+use error_handler::error::semantic::variable_definition::{
+    VarAlreadyDefined, VarDefinitionTypeMismatch,
+};
 
 use crate::{def_info::VarInfo, visitors::SemanticVisitor};
 
@@ -28,17 +31,17 @@ impl<'a> SemanticVisitor<'a> {
         let is_asignable = self.type_checker.conforms(&right_type, &identifier.info.ty);
 
         if !is_asignable {
-            let message = format!(
-                "Type mismatch: Cannot assign {} to {}",
+            let error = VarDefinitionTypeMismatch::new(
                 to_string(&right_type),
-                to_string(&identifier.info.ty)
+                to_string(&identifier.info.ty),
+                identifier.position.start,
             );
-            self.errors.push(message);
+            self.errors.push(error.into());
         }
 
         if !shadoweable && self.var_definitions.is_defined(&identifier.id) {
-            let message = format!("Constant {} is already defined", identifier.id);
-            self.errors.push(message);
+            let error = VarAlreadyDefined::new(identifier.id.clone(), identifier.position.start);
+            self.errors.push(error.into());
         } else {
             let var_info = if shadoweable {
                 VarInfo::new_from_identifier(identifier, true, right_type.clone())
@@ -60,12 +63,12 @@ impl<'a> SemanticVisitor<'a> {
         let is_asignable = self.type_checker.conforms(&right_type, &identifier.info.ty);
 
         if !is_asignable {
-            let message = format!(
-                "Type mismatch: Cannot assign {} to {}",
+            let error = VarDefinitionTypeMismatch::new(
                 to_string(&right_type),
-                to_string(&identifier.info.ty)
+                to_string(&identifier.info.ty),
+                identifier.position.start,
             );
-            self.errors.push(message);
+            self.errors.push(error.into());
         }
 
         identifier.set_type_if_none(right_type.clone());

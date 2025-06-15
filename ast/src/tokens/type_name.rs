@@ -1,3 +1,5 @@
+use crate::token_position::TokenPositionTrait;
+
 use super::TokenPosition;
 
 /// # Description
@@ -22,5 +24,11 @@ impl TypeName {
 impl PartialEq for TypeName {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
+    }
+}
+
+impl TokenPositionTrait for TypeName {
+    fn position(&self) -> usize {
+        self.position.start
     }
 }

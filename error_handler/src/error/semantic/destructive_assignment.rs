@@ -3,32 +3,32 @@ use crate::error::semantic::semantic_error::SemanticError;
 use std::fmt;
 
 #[derive(Debug, Clone)]
-pub struct InvalidReassigmentTarget {
+pub struct InvalidAssigmentTarget {
     pub target: String,
     pub position: usize,
 }
 
-impl InvalidReassigmentTarget {
+impl InvalidAssigmentTarget {
     pub fn new(target: String, position: usize) -> Self {
         Self { target, position }
     }
 }
 
-impl fmt::Display for InvalidReassigmentTarget {
+impl fmt::Display for InvalidAssigmentTarget {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "`{}` is not a valid reassignment target.", self.target)
+        write!(f, "`{}` is not a valid assignment target.", self.target)
     }
 }
 
-impl HulkErrorTrait for InvalidReassigmentTarget {
+impl HulkErrorTrait for InvalidAssigmentTarget {
     fn get_position(&self) -> usize {
         self.position
     }
 }
 
-impl From<InvalidReassigmentTarget> for HulkError {
-    fn from(e: InvalidReassigmentTarget) -> Self {
-        HulkError::SemanticError(SemanticError::InvalidReassigmentTarget(e))
+impl From<InvalidAssigmentTarget> for HulkError {
+    fn from(e: InvalidAssigmentTarget) -> Self {
+        HulkError::SemanticError(SemanticError::InvalidAssigmentTarget(e))
     }
 }
 

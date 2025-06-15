@@ -2,6 +2,7 @@ use ast::{
     Expression, VisitableExpression,
     typing::{BuiltInType, Type, TypeAnnotation, to_string},
 };
+use error_handler::error::semantic::function::{FuncParamInvalidType, FuncParamsInvalidAmount};
 
 use super::SemanticVisitor;
 
@@ -13,13 +14,15 @@ impl<'a> SemanticVisitor<'a> {
     /// - `arguments`: A mutable reference to a vector of `Expression` representing the arguments passed to the `print` function.
     /// # Returns
     /// A `TypeAnnotation` representing the type of the argument if it is valid, or `None` if there is a type mismatch.
-    pub(crate) fn handle_print(&mut self, arguments: &mut Vec<Expression>) -> TypeAnnotation {
+    pub(crate) fn handle_print(
+        &mut self,
+        arguments: &mut Vec<Expression>,
+        position: usize,
+    ) -> TypeAnnotation {
         if arguments.len() != 1 {
-            let message = format!(
-                "Type mismatch: print function expects 1 argument, but {} were provided",
-                arguments.len()
-            );
-            self.errors.push(message);
+            let error =
+                FuncParamsInvalidAmount::new("print".to_string(), 1, arguments.len(), position);
+            self.errors.push(error.into());
             return None;
         }
         let arg_type = arguments[0].accept(self);
@@ -30,11 +33,14 @@ impl<'a> SemanticVisitor<'a> {
         ]
         .contains(&arg_type)
         {
-            let message = format!(
-                "Type mismatch: print function expects argument of type String, but {} was provided",
-                to_string(&arg_type)
+            let error = FuncParamInvalidType::new(
+                "print".to_string(),
+                0,
+                "Printable".to_string(),
+                to_string(&arg_type),
+                position,
             );
-            self.errors.push(message);
+            self.errors.push(error.into());
             return None;
         }
         return arg_type;

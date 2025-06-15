@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 ast = { path = "../ast" }
 generator = { path = "../generator" }
+error_handler = { path = "../error_handler" }
 
 [dev-dependencies]
 parser = { path = "../parser" }

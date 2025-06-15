@@ -7,7 +7,7 @@ use crate::error::{
             UndefinedFunction, UndefinedType, UndefinedTypeOrProtocol, UndefinedVariable,
         },
         destructive_assignment::{
-            InvalidReassigmentExpression, InvalidReassigmentTarget, InvalidReassignmentType,
+            InvalidReassigmentExpression, InvalidAssigmentTarget, InvalidReassignmentType,
             ListInvalidReassignmentType,
         },
         function::{
@@ -58,7 +58,7 @@ pub enum SemanticError {
     VarAlreadyDefined(VarAlreadyDefined),                 // "Constant {} is already defined"
 
     // destructive assignment
-    InvalidReassigmentTarget(InvalidReassigmentTarget), // "Semantic Error: `{}` is not a valid assignment target",
+    InvalidAssigmentTarget(InvalidAssigmentTarget), // "Semantic Error: `{}` is not a valid assignment target",
     InvalidReassignmentType(InvalidReassignmentType), // "Type mismatch: {} is {} but is being reassigned with {}",
     ListInvalidReassignmentType(ListInvalidReassignmentType), // "Type mismatch: Cannot assign {} to list element of type {}",
     InvalidReassigmentExpression(InvalidReassigmentExpression), // "Semantic Error: only variables and self properties can be assigned"
@@ -100,7 +100,7 @@ impl Display for SemanticError {
             SemanticError::TypeMemberAlreadyDefined(e) => format!("{}", e),
             SemanticError::VarDefinitionTypeMismatch(e) => format!("{}", e),
             SemanticError::VarAlreadyDefined(e) => format!("{}", e),
-            SemanticError::InvalidReassigmentTarget(e) => format!("{}", e),
+            SemanticError::InvalidAssigmentTarget(e) => format!("{}", e),
             SemanticError::InvalidReassignmentType(e) => format!("{}", e),
             SemanticError::ListInvalidReassignmentType(e) => format!("{}", e),
             SemanticError::InvalidReassigmentExpression(e) => format!("{}", e),
@@ -143,7 +143,7 @@ impl HulkErrorTrait for SemanticError {
             SemanticError::TypeMemberAlreadyDefined(e) => e.get_position(),
             SemanticError::VarDefinitionTypeMismatch(e) => e.get_position(),
             SemanticError::VarAlreadyDefined(e) => e.get_position(),
-            SemanticError::InvalidReassigmentTarget(e) => e.get_position(),
+            SemanticError::InvalidAssigmentTarget(e) => e.get_position(),
             SemanticError::InvalidReassignmentType(e) => e.get_position(),
             SemanticError::ListInvalidReassignmentType(e) => e.get_position(),
             SemanticError::InvalidReassigmentExpression(e) => e.get_position(),

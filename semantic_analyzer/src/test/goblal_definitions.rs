@@ -1,3 +1,4 @@
+use error_handler::error_handler::ErrorHandler;
 use parser::parser::Parser;
 
 use crate::semantic_analyzer::SemanticAnalyzer;
@@ -18,20 +19,20 @@ fn test_define_type() {
 
 #[test]
 fn test_define_type_twice() {
+    let program = "type Point {x = 0; y = 0; } type Point {a = 0; b = 0; }";
+
+    let mut error_handler = ErrorHandler::new(program);
     let p = Parser::new();
-
-    let mut answ = p
-        .parse("type Point {x = 0; y = 0; } type Point {a = 0; b = 0; }")
-        .unwrap();
-
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
-
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
     assert_eq!(semantic_analyzer.type_definitions.is_defined("Point"), true);
     assert_eq!(
-        result.err().unwrap(),
-        vec!["Already exists a type or protocol Point".to_string()]
+        error_handler.get_raw_errors(),
+        vec!["Semantic Error: Already exists a type or protocol `Point`."]
     );
 }
 
@@ -87,22 +88,19 @@ fn define_global_variable() {
 
 #[test]
 fn define_global_variable_twice() {
+    let program = "constant x: Number = 0; constant x: Number = 1;";
+    let mut error_handler = ErrorHandler::new(program);
     let p = Parser::new();
-
-    let mut answ = p
-        .parse("constant x: Number = 0; constant x: Number = 1;")
-        .unwrap();
-
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-
     semantic_analyzer
         .analyze_program_ast(&mut answ)
         .expect_err("Should return an error");
-
+    error_handler.extend_errors(semantic_analyzer.errors);
     assert_eq!(semantic_analyzer.var_definitions.is_defined("x"), true);
     assert_eq!(
-        semantic_analyzer.errors,
-        vec!["Constant x is already defined".to_string()]
+        error_handler.get_raw_errors(),
+        vec!["Semantic Error: Constant `x` is already defined."]
     );
 }
 
@@ -124,20 +122,22 @@ fn define_global_function() {
 
 #[test]
 fn define_global_function_twice() {
+    let program =
+        "function f(x: Number): Number { return x; } function f(x: Number): Number { return x; }";
+
+    let mut error_handler = ErrorHandler::new(program);
     let p = Parser::new();
-
-    let mut answ = p
-        .parse("function f(x: Number): Number { return x; } function f(x: Number): Number { return x; }")
-        .unwrap();
-
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     assert_eq!(semantic_analyzer.func_definitions.is_defined("f"), true);
     assert_eq!(
-        result.err().unwrap(),
-        vec!["Function f is already defined".to_string()]
+        error_handler.get_raw_errors(),
+        vec!["Semantic Error: Function `f` is already defined."]
     );
 }
 
@@ -208,58 +208,60 @@ fn define_global_function_and_check_type() {
 
 #[test]
 fn define_global_function_and_use_it_wrong_type() {
+    let program = "function f(x: Number): Number { return x; } f(true);";
+    let mut error_handler = ErrorHandler::new(program);
     let p = Parser::new();
-
-    let mut answ = p
-        .parse("function f(x: Number): Number { return x; } f(true);")
-        .unwrap();
-
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     assert_eq!(semantic_analyzer.func_definitions.is_defined("f"), true);
     assert_eq!(
-        result.err().unwrap(),
-        vec!["Function f expects parameter 0 of type Number, but got Boolean".to_string()]
+        error_handler.get_raw_errors(),
+        vec![
+            "Semantic Error: Function `f` expects parameter `0` of type `Number`, but got `Boolean`."
+        ]
     );
 }
 
 #[test]
 fn define_global_function_and_use_it_wrong_type2() {
+    let program = "function f(x: Number): Number { return x; } f(1, 2);";
+    let mut error_handler = ErrorHandler::new(program);
     let p = Parser::new();
-
-    let mut answ = p
-        .parse("function f(x: Number): Number { return x; } f(1, 2);")
-        .unwrap();
-
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     assert_eq!(semantic_analyzer.func_definitions.is_defined("f"), true);
     assert_eq!(
-        result.err().unwrap(),
-        vec!["Function f expects 1 parameters, but 2 were provided".to_string()]
+        error_handler.get_raw_errors(),
+        vec!["Semantic Error: Function `f` expects 1 parameters, but 2 were provided."]
     );
 }
 
 #[test]
 fn define_global_function_and_use_it_wrong3() {
+    let program = "function f(): Number { return 3; } f(1, 2);";
+    let mut error_handler = ErrorHandler::new(program);
     let p = Parser::new();
-
-    let mut answ = p
-        .parse("function f(): Number { return 3; } f(1, 2);")
-        .unwrap();
-
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     assert_eq!(semantic_analyzer.func_definitions.is_defined("f"), true);
     assert_eq!(
-        result.err().unwrap(),
-        vec!["Function f expects 0 parameters, but 2 were provided".to_string()]
+        error_handler.get_raw_errors(),
+        vec!["Semantic Error: Function `f` expects 0 parameters, but 2 were provided."]
     );
 }
 
@@ -279,18 +281,20 @@ fn define_global_arrow_function() {
 
 #[test]
 fn try_dassign_constant() {
+    let program = "constant zero: Number = 0; zero:= 2;";
+    let mut error_handler = ErrorHandler::new(program);
     let p = Parser::new();
-
-    let mut answ = p.parse("constant zero: Number = 0; zero:= 2;").unwrap();
-
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     assert_eq!(semantic_analyzer.var_definitions.is_defined("zero"), true);
     assert_eq!(
-        result.err().unwrap(),
-        vec!["Semantic Error: `zero` is not a valid assignment target".to_string()]
+        error_handler.get_raw_errors(),
+        vec!["Semantic Error: `zero` is not a valid assignment target.".to_string()]
     )
 }
 
@@ -319,44 +323,40 @@ fn shadowed_dassignment_to_constant() {
 
 #[test]
 fn unknown_annotation_in_global_function_param() {
-    let p = Parser::new();
-
-    let mut answ = p
-        .parse(
-            "
+    let program = "
             function f(x:Number, y: Boniato): Number {x;}
-        ",
-        )
-        .unwrap();
-
+        ";
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     assert_eq!(
-        result.err().unwrap(),
-        vec!["Semantic Error: Type or protocol Boniato is not defined.".to_string(),]
+        error_handler.get_raw_errors(),
+        vec!["Semantic Error: Type or protocol `Boniato` is not defined.".to_string(),]
     );
 }
 
 #[test]
 fn unknown_annotation_in_constant_definition() {
-    let p = Parser::new();
-
-    let mut answ = p
-        .parse(
-            "
+    let program = "
             constant x: Boniato = 3;
-        ",
-        )
-        .unwrap();
-
+        ";
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     assert_eq!(
-        result.err().unwrap(),
-        vec!["Semantic Error: Type or protocol Boniato is not defined.".to_string(),]
+        error_handler.get_raw_errors(),
+        vec!["Semantic Error: Type or protocol `Boniato` is not defined.".to_string(),]
     );
 }

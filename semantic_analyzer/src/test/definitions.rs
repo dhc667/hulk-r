@@ -1,21 +1,25 @@
 use crate::semantic_analyzer::SemanticAnalyzer;
+use error_handler::error_handler::ErrorHandler;
 use parser::parser::Parser;
 
-#[test]
-fn not_defined_variable() {
+fn analyze_and_get_errors(program: &str) -> Vec<String> {
+    let mut error_handler = ErrorHandler::new(program);
     let p = Parser::new();
-
-    let mut answ = p.parse("x + 2;").unwrap();
-
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-
     semantic_analyzer
         .analyze_program_ast(&mut answ)
         .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
+    error_handler.get_raw_errors()
+}
 
+#[test]
+fn not_defined_variable() {
+    let program = "x + 2;";
     assert_eq!(
-        semantic_analyzer.errors,
-        vec!["Variable x is not defined".to_string()]
+        analyze_and_get_errors(program),
+        vec!["Semantic Error: Variable `x` is not defined.".to_string()]
     );
 }
 
@@ -81,42 +85,22 @@ fn lookup_in_let_in_with_shadow() {
 
 #[test]
 fn not_defined_variable_different_let_in() {
-    let p = Parser::new();
-
-    let mut answ = p.parse("{ let x=3 in {x;}; x+18; };").unwrap();
-
-    let mut semantic_analyzer = SemanticAnalyzer::new();
-
-    semantic_analyzer
-        .analyze_program_ast(&mut answ)
-        .expect_err("Should return an error");
-
+    let program = "{ let x=3 in {x;}; x+18; };";
     assert_eq!(
-        semantic_analyzer.errors,
-        vec!["Variable x is not defined".to_string()]
+        analyze_and_get_errors(program),
+        vec!["Semantic Error: Variable `x` is not defined.".to_string()]
     );
 }
 
 #[test]
 fn several_undefinitions() {
-    let p = Parser::new();
-
-    let mut answ = p
-        .parse("{ let x=3, y=4, z=5 in {x;}; x+y+z+18; };")
-        .unwrap();
-
-    let mut semantic_analyzer = SemanticAnalyzer::new();
-
-    semantic_analyzer
-        .analyze_program_ast(&mut answ)
-        .expect_err("Should return an error");
-
+    let program = "{ let x=3, y=4, z=5 in {x;}; x+y+z+18; };";
     assert_eq!(
-        semantic_analyzer.errors,
+        analyze_and_get_errors(program),
         vec![
-            "Variable x is not defined".to_string(),
-            "Variable y is not defined".to_string(),
-            "Variable z is not defined".to_string()
+            "Semantic Error: Variable `x` is not defined.",
+            "Semantic Error: Variable `y` is not defined.",
+            "Semantic Error: Variable `z` is not defined."
         ]
     );
 }
@@ -170,19 +154,10 @@ fn func_definitions() {
 
 #[test]
 fn anotated_var_with_wrong_value_type() {
-    let p = Parser::new();
-
-    let mut answ = p.parse("let x: Number = true in {x;};").unwrap();
-
-    let mut semantic_analyzer = SemanticAnalyzer::new();
-
-    semantic_analyzer
-        .analyze_program_ast(&mut answ)
-        .expect_err("Should return an error");
-
+    let program = "let x: Number = true in {x;};";
     assert_eq!(
-        semantic_analyzer.errors,
-        vec!["Type mismatch: Cannot assign Boolean to Number".to_string()]
+        analyze_and_get_errors(program),
+        vec!["Semantic Error: Cannot assign `Boolean` to `Number`.".to_string()]
     );
 }
 
@@ -251,54 +226,27 @@ fn mutate_indexing() {
 
 #[test]
 fn mutate_non_variable() {
-    let p = Parser::new();
-
-    let mut answ = p
-        .parse(
-            "
-            3:= 4;
-        ",
-        )
-        .unwrap();
-
-    let mut semantic_analyzer = SemanticAnalyzer::new();
-
-    let result = semantic_analyzer.analyze_program_ast(&mut answ);
-
-    // No errors expected
+    let program = "3:= 4;";
     assert_eq!(
-        result.err().unwrap(),
-        vec!["Semantic Error: only variables and self properties can be assigned".to_string()]
+        analyze_and_get_errors(program),
+        vec!["Semantic Error: Only variables and self properties can be assigned.".to_string()]
     );
 }
 
 #[test]
 fn mutate_field_outside_definition() {
-    let p = Parser::new();
-
-    let mut answ = p
-        .parse(
-            "
+    let program = "
             type A {
                 x  = 3;
             }
             let a = new A() in {
                 a.x := 4;
             };
-        ",
-        )
-        .unwrap();
-
-    let mut semantic_analyzer = SemanticAnalyzer::new();
-
-    semantic_analyzer
-        .analyze_program_ast(&mut answ)
-        .expect_err("Should return an error");
-
+        ";
     assert_eq!(
-        semantic_analyzer.errors,
+        analyze_and_get_errors(program),
         vec![
-            "Cannot access member x of type A. Properties are private, even to inherited types."
+            "Semantic Error: Cannot access member `x` of type `A`. Properties are private, even to inherited types."
                 .to_string()
         ]
     );
