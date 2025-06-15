@@ -1,7 +1,6 @@
-function id(x: Object): Object => x;
+constant EPSILON: Number = 0.00000001;
+constant PI: Number = 3.141592653589793;
 
-[1, "false"];
+function foo(): Number => EPSILON;
 
-if (true) 1 else false;
-
-type Object {}
+print(foo());

@@ -265,3 +265,28 @@ pub fn print_defined() {
     // No errors expected
     assert!(semantic_analyzer.errors.is_empty());
 }
+
+#[test]
+pub fn constant_definition() {
+    let p = Parser::new();
+
+    let mut answ = p
+        .parse(
+            "
+        constant EPSILON: Number = 0.00000001;
+        constant PI: Number = 3.141592653589793;
+
+        function foo(): Number => EPSILON;
+
+        print(foo());
+    ",
+        )
+        .unwrap();
+
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+
+    semantic_analyzer.analyze_program_ast(&mut answ).unwrap();
+
+    // No errors expected
+    assert!(semantic_analyzer.errors.is_empty());
+}

@@ -497,7 +497,7 @@ impl<'a> DefinitionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
     }
 
     fn visit_function_def(&mut self, node: &mut GlobalFunctionDef) -> TypeAnnotation {
-        self.var_definitions.push_closed_frame();
+        self.var_definitions.push_open_frame();
         self.handle_fn_def(&mut node.function_def, None);
         self.var_definitions.pop_frame();
         None

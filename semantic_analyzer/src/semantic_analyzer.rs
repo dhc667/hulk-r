@@ -91,7 +91,21 @@ impl SemanticAnalyzer {
             &mut self.func_definitions,
             &mut self.errors,
         );
-        for definition in &mut program.definitions {
+
+        // visit constants first to ensure they are defined before use
+        for definition in &mut program
+            .definitions
+            .iter_mut()
+            .filter(|d| d.as_constant_def().is_some())
+        {
+            definition.accept(&mut semantic_visitor);
+        }
+
+        for definition in &mut program
+            .definitions
+            .iter_mut()
+            .filter(|d| d.as_constant_def().is_none())
+        {
             definition.accept(&mut semantic_visitor);
         }
 
