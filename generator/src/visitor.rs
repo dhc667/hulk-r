@@ -128,6 +128,8 @@ pub struct GeneratorVisitor {
 
     /// Maps (type_name, function_name) to the LLVM function signature.
     function_member_signature_types: HashMap<(String, String), String>,
+
+    functions_args_types: HashMap<String, Vec<String>>,
 }
 
 impl GeneratorVisitor {
@@ -149,6 +151,7 @@ impl GeneratorVisitor {
             original_type_for_definition: HashMap::new(),
             tmp_counter: Cell::new(0),
             function_member_signature_types: HashMap::new(),
+            functions_args_types: HashMap::new(),
         }
     }
 
@@ -726,8 +729,17 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
 
         let mut preamble = String::new();
         let mut arg_values = Vec::new();
-        let mut arg_types = Vec::new();
-        for arg in node.arguments.iter_mut() {
+
+
+        let arg_types = {
+            // Clone so we don't hold the borrow on self while mutably borrowing self in the loop
+            self.functions_args_types
+                .get(&node.identifier.id)
+                .unwrap_or_else(|| panic!("Function {} not found", node.identifier.id))
+                .clone()
+        };
+
+        for (i, arg) in node.arguments.iter_mut().enumerate() {
             let arg_result = arg.accept(self);
             preamble += &arg_result.preamble;
             let handle = arg_result
@@ -735,32 +747,6 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
                 .expect("Function argument must have a result");
             arg_values.push(handle.llvm_name);
 
-            let arg_type = match arg {
-                ast::Expression::NumberLiteral(_) => "double".to_string(),
-                ast::Expression::BooleanLiteral(_) => "i1".to_string(),
-                ast::Expression::StringLiteral(_) => "i8*".to_string(),
-                ast::Expression::Variable(id) => match &id.info.ty {
-                    Some(ty) => match ty {
-                        ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Number) => {
-                            "double".to_string()
-                        }
-                        ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Bool) => {
-                            "i1".to_string()
-                        }
-                        ast::typing::Type::BuiltIn(ast::typing::BuiltInType::String) => {
-                            "i8*".to_string()
-                        }
-                        ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Object) => {
-                            "i8*".to_string()
-                        }
-                        ast::typing::Type::Defined(name) => format!("%{}_type*", name.id.clone()),
-                        _ => "i8*".to_string(),
-                    },
-                    None => "i8*".to_string(),
-                },
-                _ => "i8*".to_string(),
-            };
-            arg_types.push(arg_type);
         }
 
         let ret_type = match &node.identifier.info.ty {
@@ -1211,6 +1197,8 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
         };
 
         preamble += &format!("define {} @{}(", return_type, func_name);
+        
+        let mut param_type_vec:Vec<String> = Vec::new();
 
         for (i, param) in node.function_def.parameters.iter().enumerate() {
             if i > 0 {
@@ -1234,7 +1222,13 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
                 None => "i8*".to_string(),
             };
             preamble += &format!("{} %{}", llvm_type, param.id);
+            param_type_vec.push(llvm_type);
+
         }
+        
+        self.functions_args_types.insert(node.function_def.identifier.id.clone(), param_type_vec);
+
+
         preamble += ") {\n";
         preamble += "entry:\n";
 
