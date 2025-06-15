@@ -47,7 +47,7 @@ impl GeneratorVisitor {
     /// - If we generate a temporary variable %.0, and then generate these labels, we'll get
     /// loop.1, body.1, loop_exit.1
     /// - If we generate the labels first, we'll get loop.0, body.0, loop_exit.0
-    fn generate_loop_labels(&mut self) -> (String, String, String) {
+    pub(crate) fn generate_loop_labels(&mut self) -> (String, String, String) {
         let l = format!("loop.{}", self.tmp_variable_id);
         let b = format!("body.{}", self.tmp_variable_id);
         let le = format!("loop_exit.{}", self.tmp_variable_id);

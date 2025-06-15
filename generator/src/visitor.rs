@@ -1,6 +1,7 @@
 mod assignment;
 mod bin_op;
 mod block;
+mod for_exp;
 mod if_else;
 mod print;
 mod type_def;
@@ -338,8 +339,10 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
         self.handle_while(condition_result, body_result)
     }
 
-    fn visit_for(&mut self, _node: &mut ast::For) -> VisitorResult {
-        todo!()
+    fn visit_for(&mut self, node: &mut ast::For) -> VisitorResult {
+        let iterable_result = node.iterable.accept(self);
+        let element_id = node.element.id.clone();
+        self.handle_for(&element_id, iterable_result, node)
     }
 
     fn visit_un_op(&mut self, node: &mut ast::UnOp) -> VisitorResult {
@@ -802,7 +805,7 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
         // Allocate memory for the array using malloc
         // e.g., %list_ptr = call i8* @malloc(i64 size)
         let type_size = self.llvm_type_size(&llvm_elem_type);
-        let total_size = type_size * list_len;
+        let total_size = type_size * list_len + 8;
         let ptr_var = format!("%list_ptr_{}", tmp_var_id);
         preamble += &format!(
             "{ptr_var} = call i8* @malloc(i64 {})\n",
@@ -816,6 +819,43 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
             array_ptr=array_ptr,
             elem_type=llvm_elem_type
         );
+        
+        // Store the length of the array at index 0
+        let length_ptr = format!("%length_ptr_{}", tmp_var_id);
+        let length_value = format!("%length_val_{}", tmp_var_id);
+        preamble += &format!(
+            "{length_value} = add i64 {}, 0\n",
+            element_handles.len()
+        );
+        preamble += &format!(
+            "{length_ptr} = getelementptr inbounds {elem_type}, {elem_type}* {array_ptr}, i64 0\n",
+            length_ptr=length_ptr,
+            elem_type=llvm_elem_type,
+            array_ptr=array_ptr
+        );
+        
+        // Always store length as i64 to ensure consistency, converting if needed
+        if llvm_elem_type == "i64" {
+            preamble += &format!(
+                "store i64 {length_value}, i64* {length_ptr}\n",
+                length_value=length_value,
+                length_ptr=length_ptr
+            );
+        } else {
+            // If the element type is not i64, we need to bitcast the pointer
+            let casted_length_ptr = format!("%casted_length_ptr_{}", tmp_var_id);
+            preamble += &format!(
+                "{casted_length_ptr} = bitcast {elem_type}* {length_ptr} to i64*\n",
+                casted_length_ptr=casted_length_ptr,
+                elem_type=llvm_elem_type,
+                length_ptr=length_ptr
+            );
+            preamble += &format!(
+                "store i64 {length_value}, i64* {casted_length_ptr}\n",
+                length_value=length_value,
+                casted_length_ptr=casted_length_ptr
+            );
+        }
 
         // Store elements into the array memory
         for (i, handle) in element_handles.iter().enumerate() {
@@ -825,7 +865,7 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
                 elem_ptr=elem_ptr,
                 elem_type=llvm_elem_type,
                 array_ptr=array_ptr,
-                idx=i
+                idx=i+1
             );
             preamble += &format!(
                 "store {elem_type} {value}, {elem_type}* {elem_ptr}\n",
@@ -949,12 +989,27 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
             );
             casted_ptr
         };
-
+        
         // Compute pointer to the indexed element
         let elem_ptr = format!("%elem_ptr_{}", tmp_var_id);
+        
+        // Cast the index to i64
+        let casted_index = format!("%casted_index_{}", tmp_var_id);
+        preamble += &format!(
+            "  {} = fptosi {} {} to i64\n", 
+            casted_index, "double", index_handle.llvm_name
+        );
+        
+        // Create a new temporary variable for the adjusted index
+        let adjusted_index = format!("%adjusted_index_{}", tmp_var_id);
+        preamble += &format!(
+            "  {} = add i64 {}, 1\n",
+            adjusted_index, casted_index
+        );
+        
         preamble += &format!(
             "  {} = getelementptr inbounds {}, {}* {}, i64 {}\n",
-            elem_ptr, elem_type, elem_type, casted_list_ptr, index_handle.llvm_name.split('.').next().unwrap()
+            elem_ptr, elem_type, elem_type, casted_list_ptr, adjusted_index
         );
 
         // Load the value from the array
@@ -963,7 +1018,7 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
             "  {} = load {}, {}* {}\n",
             loaded_val, elem_type, elem_type, elem_ptr
         );
-
+        
         // Create the appropriate handle type based on the element type
         let handle_type = match elem_type.as_str() {
             "double" => HandleType::Register(LlvmType::F64),
