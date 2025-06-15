@@ -286,7 +286,7 @@ CompositeExpression: ast::Expression = {
     LetExpression => ast::Expression::from(<>),
     IfExpression => ast::Expression::from(<>),
     WhileExpression => ast::Expression::from(<>),
-    ForExpression => ast::Expression::from(<>),
+    // ForExpression => ast::Expression::from(<>),
     Atom
 }
 
@@ -330,10 +330,10 @@ WhileExpression: ast::While = {
         => ast::While::new(k, c, b),
 }
 
-ForExpression: ast::For = {
-    <k:ForKeyword> "(" <e:Identifier> <i:InKeyword> <x:Expression> ")" <b:Block>
-        => ast::For::new(k, e, i, x, b),
-}
+// ForExpression: ast::For = {
+//    <k:ForKeyword> "(" <e:Identifier> <i:InKeyword> <x:Expression> ")" <b:Block>
+//        => ast::For::new(k, e, i, x, b),
+//}
 
 Atom: ast::Expression = {
     "(" <x:Expression> ")" => x,
@@ -576,10 +576,10 @@ WhileKeyword: tokens::Keyword = {
         => tokens::Keyword::While(tokens::TokenPosition::new(s, e)),
 }
 
-ForKeyword: tokens::Keyword = {
-    <s: @L> "for" <e: @R>
-        => tokens::Keyword::For(tokens::TokenPosition::new(s, e)),
-}
+// ForKeyword: tokens::Keyword = {
+//     <s: @L> "for" <e: @R>
+//         => tokens::Keyword::For(tokens::TokenPosition::new(s, e)),
+// }
 
 TypeKeyword: tokens::Keyword = {
     <s: @L> "type" <e: @R>

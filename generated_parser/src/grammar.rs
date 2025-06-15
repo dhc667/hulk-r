@@ -405,7 +405,7 @@ pub fn lexer_parser() -> (LexerWrapper, Parser<TokenType, ReturnType>) {
             CompositeExpression -> LetExpression = get_last;
             CompositeExpression -> IfExpression = get_last;
             CompositeExpression -> WhileExpression = get_last;
-            CompositeExpression -> ForExpression = get_last;
+            // CompositeExpression -> ForExpression = get_last;
             CompositeExpression -> Atom = get_last;
 
             LetExpression -> Let AssignmentList In CompositeExpression
@@ -517,22 +517,22 @@ pub fn lexer_parser() -> (LexerWrapper, Parser<TokenType, ReturnType>) {
                 }
             ;
 
-            ForExpression -> For Lpar IdentifierNT In Expression Rpar Block
-                = |mut v| {
-                    let body = v.pop().unwrap().try_into_block().unwrap();
-                    v.pop().unwrap();
-                    let iterable = v.pop().unwrap().try_into_expression().unwrap();
-                    let in_token = v.pop().unwrap().try_into_keyword().unwrap();
-                    let element = v.pop().unwrap().try_into_identifier_nt().unwrap();
-                    v.pop().unwrap();
-                    let for_token = v.pop().unwrap().try_into_keyword().unwrap();
+            // ForExpression -> For Lpar IdentifierNT In Expression Rpar Block
+            //     = |mut v| {
+            //         let body = v.pop().unwrap().try_into_block().unwrap();
+            //         v.pop().unwrap();
+            //         let iterable = v.pop().unwrap().try_into_expression().unwrap();
+            //         let in_token = v.pop().unwrap().try_into_keyword().unwrap();
+            //         let element = v.pop().unwrap().try_into_identifier_nt().unwrap();
+            //         v.pop().unwrap();
+            //         let for_token = v.pop().unwrap().try_into_keyword().unwrap();
 
 
-                    ReturnType::Expression(Expression::from(
-                        For::new(for_token, element, in_token, iterable, body)
-                    ))
-                }
-            ;
+            //         ReturnType::Expression(Expression::from(
+            //             For::new(for_token, element, in_token, iterable, body)
+            //         ))
+            //     }
+            // ;
 
             Atom -> Lpar Expression Rpar
                 = |mut v| {
@@ -837,9 +837,9 @@ pub fn lexer_parser() -> (LexerWrapper, Parser<TokenType, ReturnType>) {
             (While, "while", |tok: &Token<TokenType>| {
                 ReturnType::Keyword(Keyword::While(get_pos(tok)))
             }),
-            (For, "for", |tok: &Token<TokenType>| {
-                ReturnType::Keyword(Keyword::For(get_pos(tok)))
-            }),
+            // (For, "for", |tok: &Token<TokenType>| {
+            //     ReturnType::Keyword(Keyword::For(get_pos(tok)))
+            // }),
             (In, "in", |tok: &Token<TokenType>| {
                 ReturnType::Keyword(Keyword::In(get_pos(tok)))
             }),

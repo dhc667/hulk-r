@@ -1,6 +1,7 @@
 use crate::test::expression_parser::ExpressionParser;
 
 #[test]
+#[ignore = "for is disabled"]
 fn simple_for() {
     let p = ExpressionParser::new();
 
@@ -26,6 +27,7 @@ fn simple_for() {
 }
 
 #[test]
+#[ignore = "for is disabled"]
 fn complex_iterable() {
     let p = ExpressionParser::new();
 
