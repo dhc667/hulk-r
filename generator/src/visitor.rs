@@ -901,7 +901,7 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
             Some(ast_type) => self.llvm_type_str_from_ast_type(ast_type),
             None => "i64".to_string(), // fallback, though shouldn't happen
         };
-        print!("heyyyyy {llvm_elem_type}");
+
         // Allocate memory for the array using malloc
         // e.g., %list_ptr = call i8* @malloc(i64 size)
         let type_size = self.llvm_type_size(&llvm_elem_type);
