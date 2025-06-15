@@ -11,9 +11,6 @@ let a = new BullDog() in {a.sound();};
 
 constant PI: Number = 3.14;
 
-protocol Animal {
-    sound(): String; 
-}
 
 type Dog {
     sound(): String => \"woof!\";
@@ -50,9 +47,6 @@ fn expr_in_the_middle() {
             "
 constant PI: Number = 3.14;
 
-protocol Animal {
-    sound(): String; 
-}
 
 type Dog {
     sound(): String => \"woof!\";
@@ -91,9 +85,6 @@ fn expr_in_the_end() {
             "
 constant PI: Number = 3.14;
 
-protocol Animal {
-    sound(): String; 
-}
 
 type Dog {
     sound(): String => \"woof!\";
@@ -132,9 +123,6 @@ fn multiple_exprs() {
             "
 constant PI: Number = 3.14;
 
-protocol Animal {
-    sound(): String; 
-}
 
 let a = new Dog() in {a.sound();};
 
