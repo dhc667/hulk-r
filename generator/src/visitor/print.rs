@@ -63,9 +63,10 @@ impl GeneratorVisitor {
         "#;
 
         "@.fstr = private constant [4 x i8] c\"%f\\0A\\00\", align 1\n".to_string()
-            + "@.true_str = private constant [6 x i8] c\"true\\0A\\00\", align 1\n"
-            + "@.false_str = private constant [7 x i8] c\"false\\0A\\00\", align 1\n"
-            + "@.none_str = private constant [6 x i8] c\"none\\0A\\00\", align 1\n"
+            + "@.fstr2 = private constant [3 x i8] c\"%f\\00\", align 1\n"
+            + "@.true_str = private constant [5 x i8] c\"true\\00\", align 1\n"
+            + "@.false_str = private constant [6 x i8] c\"false\\00\", align 1\n"
+            + "@.none_str = private constant [5 x i8] c\"none\\00\", align 1\n"
             + "declare i32 @printf(i8*, ...)\n"
             + "declare i32 @sprintf(i8*, i8*, ...)\n"
             + "declare i8* @strcat(i8*, i8*)\n"
