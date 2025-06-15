@@ -8,6 +8,7 @@ use generator::context::Context;
 use crate::def_info::{FuncInfo, TypeInfo, VarInfo};
 
 use crate::graph_utils::dfs::get_cycle;
+use crate::typing::sort_definitions::sort_definitions;
 use crate::visitors::{
     AnnotationVisitor, GlobalDefinerVisitor, InheritanceVisitor, SemanticVisitor,
 };
@@ -69,6 +70,8 @@ impl SemanticAnalyzer {
         if self.errors.len() > 0 {
             return Err(self.errors.clone());
         }
+
+        sort_definitions(&self.type_hierarchy, &mut program.definitions);
 
         let mut annotation_visitor = AnnotationVisitor::new(
             &mut self.type_definitions,
