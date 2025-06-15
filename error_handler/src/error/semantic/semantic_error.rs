@@ -14,7 +14,10 @@ use crate::error::{
             FuncAlreadyDefined, FuncParamInvalidType, FuncParamsInvalidAmount,
             FuncReturnTypeInvalid,
         },
-        inheritance::{InheritanceCycle, InheritanceInvalidParent},
+        inheritance::{
+            InheritanceCycle, InheritanceInvalidParent, InvalidIfElseType, InvalidListLiteralType,
+            ObjectAnnotationError,
+        },
         iterable::{InvalidIndexing, NonIterableType},
         member_access::{AccessingPrivateMember, FieldNotFound, MethodNotFound},
         operator::{BinOpError, UnOpError},
@@ -66,6 +69,9 @@ pub enum SemanticError {
     // inheritance
     InheritanceInvalidParent(InheritanceInvalidParent), // "Type {} is a built-in type and cannot be inherited from",
     InheritanceCycle(InheritanceCycle), // "Semantic Error: Inheritance cycle detected
+    InvalidIfElseType(InvalidIfElseType),
+    InvalidListLiteralType(InvalidListLiteralType),
+    ObjectAnnotationError(ObjectAnnotationError),
 
     // iterable
     NonIterableType(NonIterableType), // "Type mismatch: Cannot iterate over type {}",
@@ -106,6 +112,9 @@ impl Display for SemanticError {
             SemanticError::InvalidReassigmentExpression(e) => format!("{}", e),
             SemanticError::InheritanceInvalidParent(e) => format!("{}", e),
             SemanticError::InheritanceCycle(e) => format!("{}", e),
+            SemanticError::InvalidIfElseType(e) => format!("{}", e),
+            SemanticError::InvalidListLiteralType(e) => format!("{}", e),
+            SemanticError::ObjectAnnotationError(e) => format!("{}", e),
             SemanticError::NonIterableType(e) => format!("{}", e),
             SemanticError::InvalidIndexing(e) => format!("{}", e),
             SemanticError::AccessingPrivateMember(e) => format!("{}", e),
@@ -149,6 +158,9 @@ impl HulkErrorTrait for SemanticError {
             SemanticError::InvalidReassigmentExpression(e) => e.get_position(),
             SemanticError::InheritanceInvalidParent(e) => e.get_position(),
             SemanticError::InheritanceCycle(e) => e.get_position(),
+            SemanticError::InvalidIfElseType(e) => e.get_position(),
+            SemanticError::InvalidListLiteralType(e) => e.get_position(),
+            SemanticError::ObjectAnnotationError(e) => e.get_position(),
             SemanticError::NonIterableType(e) => e.get_position(),
             SemanticError::InvalidIndexing(e) => e.get_position(),
             SemanticError::AccessingPrivateMember(e) => e.get_position(),

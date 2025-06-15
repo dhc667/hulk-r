@@ -1,4 +1,5 @@
 use ast::typing::{BuiltInType, Type};
+use error_handler::error_handler::ErrorHandler;
 use parser::parser::Parser;
 
 use crate::semantic_analyzer::SemanticAnalyzer;
@@ -284,4 +285,24 @@ fn complicated_inheritance_cycle() {
     println!("{:?}", semantic_analyzer.errors);
 
     assert!(result.is_err(), "Errors: {:?}", result.err());
+}
+
+#[test]
+fn redeclare_object() {
+    let program = "
+        type Object {}";
+
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
+
+    assert_eq!(
+        error_handler.get_raw_errors(),
+        vec!["Semantic Error: Already exists a type or protocol `Object`."]
+    )
 }

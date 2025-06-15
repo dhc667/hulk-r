@@ -110,7 +110,10 @@ pub fn simple_inference_test() {
 
     assert_eq!(
         error_handler.get_raw_errors(),
-        vec!["Semantic Error: Cannot apply `+` to operands of type `Object` and `Number`."]
+        vec![
+            "Semantic Error: If-else expresssion must have a more specific type than `Object`.",
+            "Semantic Error: Cannot apply `+` to operands of type `Object` and `Number`."
+        ]
     );
     assert_eq!(dec.info.ty, Some(Type::BuiltIn(BuiltInType::Object)));
 }
@@ -199,7 +202,16 @@ pub fn list_typing() {
 #[test]
 pub fn list_typing_2() {
     let p = Parser::new();
-    let mut answ = p.parse("let x = [1, true, \"hola\"] in x;").unwrap();
+    let mut answ = p
+        .parse(
+            "
+        type A {}
+        type B inherits A {}
+        type C inherits A {}
+        let x = [new B(), new B(), new A(), new C()] in x;
+    ",
+        )
+        .unwrap();
 
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer.analyze_program_ast(&mut answ).unwrap();
@@ -210,6 +222,30 @@ pub fn list_typing_2() {
     let list_literal = assignment.rhs.as_list_literal().unwrap();
 
     assert_eq!(semantic_analyzer.errors.len(), 0);
+    assert_eq!(to_string(&dec.info.ty), "A*");
+    assert_eq!(to_string(&list_literal.list_type), "A*")
+}
+
+#[test]
+pub fn list_typing_3() {
+    let program = "let x = [1, true, \"hola\"] in x;";
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
+
+    let assignment = &answ.expressions[0].as_let_in().unwrap().assignment;
+    let dec = &assignment.identifier;
+    let list_literal = assignment.rhs.as_list_literal().unwrap();
+
+    assert_eq!(
+        error_handler.get_raw_errors(),
+        vec!["Semantic Error: List literal must have a more specific type than `Object`."]
+    );
     assert_eq!(
         dec.info.ty,
         Some(Type::Iterable(Box::new(Type::BuiltIn(BuiltInType::Object))))
@@ -280,11 +316,16 @@ pub fn list_indexing_2() {
 
 #[test]
 pub fn list_typing_with_different_types() {
-    let p = Parser::new();
-    let mut answ = p.parse("let x = [1, 2, \"3\"] in { x ;};").unwrap();
+    let program = "let x = [1, 2, \"3\"] in { x ;};";
 
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
-    semantic_analyzer.analyze_program_ast(&mut answ).unwrap();
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
 
     let dec = &answ.expressions[0]
         .as_let_in()
@@ -292,7 +333,6 @@ pub fn list_typing_with_different_types() {
         .assignment
         .identifier;
 
-    assert_eq!(semantic_analyzer.errors.len(), 0);
     assert_eq!(
         dec.info.ty,
         Some(Type::Iterable(Box::new(Type::BuiltIn(BuiltInType::Object))))
@@ -672,6 +712,27 @@ fn concat_checks6() {
         vec![
             "Semantic Error: Cannot apply `@` to operands of type `Number*` and `Number*`.",
             "Semantic Error: Cannot apply `@@` to operands of type `Number*` and `Number*`."
+        ]
+    );
+}
+
+#[test]
+fn object_params() {
+    let program = r#"function id(x: Object): Object => x;"#;
+    let mut error_handler = ErrorHandler::new(program);
+    let p = Parser::new();
+    let mut answ = p.parse(program).unwrap();
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
+
+    assert_eq!(
+        error_handler.get_raw_errors(),
+        vec![
+            "Semantic Error: Annotations must be of a more specific type than `Object`.",
+            "Semantic Error: Annotations must be of a more specific type than `Object`."
         ]
     );
 }

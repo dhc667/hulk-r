@@ -1280,11 +1280,14 @@ fn method_override_variant_1() {
     let mut answ = p
         .parse(
             "
+            type O {}
+            type N inherits O {}
+
             type A {
-                foo(x: Number):Number => x;
+                foo(x: N):N => x;
             }
             type B inherits A {
-                foo(x: Object):Number => 1;
+                foo(x: O):N => new N();
             }
             ",
         )
@@ -1303,11 +1306,14 @@ fn method_override_variant_2() {
     let mut answ = p
         .parse(
             "
+            type O {}
+            type N inherits O {}
+
             type A {
-                foo(x: Number):Object => 1;
+                foo(x: N):O => new N();
             }
             type B inherits A {
-                foo(x: Number):Number => x;
+                foo(x: N):N => x;
             }
             ",
         )
@@ -1326,11 +1332,14 @@ fn method_override_variant_3() {
     let mut answ = p
         .parse(
             "
+            type O {}
+            type N inherits O {}
+
             type A {
-                foo(x: Number):Object => x;
+                foo(x: N):O => x;
             }
             type B inherits A {
-                foo(x: Object):Number => 3;
+                foo(x: O):N => new N();
             }
             ",
         )
@@ -1368,11 +1377,14 @@ fn field_override_should_fail() {
 #[test]
 fn method_override_wrong_arg_count() {
     let program = "
+        type O {}
+        type N inherits O {}
+
         type A { 
-            foo(x: Number): Number => x; 
+            foo(x: N): N => x; 
         }
         type B inherits A { 
-            foo(x: Number, y: Number): Number => x; 
+            foo(x: N, y: N): N => x; 
         }
     ";
     let mut error_handler = ErrorHandler::new(program);
@@ -1395,14 +1407,17 @@ fn method_override_wrong_arg_count() {
 #[test]
 fn method_override_wrong_return_covariance() {
     let program = r#"
+        type O {}
+        type N inherits O {}
+
         type A { 
-            foo(x: Number): Object => x; 
+            foo(x: N): O => x; 
         }
         type B inherits A { 
-            foo(x: Number): Number => x; 
+            foo(x: N): N => x; 
         }
         type C inherits B { 
-            foo(x: Number): Boolean => true; 
+            foo(x: N): B => new B(); 
         }
     "#;
 
@@ -1426,11 +1441,14 @@ fn method_override_wrong_return_covariance() {
 #[test]
 fn complicated_inheritance_chain() {
     let program = "
-        type A { foo(x: Object): Object => x; }
-        type B inherits A { foo(x: Number): Object => x; }
-        type C inherits B { foo(x: Number): Number => x; }
-        type D inherits C { foo(x: Number): Number => x; }
-        type E inherits D { foo(x: Number): Number => x; }
+        type O {}
+        type N inherits O {}
+
+        type A { foo(x: O): O => x; }
+        type B inherits A { foo(x: N): O => x; }
+        type C inherits B { foo(x: N): N => x; }
+        type D inherits C { foo(x: N): N => x; }
+        type E inherits D { foo(x: N): N => x; }
     ";
 
     let mut error_handler = ErrorHandler::new(program);
@@ -1456,9 +1474,12 @@ fn complicated_inheritance_cycle_should_fail() {
     let mut answ = p
         .parse(
             r#"
-        type A inherits C { foo(x: Number): Object => x; }
-        type B inherits A { foo(x: Object): Object => x; }
-        type C inherits B { foo(x: Object): Number => x; }
+        type O {}
+        type N inherits O {}
+
+        type A inherits C { foo(x: N): O => x; }
+        type B inherits A { foo(x: O): O => x; }
+        type C inherits B { foo(x: O): N => x; }
     "#,
         )
         .unwrap();
@@ -1470,13 +1491,16 @@ fn complicated_inheritance_cycle_should_fail() {
 #[test]
 fn override_from_far_ancestor() {
     let program = "
+            type O {}
+            type N inherits O {}
+
             type A {
-                foo(x: Number):Object => x;
+                foo(x: N):O => x;
                 x = 1;
             }
             type C inherits A {}
             type B inherits C {
-                foo(x: Object):Number => 3;
+                foo(x: O):N => new N();
                 x = 2;
             }
             ";

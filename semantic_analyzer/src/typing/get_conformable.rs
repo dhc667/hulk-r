@@ -1,5 +1,8 @@
-use ast::typing::{Type, TypeAnnotation};
-use error_handler::error::{error::HulkError, semantic::definition::UndefinedTypeOrProtocol};
+use ast::typing::{Type, TypeAnnotation, to_string};
+use error_handler::error::{
+    error::HulkError,
+    semantic::{definition::UndefinedTypeOrProtocol, inheritance::ObjectAnnotationError},
+};
 
 pub trait GetConformable {
     fn is_type_defined(&self, ty: &Type) -> bool;
@@ -15,6 +18,9 @@ pub trait GetConformable {
             return Ok(None);
         };
 
+        if to_string(&Some(ty.clone())) == "Object" {
+            return Err(ObjectAnnotationError::new(position).into());
+        }
         //TODO: we probably need to do something generic for this
         let ty = if let Type::Iterable(inner) = ty {
             inner.as_ref()

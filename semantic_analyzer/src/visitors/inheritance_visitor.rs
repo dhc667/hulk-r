@@ -100,10 +100,12 @@ impl<'a> DefinitionVisitor<()> for InheritanceVisitor<'a> {
                 }
             }
             None => {
-                self.type_hierarchy.insert(
-                    node.name.id.clone(),
-                    Some(Type::BuiltIn(BuiltInType::Object)),
-                );
+                if node.name.id != "Object" {
+                    self.type_hierarchy.insert(
+                        node.name.id.clone(),
+                        Some(Type::BuiltIn(BuiltInType::Object)),
+                    );
+                }
             }
         }
     }
