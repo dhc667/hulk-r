@@ -1,4 +1,4 @@
-use crate::test::lli_interface::lli_f64;
+use crate::test::lli_interface::{lli_f64, lli_i1};
 use crate::test::lli_interface::lli_string;
 use super::generate_code;
 
@@ -434,7 +434,7 @@ fn return_string_from_function() {
     let llvm = generate_code(
         r#"
             function f(): String { return let a = "a" in { a:="hello";  (a @" world");}; }
-            let x = f(),y = [1,2,3] in print(x);
+            let x = f() in print(x);
         "#,
     );
     println!("{}", llvm);
@@ -483,4 +483,63 @@ hello world
 4.000000
 hello world
 5.000000");
+}
+
+#[test]
+fn list_of_numbers() {
+    let llvm = generate_code(
+        r#"
+            function f(): String { return let a = "a" in { a:="hello";  (a @" world");}; }
+            let x = f(),y = [1,2,3] in print(x);
+        "#,
+    );
+    println!("{}", llvm);
+    let result = lli_string(&llvm).unwrap();
+    assert_eq!(result, "hello world");
+}
+
+#[test]
+fn list_of_bools() {
+    let llvm = generate_code(
+        r#"
+            function f(): Bool { return false; }
+            let x = f() in let y = [true,x] in print(x);
+        "#,
+    );
+    println!("{}", llvm);
+    let result = lli_i1(&llvm).unwrap();
+    assert_eq!(result, false);
+}
+
+#[test]
+fn list_of_strings() {
+    let llvm = generate_code(
+        r#"
+            function f(): String { return let a = "a" in { a:="hello";  (a @" world");}; }
+            let x = f(),y = ["hi",x] in print(x);
+        "#,
+    );
+    println!("{}", llvm);
+    let result = lli_string(&llvm).unwrap();
+    assert_eq!(result, "hello world");
+}
+
+
+#[test]
+fn list_of_types() {
+    let llvm = generate_code(
+        r#"
+            type Person ( name: String,age: Number){
+                age=age*2;
+                name=name;
+                getAge(): Number { return self.age; }
+                getName(): String { return self.name; }
+            }
+            let josue = new Person("josue",20), dario = new Person("dario",20) , list = [josue,dario] in print(josue.getName() @ " y " @ dario.getName());
+            
+        "#,
+    );
+    println!("{}", llvm);
+    let result = lli_string(&llvm).unwrap();
+    assert_eq!(result, "josue y dario");
 }
