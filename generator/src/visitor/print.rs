@@ -67,6 +67,7 @@ impl GeneratorVisitor {
             + "@.true_str = private constant [5 x i8] c\"true\\00\", align 1\n"
             + "@.false_str = private constant [6 x i8] c\"false\\00\", align 1\n"
             + "@.none_str = private constant [5 x i8] c\"none\\00\", align 1\n"
+            + "@.space_str = private constant [2 x i8] c\" \\00\", align 1\n"
             + "declare i32 @printf(i8*, ...)\n"
             + "declare i32 @sprintf(i8*, i8*, ...)\n"
             + "declare i8* @strcat(i8*, i8*)\n"
