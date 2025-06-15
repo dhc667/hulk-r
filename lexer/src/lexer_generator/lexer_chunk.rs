@@ -11,6 +11,7 @@ use std::hash::Hash;
 /// ## Methods:
 /// - `new`: Creates a new `LexerChunk` with the specified type, slice, line, start, and end indices.
 /// - `is_empty`: Checks if the chunk is empty (i.e., start and end indices are the same).
+#[derive(Debug)]
 pub struct LexerChunk<'a, TokenKind>
 where
     TokenKind: Clone + PartialEq + Hash + Eq,

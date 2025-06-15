@@ -28,7 +28,7 @@ Instruction: parsing_helpers::Instruction = {
 
 Definition: ast::Definition = {
     TypeDef => ast::Definition::from(<>),
-    ProtocolDef => ast::Definition::from(<>),
+    // ProtocolDef => ast::Definition::from(<>),
     GlobalFunctionDef => ast::Definition::from(<>),
     ConstantDef => ast::Definition::from(<>),
 }
@@ -119,11 +119,11 @@ DataMemberDef: ast::DataMemberDef = {
         => ast::DataMemberDef::from(a)
 }
 
-ProtocolDef: ast::ProtocolDef = {
-    <k:ProtocolKeyword> <n:TypeName> <x:ExtensionIndicator?> "{"
-        <l:FunctionSignatureList>
-    "}" => ast::ProtocolDef::new(k, n, x, l),
-}
+// ProtocolDef: ast::ProtocolDef = {
+//    <k:ProtocolKeyword> <n:TypeName> <x:ExtensionIndicator?> "{"
+//        <l:FunctionSignatureList>
+//    "}" => ast::ProtocolDef::new(k, n, x, l),
+//}
 
 ExtensionIndicator: ast::ExtensionIndicator = {
     <x:ExtendsKeyword> <n:TypeName>
@@ -520,7 +520,7 @@ CloseBracket: tokens::GroupingOperator = {
 }
 
 BuiltInType: typing::BuiltInType = {
-    "Object" => typing::BuiltInType::Object,
+    // "Object" => typing::BuiltInType::Object,
     "Number" => typing::BuiltInType::Number,
     "String" => typing::BuiltInType::String,
     "Boolean" => typing::BuiltInType::Bool,
@@ -591,10 +591,10 @@ FunctionKeyword: tokens::Keyword = {
         => tokens::Keyword::Function(tokens::TokenPosition::new(s, e)),
 }
 
-ProtocolKeyword: tokens::Keyword = {
-    <s: @L> "protocol" <e: @R>
-        => tokens::Keyword::Protocol(tokens::TokenPosition::new(s, e)),
-}
+// ProtocolKeyword: tokens::Keyword = {
+//    <s: @L> "protocol" <e: @R>
+//        => tokens::Keyword::Protocol(tokens::TokenPosition::new(s, e)),
+//}
 
 ConstantKeyword: tokens::Keyword = {
     <s: @L> "constant" <e: @R>

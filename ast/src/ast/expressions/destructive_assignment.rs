@@ -4,6 +4,7 @@ use crate::{
     visitors::{ExpressionVisitor, visitable_expression::VisitableExpression},
 };
 
+#[derive(Debug)]
 pub struct DestructiveAssignment {
     pub lhs: Box<Expression>,
     pub op: BinaryOperator,

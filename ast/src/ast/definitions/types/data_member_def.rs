@@ -1,6 +1,7 @@
 use crate::{Assignment, Identifier};
 use crate::{Expression, tokens::BinaryOperator};
 
+#[derive(Debug)]
 pub struct DataMemberDef {
     pub identifier: Identifier,
     pub assignment_op: BinaryOperator,

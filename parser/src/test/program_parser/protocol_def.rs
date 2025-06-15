@@ -3,6 +3,7 @@ use ast::typing::BuiltInType;
 use crate::ProgramParser;
 
 #[test]
+#[ignore = "protocols are disabled"]
 fn simple_protocol() {
     let p = ProgramParser::new();
 
@@ -11,7 +12,7 @@ fn simple_protocol() {
             "
 
 protocol Hash {
-    hash(o: Object): Number;
+    hash(o: String): Number;
 }
 
 42;
@@ -32,6 +33,6 @@ protocol Hash {
             .unwrap()
             .as_builtin()
             .unwrap(),
-        &BuiltInType::Object
+        &BuiltInType::String
     )
 }

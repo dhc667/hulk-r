@@ -3,6 +3,7 @@ use super::{
 };
 use crate::{ExpressionVisitor, VisitableExpression, tokens::*};
 
+#[derive(Debug)]
 pub enum Expression {
     DestructiveAssignment(DestructiveAssignment),
     BinOp(BinOp),

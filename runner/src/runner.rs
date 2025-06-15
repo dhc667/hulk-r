@@ -1,5 +1,6 @@
+use generated_parser::ProgramParser;
 use generator::CodeGenerator;
-use parser::parser::Parser;
+
 use semantic_analyzer::semantic_analyzer::SemanticAnalyzer;
 
 fn write_output(target_file: &str, content: &str) -> Result<(), std::io::Error> {
@@ -16,7 +17,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     //  NOTE: the parser -> semantic analyzer -> generator steps will eventually
     //        be abstracted away into a single struct or function
 
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let ast = p.parse(&content);
 
     let mut ast = match ast {

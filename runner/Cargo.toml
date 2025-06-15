@@ -6,5 +6,5 @@ edition = "2024"
 [dependencies]
 generator = { path = "../generator" }
 semantic_analyzer = { path = "../semantic_analyzer" }
-parser = { path = "../parser" }
+generated_parser = { path = "../generated_parser" }
 ast = { path = "../ast" }

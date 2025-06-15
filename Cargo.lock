@@ -123,11 +123,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1d674e81391d1e1ab681a28d99df07927c6d4aa5b027d7da16ba32d1d21ecd99"
 
 [[package]]
+name = "generated_parser"
+version = "0.1.0"
+dependencies = [
+ "ast",
+ "lexer",
+ "parser_generator",
+]
+
+[[package]]
 name = "generator"
 version = "0.1.0"
 dependencies = [
  "ast",
- "parser",
+ "generated_parser",
  "semantic_analyzer",
 ]
 
@@ -300,6 +309,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "parser_generator"
+version = "0.1.0"
+dependencies = [
+ "lexer",
+]
+
+[[package]]
 name = "petgraph"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -373,8 +389,8 @@ name = "runner"
 version = "0.1.0"
 dependencies = [
  "ast",
+ "generated_parser",
  "generator",
- "parser",
  "semantic_analyzer",
 ]
 

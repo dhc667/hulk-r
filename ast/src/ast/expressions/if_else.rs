@@ -3,6 +3,7 @@ use crate::tokens::Keyword;
 use crate::visitors::ExpressionVisitor;
 use crate::visitors::visitable_expression::VisitableExpression;
 
+#[derive(Debug)]
 pub struct IfElse {
     pub if_token: Keyword,
     pub condition: Box<Expression>,

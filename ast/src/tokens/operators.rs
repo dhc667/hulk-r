@@ -3,6 +3,7 @@ use std::fmt::Formatter;
 
 use super::*;
 
+#[derive(Debug)]
 pub enum BinaryOperator {
     Plus(TokenPosition),
     Minus(TokenPosition),
@@ -54,6 +55,7 @@ impl Display for BinaryOperator {
 }
 
 #[derive(Clone, Copy)]
+#[derive(Debug)]
 pub enum UnaryOperator {
     Plus(TokenPosition),
     Minus(TokenPosition),
@@ -70,6 +72,7 @@ impl Display for UnaryOperator {
     }
 }
 
+#[derive(Debug)]
 pub enum GroupingOperator {
     OpenParen(TokenPosition),
     CloseParen(TokenPosition),
@@ -92,6 +95,7 @@ impl Display for GroupingOperator {
     }
 }
 
+#[derive(Debug)]
 pub struct ArrowOperator {
     pub position: TokenPosition,
 }
@@ -102,6 +106,7 @@ impl ArrowOperator {
     }
 }
 
+#[derive(Debug)]
 pub struct DotOperator {
     pub position: TokenPosition,
 }
