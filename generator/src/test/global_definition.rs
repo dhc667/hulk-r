@@ -442,17 +442,29 @@ fn return_string_from_function() {
     assert_eq!(result, "hello world");
 }
 
-// #[test]
-// fn interleaved_number_and_string_operations() {
-//     let llvm = generate_code(
-//         r#"
-//             let n = 42, s = " is the answer" in print(n @ s);
-//         "#,
-//     );
-//     println!("{}", llvm);
-//     let result = lli_string(&llvm).unwrap();
-//     assert_eq!(result, "42 is the answer");
-// }
+#[test]
+fn interleaved_number_and_string_operations() {
+    let llvm = generate_code(
+        r#"
+            let n = true,m=false, s = " is the answer and not " in print(n @ s @ m);
+        "#,
+    );
+    println!("{}", llvm);
+    let result = lli_string(&llvm).unwrap();
+    assert_eq!(result, "true is the answer and not false");
+}
+
+#[test]
+fn interleaved_number_and_string_operations_with_numbers() {
+    let llvm = generate_code(
+        r#"
+            let n = 1,m=20, s = " is the answer and not " in print(n @ s @ m);
+        "#,
+    );
+    println!("{}", llvm);
+    let result = lli_string(&llvm).unwrap();
+    assert_eq!(result, "1.000000 is the answer and not 20.000000");
+}
 
 
 #[test]
@@ -461,7 +473,7 @@ fn simple_while_2() {
         r#"let x = 1 in {
             while(x < 6) {
                 let a = "hello" in {
-                    let b = a @ " world" in {
+                    let b = a @@ "world" in {
                      print(b);
                     };
                 };
@@ -543,3 +555,24 @@ fn list_of_types() {
     let result = lli_string(&llvm).unwrap();
     assert_eq!(result, "josue y dario");
 }
+
+#[test]
+fn factorial()
+{
+    let llvm = generate_code(
+        r#"
+            function factorial(n: Number): Number {
+                if (n == 0) {
+                    return 1;
+                } else {
+                    return n * factorial(n - 1);
+                };
+            }
+            let x = factorial(5) in print(x);
+            "#,
+    );
+    println!("{}", llvm);
+    let result = lli_f64(&llvm).unwrap();
+    assert_eq!(result, 120.0);
+}
+
