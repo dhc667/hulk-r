@@ -913,67 +913,73 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
     }
 
     fn visist_list_indexing(&mut self, node: &mut ListIndexing) -> VisitorResult {
-        todo!()
-        
-        // let mut preamble = String::new();
-        // let list_result = node.list.accept(self);
-        // preamble += &list_result.preamble;
-        // let list_handle = match list_result.result_handle {
-        //     Some(h) => h,
-        //     None => panic!("Expected handle for list expression"),
-        // };
-        // 
-        // // Visit the index expression to get the index value
-        // let index_result = node.index.accept(self);
-        // preamble += &index_result.preamble;
-        // let index_handle = match index_result.result_handle {
-        //     Some(h) => h,
-        //     None => panic!("Expected handle for index expression"),
-        // };
-        // 
-        // // Get the element type as LLVM type string
-        // let elem_type = match &node.list {
-        //     Some(ast_type) => self.llvm_type_str_from_ast_type(ast_type),
-        //     None => "double".to_string(), // fallback for demonstration
-        // };
-        // 
-        // let tmp_var_id = self.tmp_counter.get();
-        // self.tmp_counter.set(tmp_var_id + 1);
-        // 
-        // // Bitcast the list pointer back to the element type pointer
-        // let casted_list_ptr = format!("%list_elem_ptr_{}", tmp_var_id);
-        // preamble += &format!(
-        //     "{casted_list_ptr} = bitcast i8* {list_handle} to {elem_type}*\n",
-        //     casted_list_ptr=casted_list_ptr,
-        //     list_handle=list_handle.llvm_name,
-        //     elem_type=elem_type
-        // );
-        // 
-        // // Compute pointer to the indexed element
-        // let elem_ptr = format!("%elem_ptr_{}", tmp_var_id);
-        // preamble += &format!(
-        //     "{elem_ptr} = getelementptr inbounds {elem_type}, {elem_type}* {casted_list_ptr}, i64 {idx_handle}\n",
-        //     elem_ptr=elem_ptr,
-        //     elem_type=elem_type,
-        //     casted_list_ptr=casted_list_ptr,
-        //     idx_handle=index_handle.llvm_name
-        // );
-        // 
-        // // Load the value from the array
-        // let loaded_val = format!("%loaded_elem_{}", tmp_var_id);
-        // preamble += &format!(
-        //     "{loaded_val} = load {elem_type}, {elem_type}* {elem_ptr}\n",
-        //     loaded_val=loaded_val,
-        //     elem_type=elem_type,
-        //     elem_ptr=elem_ptr
-        // );
-        // 
-        // VisitorResult {
-        //     preamble,
-        //     result_handle: Some(crate::llvm_types::LlvmHandle::new_list_register(
-        //         loaded_val, 
-        //     )),
-        // }
+        let mut preamble = String::new();
+
+        // Visit the list expression to get the list handle
+        let list_result = node.list.accept(self);
+        preamble += &list_result.preamble;
+        let list_handle = match list_result.result_handle {
+            Some(h) => h,
+            None => panic!("Expected handle for list expression"),
+        };
+
+        // Visit the index expression to get the index value
+        let index_result = node.index.accept(self);
+        preamble += &index_result.preamble;
+        let index_handle = match index_result.result_handle {
+            Some(h) => h,
+            None => panic!("Expected handle for index expression"),
+        };
+
+        let elem_type = match &node.list_type {
+            Some(ast_type) => self.llvm_type_str_from_ast_type(ast_type),
+            None => panic!("Expected list type for list indexing"),
+        };
+
+        let tmp_var_id = self.tmp_counter.get();
+        self.tmp_counter.set(tmp_var_id + 1);
+
+        let casted_list_ptr = if list_handle.llvm_name.contains("list_ptr") {
+            list_handle.llvm_name.clone()
+        } else {
+            let casted_ptr = format!("%list_elem_ptr_{}", tmp_var_id);
+            preamble += &format!(
+                "  {} = bitcast i8* {} to {}*\n",
+                casted_ptr, list_handle.llvm_name, elem_type
+            );
+            casted_ptr
+        };
+
+        // Compute pointer to the indexed element
+        let elem_ptr = format!("%elem_ptr_{}", tmp_var_id);
+        preamble += &format!(
+            "  {} = getelementptr inbounds {}, {}* {}, i64 {}\n",
+            elem_ptr, elem_type, elem_type, casted_list_ptr, index_handle.llvm_name.split('.').next().unwrap()
+        );
+
+        // Load the value from the array
+        let loaded_val = format!("%loaded_elem_{}", tmp_var_id);
+        preamble += &format!(
+            "  {} = load {}, {}* {}\n",
+            loaded_val, elem_type, elem_type, elem_ptr
+        );
+
+        // Create the appropriate handle type based on the element type
+        let handle_type = match elem_type.as_str() {
+            "double" => HandleType::Register(LlvmType::F64),
+            "i1" => HandleType::Register(LlvmType::I1),
+            "i8*" => HandleType::Register(LlvmType::String),
+            s if s.ends_with("*") && s.starts_with("%") => HandleType::Register(LlvmType::Object),
+            _ => HandleType::Register(LlvmType::F64),
+        };
+
+        VisitorResult {
+            preamble,
+            result_handle: Some(LlvmHandle {
+                handle_type,
+                llvm_name: loaded_val,
+            }),
+        }
     }
 }
 
