@@ -13,7 +13,7 @@ pub enum LexicalError {
 impl Display for LexicalError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            LexicalError::InvalidCharacter(err) => write!(f, "{}", err),
+            LexicalError::InvalidCharacter(err) => write!(f, "Lexical Error: {}", err),
         }
     }
 }

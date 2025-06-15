@@ -17,11 +17,11 @@ impl ErrorHandler {
 
     fn get_line_breaks(program_text: &str) -> Vec<usize> {
         let mut line_breaks = vec![0];
-        for (i, c) in program_text.char_indices() {
-            if c == '\n' {
-                line_breaks.push(i);
-            }
-        }
+        line_breaks.extend(
+            program_text
+                .char_indices()
+                .filter_map(|(i, c)| if c == '\n' { Some(i + 1) } else { None }),
+        );
         if !program_text.ends_with('\n') {
             line_breaks.push(program_text.len());
         }
@@ -59,7 +59,7 @@ impl ErrorHandler {
 
     fn get_line_number(&self, position: usize) -> usize {
         self.line_breaks
-            .partition_point(|&line_start| line_start < position)
+            .partition_point(|&line_start| line_start <= position)
             - 1
     }
 

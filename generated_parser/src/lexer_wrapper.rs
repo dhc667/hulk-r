@@ -1,3 +1,4 @@
+use error_handler::error::error::HulkError;
 use lexer::lexer_generator::{lexer::Lexer, lexer_chunk::LexerChunk, rule::Rule};
 use parser_generator::{DefineLexer, Lex, Token};
 
@@ -23,7 +24,10 @@ impl LexerWrapper {
 }
 
 impl Lex<TokenType> for LexerWrapper {
-    fn split(&self, input: &str) -> Result<Vec<parser_generator::Token<TokenType>>, Vec<String>> {
+    fn split(
+        &self,
+        input: &str,
+    ) -> Result<Vec<parser_generator::Token<TokenType>>, Vec<HulkError>> {
         self.lexer
             .split(input)
             .map(|ok| ok.into_iter().map(Self::lexer_chunk_to_token).collect())

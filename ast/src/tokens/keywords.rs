@@ -53,7 +53,6 @@ impl TokenPositionTrait for Keyword {
             | Keyword::If(pos)
             | Keyword::Else(pos)
             | Keyword::While(pos)
-            | Keyword::Print(pos)
             | Keyword::In(pos)
             | Keyword::Elif(pos)
             | Keyword::Function(pos)

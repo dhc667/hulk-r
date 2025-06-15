@@ -131,6 +131,7 @@ name = "generated_parser"
 version = "0.1.0"
 dependencies = [
  "ast",
+ "error_handler",
  "lexer",
  "parser_generator",
 ]
@@ -318,6 +319,7 @@ dependencies = [
 name = "parser_generator"
 version = "0.1.0"
 dependencies = [
+ "error_handler",
  "lexer",
 ]
 

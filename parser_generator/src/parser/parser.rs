@@ -1,5 +1,8 @@
 use std::{collections::HashMap, fmt::Debug, hash::Hash};
 
+use error_handler::error::error::HulkError;
+use error_handler::error::sintactic::user_error::UserError;
+
 #[cfg(test)]
 use crate::debugging_helpers::get_name_or_default;
 
@@ -86,10 +89,16 @@ impl<'a, TokenType: Eq + Hash + Copy + Debug, R> Parser<TokenType, R> {
         &self,
         lexer: impl Lex<TokenType>,
         input: &str,
-    ) -> Result<R, Vec<String>> {
+    ) -> Result<R, Vec<HulkError>> {
         let toks = lexer.split(input)?;
 
-        self.parse(toks).map_err(|err| vec![err.to_string(input)])
+        self.parse(toks).map_err(|err| {
+            let position = match err {
+                ParseError::UnexpectedToken { loc, .. } => loc,
+                ParseError::UnexpectedEof => input.len(),
+            };
+            vec![UserError::new(err.to_string(input), position).into()]
+        })
     }
 
     fn shift(&self, state_id: StateId, current_parse: &mut Parse<TokenType, R>) {

@@ -1,5 +1,6 @@
 use ast::Program;
-use parser_generator::{Lex, Parser};
+use error_handler::error::{error::HulkError, sintactic::user_error::UserError};
+use parser_generator::{Lex, ParseError, Parser};
 
 use crate::{
     grammar::lexer_parser,
@@ -19,14 +20,17 @@ impl ProgramParser {
         Self { lexer, parser }
     }
 
-    pub fn parse(&self, input: &str) -> Result<Program, Vec<String>> {
+    pub fn parse(&self, input: &str) -> Result<Program, Vec<HulkError>> {
         let tokens = self.lexer.split(input)?;
 
         let parse = self.parser.parse(tokens);
         if let Err(err) = parse {
             let mut errors = Vec::new();
-            let err = err.to_string(input);
-            errors.push(err);
+            let position = match err {
+                ParseError::UnexpectedToken { loc, .. } => loc,
+                ParseError::UnexpectedEof => input.len(),
+            };
+            errors.push(UserError::new(err.to_string(input), position).into());
 
             return Err(errors);
         }

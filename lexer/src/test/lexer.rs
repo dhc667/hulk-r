@@ -144,7 +144,7 @@ pub fn unrecognized_character() {
     assert_eq!(error_handler.errors.len(), 1);
     assert_eq!(
         error_handler.get_raw_errors(),
-        vec!["Invalid character `c`"]
+        vec!["Lexical Error: Invalid character `c`"]
     );
 }
 
@@ -168,7 +168,10 @@ pub fn error_recovery() {
     assert_eq!(error_handler.errors.len(), 2);
     assert_eq!(
         error_handler.get_raw_errors(),
-        vec!["Invalid character `c`", "Invalid character `c`"]
+        vec![
+            "Lexical Error: Invalid character `c`",
+            "Lexical Error: Invalid character `c`"
+        ]
     );
 }
 
@@ -227,7 +230,10 @@ pub fn line_error() {
     assert_eq!(error_handler.errors.len(), 2);
     assert_eq!(
         error_handler.get_raw_errors(),
-        vec!["Invalid character `b`", "Invalid character `c`"]
+        vec![
+            "Lexical Error: Invalid character `b`",
+            "Lexical Error: Invalid character `c`"
+        ]
     );
 }
 
@@ -423,6 +429,6 @@ pub fn empty_match() {
     assert_eq!(error_handler.errors.len(), 1);
     assert_eq!(
         error_handler.get_raw_errors(),
-        vec!["Invalid character `b`",]
+        vec!["Lexical Error: Invalid character `b`",]
     );
 }
