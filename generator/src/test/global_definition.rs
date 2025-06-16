@@ -497,7 +497,6 @@ hello world
 5.000000");
 }
 
-
 #[test]
 fn list_of_numbers() {
     let llvm = generate_code(

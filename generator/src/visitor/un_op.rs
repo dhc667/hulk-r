@@ -50,7 +50,7 @@ impl GeneratorVisitor {
                 let preamble = inner_result.preamble
                     + "\n"
                     + &format!(
-                        "{} = fsub double 0.0, {}",
+                        "{} = fsub double 0.0, {}\n",
                         tmp_variable, inner_handle.llvm_name
                     );
 
@@ -75,7 +75,7 @@ impl GeneratorVisitor {
                 let tmp_variable = self.generate_tmp_variable();
                 let preamble = inner_result.preamble
                     + "\n"
-                    + &format!("{} = xor i1 {}, true", tmp_variable, inner_handle.llvm_name);
+                    + &format!("{} = xor i1 {}, true\n", tmp_variable, inner_handle.llvm_name);
 
                 return VisitorResult {
                     preamble,
