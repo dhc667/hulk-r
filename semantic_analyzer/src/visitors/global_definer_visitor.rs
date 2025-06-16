@@ -1,6 +1,5 @@
 use ast::{
-    DefinitionVisitor, TypeName, VisitableDefinition,
-    typing::{BuiltInType, Type, TypeAnnotation},
+    typing::{BuiltInType, Type, TypeAnnotation}, DefinitionVisitor, TypeName, VisitableDefinition
 };
 use error_handler::error::{
     error::HulkError,
@@ -129,6 +128,8 @@ impl<'a> DefinitionVisitor<()> for GlobalDefinerVisitor<'a> {
         if self
             .func_defintions
             .is_defined(&node.function_def.identifier.id)
+            || vec!["print"] // Here we can add more built-in functions that are not allowed to be redefined
+                .contains(&node.function_def.identifier.id.as_str())
         {
             self.errors.push(
                 FuncAlreadyDefined::new(
