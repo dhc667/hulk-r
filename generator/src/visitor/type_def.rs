@@ -55,11 +55,7 @@ pub fn generate_vtable_type(visitor: &mut GeneratorVisitor, node: &mut ast::Type
                     parent_methods.push(((method_name.clone(), i.clone()), arg_types.clone()));
                 }
             }
-            print!("parent methods:");
-            for ((method_name, i), arg_types) in parent_methods.clone() {
-                print!("{} {} ", method_name, i);
-            }
-            println!();
+
             parent_methods.sort_by_key(|((_, i), _)| i.clone());
 
             for ((method_name, i), arg_types) in parent_methods {
@@ -70,7 +66,7 @@ pub fn generate_vtable_type(visitor: &mut GeneratorVisitor, node: &mut ast::Type
                     .iter()
                     .find(|f| &f.identifier.id == &method_name);
                 if let Some(definition) = overridden {
-                    println!("type method: {} {}", type_name, method_name);
+
                     // If overridden, insert the child's method into the vtable
                     visitor.function_member_def_from_type_and_name.insert(
                         (type_name.clone(), method_name.clone(), i.clone()),
@@ -226,14 +222,6 @@ pub fn generate_vtable_type(visitor: &mut GeneratorVisitor, node: &mut ast::Type
         );
     }
 
-    // Debug: Print function_member_names values for this type
-    println!("function_member_names:");
-    for ((type_name, method_name), index) in &visitor.function_member_names {
-        println!(
-            "  (type: {}, method: {}) => vtable index {}",
-            type_name, method_name, index
-        );
-    }
     // Emit the vtable struct type
     if !vtable_fn_ptr_types.is_empty() {
         preamble += &format!("\n  {}\n", vtable_fn_ptr_types.join(",\n  "));

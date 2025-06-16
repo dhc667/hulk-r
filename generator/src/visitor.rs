@@ -637,14 +637,6 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
         node: &mut ast::FunctionMemberAccess,
     ) -> VisitorResult {
 
-        for ((type_name, function_name), member_name) in &self.function_member_names {
-            println!(
-                "type: {}, function: {}, member name: {}",
-                type_name, function_name, member_name
-            );
-        }
-
-        println!("Function member access: {:?}", node.member.identifier.id);
 
         let mut preamble = String::new();
 
@@ -1553,11 +1545,7 @@ impl DefinitionVisitor<VisitorResult> for GlobalDefinitionVisitor {
                         parent_methods.push(((method_name.clone(), i.clone()), arg_types.clone()));
                     }
                 }
-                print!("parent methods:");
-                for ((method_name, i), arg_types) in parent_methods.clone() {
-                    print!("{} {} ", method_name, i);
-                }
-                println!();
+                
                 parent_methods.sort_by_key(|((_, i), _)| i.clone());
 
                 for ((method_name, i), arg_types) in parent_methods {
