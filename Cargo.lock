@@ -430,8 +430,8 @@ version = "0.1.0"
 dependencies = [
  "ast",
  "error_handler",
+ "generated_parser",
  "generator",
- "parser",
 ]
 
 [[package]]

@@ -9,4 +9,4 @@ generator = { path = "../generator" }
 error_handler = { path = "../error_handler" }
 
 [dev-dependencies]
-parser = { path = "../parser" }
+generated_parser = { path = "../generated_parser" }
