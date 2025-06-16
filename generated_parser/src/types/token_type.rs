@@ -65,5 +65,5 @@ pub enum TokenType {
     Dot,
 
     __Whitespace__,
-    __SingleLineComments__,
+    __Comments__,
 }

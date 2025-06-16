@@ -887,7 +887,7 @@ pub fn lexer_parser() -> (LexerWrapper, Parser<TokenType, ReturnType>) {
 
             (BooleanLiteral, "((true)|(false))", tok_to_boolean_literal),
             (NumberLiteral, r"[0-9]*(\.[0-9]+)?", tok_to_number_literal),
-            (StringLiteral, r#""([^\\-\\"-"]|(\\"))*""#, tok_to_string_literal),
+            (StringLiteral, r#""([^\\-\\"-"]|\\n|\\t|\\\\|\\")*""#, tok_to_string_literal),
 
             (Lpar, r"\(", |tok: &Token<TokenType>| {
                 ReturnType::GroupingOperator(GroupingOperator::OpenParen(get_pos(tok)))
@@ -972,7 +972,7 @@ pub fn lexer_parser() -> (LexerWrapper, Parser<TokenType, ReturnType>) {
 
         skip: {
             (__Whitespace__, r"(\s|\t|\n|\r)+"),
-            (__SingleLineComments__, r"//[^\n-\n]*"),
+            (__Comments__, r"//[^\n-\n]*"),
         }
 
     )
