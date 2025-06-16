@@ -1,10 +1,10 @@
 use crate::semantic_analyzer::SemanticAnalyzer;
 use error_handler::error_handler::ErrorHandler;
-use parser::parser::Parser;
+use generated_parser::ProgramParser;
 
 fn analyze_and_get_errors(program: &str) -> Vec<String> {
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
@@ -25,7 +25,7 @@ fn not_defined_variable() {
 
 #[test]
 fn shadow_different_let_in() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
 
     let mut answ = p
         .parse("let x = 1 + 2 in let x = x + 2 in {x + 2;};")
@@ -41,7 +41,7 @@ fn shadow_different_let_in() {
 
 #[test]
 fn shadow_in_same_let_in() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
 
     let mut answ = p.parse("let x = 1 + 2, x = x + 2 in {x + 2;};").unwrap();
 
@@ -55,7 +55,7 @@ fn shadow_in_same_let_in() {
 
 #[test]
 fn lookup_in_let_in() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
 
     let mut answ = p.parse("let x = 1 + 2 in let y = 4 in {x + 2;};").unwrap();
 
@@ -69,7 +69,7 @@ fn lookup_in_let_in() {
 
 #[test]
 fn lookup_in_let_in_with_shadow() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
 
     let mut answ = p
         .parse("{ let x = 1 + 2 in let x = 4 in {x + 2;}; };")
@@ -107,7 +107,7 @@ fn several_undefinitions() {
 
 #[test]
 fn func_definitions() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
 
     let mut answ = p
         .parse("function foo(x: Number, y: Number): Number { x+y;}")
@@ -163,7 +163,7 @@ fn anotated_var_with_wrong_value_type() {
 
 #[test]
 fn list_definition() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
 
     let mut answ = p.parse("let x: Boolean* = [true, false] in x;").unwrap();
 
@@ -177,7 +177,7 @@ fn list_definition() {
 
 #[test]
 fn mutate_field() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
 
     let mut answ = p
         .parse(
@@ -202,7 +202,7 @@ fn mutate_field() {
 
 #[test]
 fn mutate_indexing() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
 
     let mut answ = p
         .parse(
@@ -254,7 +254,7 @@ fn mutate_field_outside_definition() {
 
 #[test]
 pub fn print_defined() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
 
     let mut answ = p.parse("print(1);").unwrap();
 
@@ -268,7 +268,7 @@ pub fn print_defined() {
 
 #[test]
 pub fn constant_definition() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
 
     let mut answ = p
         .parse(
