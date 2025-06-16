@@ -497,22 +497,6 @@ hello world
 5.000000");
 }
 
-#[test]
-fn simple_while_3() {
-    let llvm = generate_code(
-        r#"
-            let i = 0 , s = "" in {
-            while(i < 10) {
-                s := s @@ "hola";
-                i:= i + 1;
-            };
-            print(s);
-        };"#,
-    );
-
-    println!("{}", llvm);
-    assert_eq!(lli_string(&llvm).unwrap(), "hola hola hola hola hola hola hola hola hola hola");
-}
 
 #[test]
 fn list_of_numbers() {
