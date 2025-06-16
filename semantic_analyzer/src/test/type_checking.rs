@@ -1,12 +1,12 @@
 use ast::typing::{BuiltInType, Type, to_string};
 use error_handler::error_handler::ErrorHandler;
-use parser::parser::Parser;
+use generated_parser::ProgramParser;
 
 use crate::semantic_analyzer::SemanticAnalyzer;
 
 #[test]
 pub fn simple_typing() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse("let x = 1 in { x + 1 ;};").unwrap();
 
     let mut semantic_analyzer = SemanticAnalyzer::new();
@@ -39,7 +39,7 @@ pub fn simple_typing() {
 pub fn binary_op_error() {
     let program = "let x = 1 in { x + true ;};";
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
@@ -57,7 +57,7 @@ pub fn binary_op_error() {
 pub fn unary_op_error() {
     let program = "let x = true in { -x ;};";
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
@@ -76,7 +76,7 @@ pub fn dassing_error() {
     let program = "let x = true in { x:=3 ;};";
 
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
@@ -94,7 +94,7 @@ pub fn dassing_error() {
 pub fn simple_inference_test() {
     let program = "let x = if (true) true else 3 in { x + 1 ;};";
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
@@ -120,7 +120,7 @@ pub fn simple_inference_test() {
 
 #[test]
 pub fn nested_inference() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p
         .parse(
             "
@@ -162,7 +162,7 @@ pub fn nested_inference() {
 
 #[test]
 pub fn string_typing() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse("let x = \"boniato\" in { x ;};").unwrap();
 
     let mut semantic_analyzer = SemanticAnalyzer::new();
@@ -180,7 +180,7 @@ pub fn string_typing() {
 
 #[test]
 pub fn list_typing() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse("let x = [1, 2, 3] in { x ;};").unwrap();
 
     let mut semantic_analyzer = SemanticAnalyzer::new();
@@ -201,7 +201,7 @@ pub fn list_typing() {
 
 #[test]
 pub fn list_typing_2() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p
         .parse(
             "
@@ -230,7 +230,7 @@ pub fn list_typing_2() {
 pub fn list_typing_3() {
     let program = "let x = [1, true, \"hola\"] in x;";
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
@@ -258,7 +258,7 @@ pub fn list_typing_3() {
 
 #[test]
 pub fn list_indexing() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p
         .parse(
             "
@@ -285,7 +285,7 @@ pub fn list_indexing() {
 
 #[test]
 pub fn list_indexing_2() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p
         .parse(
             "
@@ -319,7 +319,7 @@ pub fn list_typing_with_different_types() {
     let program = "let x = [1, 2, \"3\"] in { x ;};";
 
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
@@ -341,7 +341,7 @@ pub fn list_typing_with_different_types() {
 
 #[test]
 pub fn list_indexing_typing() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p
         .parse(
             "
@@ -371,7 +371,7 @@ pub fn list_indexing_typing_error() {
             result;
         };";
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
@@ -392,7 +392,7 @@ pub fn list_indexing_typing_error_2() {
             result;
         };";
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
@@ -408,7 +408,7 @@ pub fn list_indexing_typing_error_2() {
 
 #[test]
 pub fn call_var_with_method_name() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p
         .parse(
             "
@@ -436,7 +436,7 @@ pub fn iterate_non_iterable() {
             };
         ";
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
@@ -452,7 +452,7 @@ pub fn iterate_non_iterable() {
 
 #[test]
 pub fn annotate_field_accessed_object() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p
         .parse(
             "
@@ -485,7 +485,7 @@ pub fn annotate_field_accessed_object() {
 
 #[test]
 pub fn annotate_function_accessed_object() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p
         .parse(
             "
@@ -521,7 +521,7 @@ pub fn unknown_annotation_in_constructor_called() {
                     x;
         ";
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
@@ -546,7 +546,7 @@ pub fn unknown_annotation_in_func_called() {
         ";
 
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
@@ -573,7 +573,7 @@ pub fn unknown_annotation_in_method_called() {
                 a.method(true) + false;
         ";
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
@@ -592,7 +592,7 @@ pub fn unknown_annotation_in_method_called() {
 
 #[test]
 fn concat_checks1() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p
         .parse(
             r#"
@@ -612,7 +612,7 @@ fn concat_checks1() {
 
 #[test]
 fn concat_checks2() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p
         .parse(
             r#"
@@ -632,7 +632,7 @@ fn concat_checks2() {
 
 #[test]
 fn concat_checks3() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p
         .parse(
             r#"
@@ -652,7 +652,7 @@ fn concat_checks3() {
 
 #[test]
 fn concat_checks4() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p
         .parse(
             r#"
@@ -672,7 +672,7 @@ fn concat_checks4() {
 
 #[test]
 fn concat_checks5() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p
         .parse(
             r#"
@@ -699,7 +699,7 @@ fn concat_checks6() {
             };
         "#;
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
@@ -720,7 +720,7 @@ fn concat_checks6() {
 fn object_params() {
     let program = r#"function id(x: Object): Object => x;"#;
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer

@@ -1,12 +1,12 @@
 use ast::typing::{BuiltInType, Type};
 use error_handler::error_handler::ErrorHandler;
-use parser::parser::Parser;
+use generated_parser::ProgramParser;
 
 use crate::semantic_analyzer::SemanticAnalyzer;
 
 #[test]
 fn built_ins_inheritance() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
 
     let mut answ = p.parse("3;").unwrap();
 
@@ -73,7 +73,7 @@ fn built_ins_inheritance() {
 
 #[test]
 fn basic_inheritance() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
 
     let mut answ = p
         .parse(
@@ -109,7 +109,7 @@ fn basic_inheritance() {
 
 #[test]
 fn before_delcared() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
 
     let mut answ = p
         .parse(
@@ -147,7 +147,7 @@ fn before_delcared() {
 
 #[test]
 fn nested_inheritance() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
 
     let mut answ = p
         .parse(
@@ -204,7 +204,7 @@ fn nested_inheritance() {
 
 #[test]
 fn inheritance_cycle() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
 
     let mut answ = p
         .parse(
@@ -250,7 +250,7 @@ fn inheritance_cycle() {
 
 #[test]
 fn complicated_inheritance_cycle() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
 
     let mut answ = p
         .parse(
@@ -293,7 +293,7 @@ fn redeclare_object() {
         type Object {}";
 
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
