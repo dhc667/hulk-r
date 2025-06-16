@@ -16,7 +16,10 @@ impl ErrorHandler {
     }
 
     fn get_line_breaks(program_text: &str) -> Vec<usize> {
-        let mut line_breaks = vec![0];
+        let mut line_breaks = Vec::new();
+        if !program_text.is_empty() {
+            line_breaks.push(0);
+        }
         line_breaks.extend(
             program_text
                 .char_indices()
@@ -67,7 +70,11 @@ impl ErrorHandler {
         let pos = error.get_position();
         let line_number = self.get_line_number(pos);
         let line_start = self.line_breaks[line_number];
-        let line_end = self.line_breaks[line_number + 1];
+        let line_end = self
+            .line_breaks
+            .get(line_number + 1)
+            .cloned()
+            .unwrap_or(self.program_text.len());
 
         let line_text = &self.program_text[line_start..line_end]
             .trim_end_matches('\n')
