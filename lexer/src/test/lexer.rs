@@ -136,7 +136,7 @@ pub fn unrecognized_character() {
 
     let lexer = Lexer::new(rules);
 
-    let mut error_handler = ErrorHandler::new(program_text);
+    let mut error_handler = ErrorHandler::new(program_text, 0);
     let errors = lexer.split(program_text).err().unwrap().1;
 
     error_handler.extend_errors(errors);
@@ -160,7 +160,7 @@ pub fn error_recovery() {
 
     let program_text = "aab bba caac";
 
-    let mut error_handler = ErrorHandler::new(program_text);
+    let mut error_handler = ErrorHandler::new(program_text, 0);
     let errors = lexer.split(program_text).err().unwrap().1;
 
     error_handler.extend_errors(errors);
@@ -222,7 +222,7 @@ pub fn line_error() {
     let lexer = Lexer::new(rules);
     let program_text = "a\nb\nc";
 
-    let mut error_handler = ErrorHandler::new(program_text);
+    let mut error_handler = ErrorHandler::new(program_text, 0);
     let errors = lexer.split(program_text).err().unwrap().1;
 
     error_handler.extend_errors(errors);
@@ -421,7 +421,7 @@ pub fn empty_match() {
 
     let lexer = Lexer::new(rules);
 
-    let mut error_handler = ErrorHandler::new(program_text);
+    let mut error_handler = ErrorHandler::new(program_text, 0);
     let errors = lexer.split(program_text).err().unwrap().1;
 
     error_handler.extend_errors(errors);

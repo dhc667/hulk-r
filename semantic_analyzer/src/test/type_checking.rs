@@ -38,7 +38,7 @@ pub fn simple_typing() {
 #[test]
 pub fn binary_op_error() {
     let program = "let x = 1 in { x + true ;};";
-    let mut error_handler = ErrorHandler::new(program);
+    let mut error_handler = ErrorHandler::new(program, 0);
     let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
@@ -56,7 +56,7 @@ pub fn binary_op_error() {
 #[test]
 pub fn unary_op_error() {
     let program = "let x = true in { -x ;};";
-    let mut error_handler = ErrorHandler::new(program);
+    let mut error_handler = ErrorHandler::new(program, 0);
     let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
@@ -75,7 +75,7 @@ pub fn unary_op_error() {
 pub fn dassing_error() {
     let program = "let x = true in { x:=3 ;};";
 
-    let mut error_handler = ErrorHandler::new(program);
+    let mut error_handler = ErrorHandler::new(program, 0);
     let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
@@ -93,7 +93,7 @@ pub fn dassing_error() {
 #[test]
 pub fn simple_inference_test() {
     let program = "let x = if (true) true else 3 in { x + 1 ;};";
-    let mut error_handler = ErrorHandler::new(program);
+    let mut error_handler = ErrorHandler::new(program, 0);
     let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
@@ -229,7 +229,7 @@ pub fn list_typing_2() {
 #[test]
 pub fn list_typing_3() {
     let program = "let x = [1, true, \"hola\"] in x;";
-    let mut error_handler = ErrorHandler::new(program);
+    let mut error_handler = ErrorHandler::new(program, 0);
     let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
@@ -318,7 +318,7 @@ pub fn list_indexing_2() {
 pub fn list_typing_with_different_types() {
     let program = "let x = [1, 2, \"3\"] in { x ;};";
 
-    let mut error_handler = ErrorHandler::new(program);
+    let mut error_handler = ErrorHandler::new(program, 0);
     let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
@@ -370,7 +370,7 @@ pub fn list_indexing_typing_error() {
         let result = let x = [1, 2, 3] in x[true] in {
             result;
         };";
-    let mut error_handler = ErrorHandler::new(program);
+    let mut error_handler = ErrorHandler::new(program, 0);
     let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
@@ -391,7 +391,7 @@ pub fn list_indexing_typing_error_2() {
         let result = let x = [1, 2, 3] in let y = true in x[true] in {
             result;
         };";
-    let mut error_handler = ErrorHandler::new(program);
+    let mut error_handler = ErrorHandler::new(program, 0);
     let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
@@ -435,7 +435,7 @@ pub fn iterate_non_iterable() {
                 a;
             };
         ";
-    let mut error_handler = ErrorHandler::new(program);
+    let mut error_handler = ErrorHandler::new(program, 0);
     let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
@@ -520,7 +520,7 @@ pub fn unknown_annotation_in_constructor_called() {
                 let x = if(a.y) 1 else 2 in 
                     x;
         ";
-    let mut error_handler = ErrorHandler::new(program);
+    let mut error_handler = ErrorHandler::new(program, 0);
     let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
@@ -545,7 +545,7 @@ pub fn unknown_annotation_in_func_called() {
             foo(1, false) + true;
         ";
 
-    let mut error_handler = ErrorHandler::new(program);
+    let mut error_handler = ErrorHandler::new(program, 0);
     let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
@@ -572,7 +572,7 @@ pub fn unknown_annotation_in_method_called() {
             let a = new A() in 
                 a.method(true) + false;
         ";
-    let mut error_handler = ErrorHandler::new(program);
+    let mut error_handler = ErrorHandler::new(program, 0);
     let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
@@ -698,7 +698,7 @@ fn concat_checks6() {
                 x @@ y;
             };
         "#;
-    let mut error_handler = ErrorHandler::new(program);
+    let mut error_handler = ErrorHandler::new(program, 0);
     let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
@@ -719,7 +719,7 @@ fn concat_checks6() {
 #[test]
 fn object_params() {
     let program = r#"function id(x: Object): Object => x;"#;
-    let mut error_handler = ErrorHandler::new(program);
+    let mut error_handler = ErrorHandler::new(program, 0);
     let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();

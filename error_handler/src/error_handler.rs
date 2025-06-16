@@ -1,32 +1,37 @@
-use crate::error::{error::{HulkError, HulkErrorTrait}, semantic::semantic_error::SemanticError};
+use crate::error::{
+    error::{HulkError, HulkErrorTrait},
+    semantic::semantic_error::SemanticError,
+};
 
 pub struct ErrorHandler {
     program_text: String,
     line_breaks: Vec<usize>,
+    offset: usize,
     pub errors: Vec<HulkError>,
 }
 
 impl ErrorHandler {
-    pub fn new(program_text: &str) -> Self {
+    pub fn new(program_text: &str, offset: usize) -> Self {
         Self {
-            program_text: program_text.to_string(),
-            line_breaks: Self::get_line_breaks(program_text),
+            program_text: program_text[offset..].to_string(),
+            line_breaks: Self::get_line_breaks(program_text, offset),
+            offset,
             errors: Vec::new(),
         }
     }
 
-    fn get_line_breaks(program_text: &str) -> Vec<usize> {
+    fn get_line_breaks(program_text: &str, offset: usize) -> Vec<usize> {
+        let text = &program_text[offset..];
         let mut line_breaks = Vec::new();
-        if !program_text.is_empty() {
+        if !text.is_empty() {
             line_breaks.push(0);
         }
         line_breaks.extend(
-            program_text
-                .char_indices()
+            text.char_indices()
                 .filter_map(|(i, c)| if c == '\n' { Some(i + 1) } else { None }),
         );
-        if !program_text.ends_with('\n') {
-            line_breaks.push(program_text.len());
+        if !text.ends_with('\n') {
+            line_breaks.push(text.len());
         }
         line_breaks
     }
@@ -71,7 +76,7 @@ impl ErrorHandler {
             return semantic_error.to_string();
         }
 
-        let pos = error.get_position();
+        let pos = error.get_position() - self.offset;
         let line_number = self.get_line_number(pos);
         let line_start = self.line_breaks[line_number];
         let line_end = self

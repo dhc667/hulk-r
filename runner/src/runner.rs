@@ -11,14 +11,18 @@ fn write_output(target_file: &str, content: &str) -> Result<(), std::io::Error> 
 
 pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     let file = "script.hulk";
+    let std_library = "std.hulk";
     let output_file = "script.ll";
 
-    let content = std::fs::read_to_string(file)?;
+    let std_library_content = std::fs::read_to_string(std_library)?;
+    let program_content = std::fs::read_to_string(file)?;
+
+    let content = format!("{}\n{}", std_library_content, program_content);
 
     //  NOTE: the parser -> semantic analyzer -> generator steps will eventually
     //        be abstracted away into a single struct or function
 
-    let mut error_handler = ErrorHandler::new(&content);
+    let mut error_handler = ErrorHandler::new(&content, std_library_content.chars().count() + 1);
     let p = ProgramParser::new();
     let ast = p.parse(&content);
 

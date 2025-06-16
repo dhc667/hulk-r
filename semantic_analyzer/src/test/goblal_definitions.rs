@@ -21,7 +21,7 @@ fn test_define_type() {
 fn test_define_type_twice() {
     let program = "type Point {x = 0; y = 0; } type Point {a = 0; b = 0; }";
 
-    let mut error_handler = ErrorHandler::new(program);
+    let mut error_handler = ErrorHandler::new(program, 0);
     let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
@@ -89,7 +89,7 @@ fn define_global_variable() {
 #[test]
 fn define_global_variable_twice() {
     let program = "constant x: Number = 0; constant x: Number = 1;";
-    let mut error_handler = ErrorHandler::new(program);
+    let mut error_handler = ErrorHandler::new(program, 0);
     let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
@@ -125,7 +125,7 @@ fn define_global_function_twice() {
     let program =
         "function f(x: Number): Number { return x; } function f(x: Number): Number { return x; }";
 
-    let mut error_handler = ErrorHandler::new(program);
+    let mut error_handler = ErrorHandler::new(program, 0);
     let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
@@ -209,7 +209,7 @@ fn define_global_function_and_check_type() {
 #[test]
 fn define_global_function_and_use_it_wrong_type() {
     let program = "function f(x: Number): Number { return x; } f(true);";
-    let mut error_handler = ErrorHandler::new(program);
+    let mut error_handler = ErrorHandler::new(program, 0);
     let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
@@ -230,7 +230,7 @@ fn define_global_function_and_use_it_wrong_type() {
 #[test]
 fn define_global_function_and_use_it_wrong_type2() {
     let program = "function f(x: Number): Number { return x; } f(1, 2);";
-    let mut error_handler = ErrorHandler::new(program);
+    let mut error_handler = ErrorHandler::new(program, 0);
     let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
@@ -249,7 +249,7 @@ fn define_global_function_and_use_it_wrong_type2() {
 #[test]
 fn define_global_function_and_use_it_wrong3() {
     let program = "function f(): Number { return 3; } f(1, 2);";
-    let mut error_handler = ErrorHandler::new(program);
+    let mut error_handler = ErrorHandler::new(program, 0);
     let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
@@ -282,7 +282,7 @@ fn define_global_arrow_function() {
 #[test]
 fn try_dassign_constant() {
     let program = "constant zero: Number = 0; zero:= 2;";
-    let mut error_handler = ErrorHandler::new(program);
+    let mut error_handler = ErrorHandler::new(program, 0);
     let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
@@ -326,7 +326,7 @@ fn unknown_annotation_in_global_function_param() {
     let program = "
             function f(x:Number, y: Boniato): Number {x;}
         ";
-    let mut error_handler = ErrorHandler::new(program);
+    let mut error_handler = ErrorHandler::new(program, 0);
     let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
@@ -346,7 +346,7 @@ fn unknown_annotation_in_constant_definition() {
     let program = "
             constant x: Boniato = 3;
         ";
-    let mut error_handler = ErrorHandler::new(program);
+    let mut error_handler = ErrorHandler::new(program, 0);
     let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
