@@ -43,7 +43,7 @@ impl GeneratorVisitor {
     /// The first generated name for a hulk variable `x` would for example be
     /// `%x.0`, the second, `%x.1`, this way, even if we enter and leave contexts,
     /// we do not need to have the concept of blocks in llvm
-    fn define_or_shadow(&mut self, name: String, handle_type: LlvmType) -> String {
+    pub(crate) fn define_or_shadow(&mut self, name: String, handle_type: LlvmType) -> String {
         let id: u32;
         {
             id = *self.variable_ids.get(&name).unwrap_or(&0);
@@ -68,6 +68,10 @@ impl GeneratorVisitor {
             LlvmType::Object => {
                 self.context
                     .define(name, Variable::new_object(llvm_name.clone()));
+            }
+            LlvmType::List => {
+                self.context
+                    .define(name, Variable::new_list(llvm_name.clone()));
             }
         }
 

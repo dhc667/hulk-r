@@ -1,4 +1,4 @@
-use crate::test::lli_interface::lli_f64;
+use crate::test::lli_interface::{lli_f64, lli_i1};
 use crate::test::lli_interface::lli_string;
 use super::generate_code;
 
@@ -400,15 +400,197 @@ fn complex_string_manipulation() {
     assert_eq!(result, "foo-bar:baz");
 }
 
+#[test]
+fn complex_string_manipulation_2() {
+    let llvm = generate_code(
+        r#"
+            function f(): String {"foobabaz";}
 
-// #[test]
-// fn interleaved_number_and_string_operations() {
-//     let llvm = generate_code(
-//         r#"
-//             let n = 42, s = " is the answer" in print(n @ s);
-//         "#,
-//     );
-//     println!("{}", llvm);
-//     let result = lli_string(&llvm).unwrap();
-//     assert_eq!(result, "42 is the answer");
-// }
+            let a = f() in print(a);
+
+        "#,
+    );
+    println!("{}", llvm);
+    let result = lli_string(&llvm).unwrap();
+    assert_eq!(result, "foobabaz");
+}
+
+
+#[test]
+fn x1() {
+    let llvm = generate_code(
+        r#"
+            function f(): Number { return let a = 5 in a; }
+            let x = f() in print(x);
+        "#,
+    );
+    println!("{}", llvm);
+    let result = lli_f64(&llvm).unwrap();
+    assert_eq!(result, 5.0);
+}
+
+#[test]
+fn return_string_from_function() {
+    let llvm = generate_code(
+        r#"
+            function f(): String { return let a = "a" in { a:="hello";  (a @" world");}; }
+            let x = f() in print(x);
+        "#,
+    );
+    println!("{}", llvm);
+    let result = lli_string(&llvm).unwrap();
+    assert_eq!(result, "hello world");
+}
+
+#[test]
+fn interleaved_number_and_string_operations() {
+    let llvm = generate_code(
+        r#"
+            let n = true,m=false, s = " is the answer and not " in print(n @ s @ m);
+        "#,
+    );
+    println!("{}", llvm);
+    let result = lli_string(&llvm).unwrap();
+    assert_eq!(result, "true is the answer and not false");
+}
+
+#[test]
+fn interleaved_number_and_string_operations_with_numbers() {
+    let llvm = generate_code(
+        r#"
+            let n = 1,m=20, s = " is the answer and not " in print(n @ s @ m);
+        "#,
+    );
+    println!("{}", llvm);
+    let result = lli_string(&llvm).unwrap();
+    assert_eq!(result, "1.000000 is the answer and not 20.000000");
+}
+
+
+#[test]
+fn simple_while_2() {
+    let llvm = generate_code(
+        r#"let x = 1 in {
+            while(x < 6) {
+                let a = "hello" in {
+                    let b = a @@ "world" in {
+                     print(b);
+                    };
+                };
+                print(x);
+                 x := x + 1;
+            };
+
+        };"#,
+    );
+
+    println!("{}", llvm);
+    assert_eq!(lli_string(&llvm).unwrap(), "hello world
+1.000000
+hello world
+2.000000
+hello world
+3.000000
+hello world
+4.000000
+hello world
+5.000000");
+}
+
+#[test]
+#[ignore = "TODO: fix this test, it is not working as expected"]
+fn simple_while_3() {
+    let llvm = generate_code(
+        r#"
+            let i = 0 , s = "" in {
+            while(i < 10) {
+                s := s @@ "hola";
+                i:= i + 1;
+            };
+            print(s);
+        };"#,
+    );
+
+    println!("{}", llvm);
+    assert_eq!(lli_string(&llvm).unwrap(), "hola hola hola hola hola hola hola hola hola hola");
+}
+
+#[test]
+fn list_of_numbers() {
+    let llvm = generate_code(
+        r#"
+            function f(): String { return let a = "a" in { a:="hello";  (a @" world");}; }
+            let x = f(),y = [1,2,3] in print(x);
+        "#,
+    );
+    println!("{}", llvm);
+    let result = lli_string(&llvm).unwrap();
+    assert_eq!(result, "hello world");
+}
+
+#[test]
+fn list_of_bools() {
+    let llvm = generate_code(
+        r#"
+            function f(): Bool { return false; }
+            let x = f() in let y = [true,x] in print(x);
+        "#,
+    );
+    println!("{}", llvm);
+    let result = lli_i1(&llvm).unwrap();
+    assert_eq!(result, false);
+}
+
+#[test]
+fn list_of_strings_with_indexing() {
+    let llvm = generate_code(
+        r#"
+            function f(): String { return let a = "a" in { a:="hello";  (a @" world");}; }
+            let x = f(),y = ["hi",x] in print(y[1]);
+        "#,
+    );
+    println!("{}", llvm);
+    let result = lli_string(&llvm).unwrap();
+    assert_eq!(result, "hello world");
+}
+
+
+#[test]
+fn list_of_types() {
+    let llvm = generate_code(
+        r#"
+            type Person ( name: String,age: Number){
+                age=age*2;
+                name=name;
+                getAge(): Number { return self.age; }
+                getName(): String { return self.name; }
+            }
+            let josue = new Person("josue",20), dario = new Person("dario",20) , list = [josue,dario] in print(josue.getName() @ " y " @ dario.getName());
+            
+        "#,
+    );
+    println!("{}", llvm);
+    let result = lli_string(&llvm).unwrap();
+    assert_eq!(result, "josue y dario");
+}
+
+#[test]
+fn factorial()
+{
+    let llvm = generate_code(
+        r#"
+            function factorial(n: Number): Number {
+                if (n == 0) {
+                    return 1;
+                } else {
+                    return n * factorial(n - 1);
+                };
+            }
+            let x = factorial(5) in print(x);
+            "#,
+    );
+    println!("{}", llvm);
+    let result = lli_f64(&llvm).unwrap();
+    assert_eq!(result, 120.0);
+}
+
