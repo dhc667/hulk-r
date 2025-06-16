@@ -2,13 +2,13 @@ use std::vec;
 
 use ast::typing::to_string;
 use error_handler::error_handler::ErrorHandler;
-use parser::parser::Parser;
+use generated_parser::ProgramParser;
 
 use crate::semantic_analyzer::SemanticAnalyzer;
 
 #[test]
 fn simple_member_definition() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
 
     let mut answ = p.parse("type A { field = 3;}").unwrap();
 
@@ -31,7 +31,7 @@ fn simple_member_definition() {
 
 #[test]
 fn simple_method_definition() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
 
     let mut answ = p.parse("type A { method() => { 3; };}").unwrap();
 
@@ -54,7 +54,7 @@ fn simple_method_definition() {
 
 #[test]
 fn type_defintion_and_usage() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
 
     let mut answ = p
         .parse("type A { field = 3; method() => { 3; }; } let a = new A() in {a;};")
@@ -109,7 +109,7 @@ fn inherited_member_resolve() {
             };";
 
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
@@ -167,7 +167,7 @@ fn inherited_member_resolve_with_ambiguity() {
             };";
 
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
@@ -233,7 +233,7 @@ fn several_inheritance_member_usage() {
             };";
 
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
@@ -302,7 +302,7 @@ fn inherited_member_in_operation() {
             };";
 
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
@@ -355,7 +355,7 @@ fn inherited_member_in_operation() {
 
 #[test]
 fn infered_type_usage() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
 
     let mut answ = p
         .parse(
@@ -404,7 +404,7 @@ fn infered_type_usage_with_indefinition() {
                 a;
             };";
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
@@ -420,7 +420,7 @@ fn infered_type_usage_with_indefinition() {
 
 #[test]
 fn accessing_methods_with_arguments() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
 
     let mut answ = p
         .parse(
@@ -447,7 +447,7 @@ fn accessing_methods_with_arguments() {
 
 #[test]
 fn accessing_methods_with_arguments_and_ambiguity() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
 
     let mut answ = p
         .parse(
@@ -487,7 +487,7 @@ fn accesing_methods_with_invalid_amount_parameters() {
             };";
 
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
@@ -519,7 +519,7 @@ fn accesing_methods_with_invalid_parameter_types() {
                 a.method2(4.0); 
             };";
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
@@ -547,7 +547,7 @@ fn invalid_method_use() {
                 a.method2(4); 
             };";
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
@@ -572,7 +572,7 @@ fn type_mismatch_when_using_method() {
                 3 + a.method(true); 
             };";
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
@@ -588,7 +588,7 @@ fn type_mismatch_when_using_method() {
 
 #[test]
 fn declaration_of_type_with_arguments() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
 
     let mut answ = p.parse("type A(x: Number) { field = x; }").unwrap();
 
@@ -607,7 +607,7 @@ fn declaration_of_type_with_arguments_and_usage() {
                 a.field; 
             };";
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
@@ -631,7 +631,7 @@ fn declaration_of_type_with_arguments_and_usage2() {
                 true && a.field; 
             };";
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
@@ -650,7 +650,7 @@ fn declaration_of_type_with_arguments_and_usage2() {
 
 #[test]
 fn declaration_of_type_with_reference_to_self() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
 
     let mut answ = p
         .parse(
@@ -684,7 +684,7 @@ fn declaration_of_type_with_reference_to_self_wrong() {
                 a.method(); 
             };";
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
@@ -712,7 +712,7 @@ fn declaration_of_type_with_self_inherited_access() {
                 a.method();  
             };";
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
@@ -740,7 +740,7 @@ fn declaration_of_type_with_self_inherited_access_wrong() {
                 a.method() && true;  
             };";
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
@@ -759,7 +759,7 @@ fn declaration_of_type_with_self_inherited_access_wrong() {
 
 #[test]
 fn super_constructor_call() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
 
     let mut answ = p
         .parse(
@@ -784,7 +784,7 @@ fn super_constructor_call() {
 
 #[test]
 fn super_constructor_call2() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
 
     let mut answ = p
         .parse(
@@ -821,7 +821,7 @@ fn super_constructor_with_wrong_arguments() {
             };";
 
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
@@ -855,7 +855,7 @@ fn nested_super_constructor_call() {
             };";
 
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
@@ -881,7 +881,7 @@ fn dassigning_to_self() {
             }
             ";
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
@@ -897,7 +897,7 @@ fn dassigning_to_self() {
 
 #[test]
 fn shadowed_dassignment_to_self() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
 
     let mut answ = p
         .parse(
@@ -921,7 +921,7 @@ fn shadowed_dassignment_to_self() {
 
 #[test]
 fn list_field() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
 
     let mut answ = p
         .parse(
@@ -945,7 +945,7 @@ fn list_field() {
 
 #[test]
 fn mutate_field_in_list() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
 
     let mut answ = p
         .parse(
@@ -981,7 +981,7 @@ fn mutate_field_in_list_incorrect_typing() {
         ";
 
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
@@ -1007,7 +1007,7 @@ fn operation_on_element_without_indexing() {
             };
         ";
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
@@ -1030,7 +1030,7 @@ fn unknown_annotation() {
             let a: Boniato = 1 in {a;};
         ";
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
@@ -1054,7 +1054,7 @@ fn unknown_annotation_in_method_param() {
             }
         ";
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
@@ -1081,7 +1081,7 @@ fn unknown_annotation_in_method_return() {
             }
         ";
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
@@ -1101,7 +1101,7 @@ fn unknown_annotation_in_type_arg() {
             type A(x: Boniato, y: Number){}
         ";
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
@@ -1126,7 +1126,7 @@ fn reassign_nonexisting_property() {
             };
         ";
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
@@ -1151,7 +1151,7 @@ fn use_field_without_self() {
             }
         ";
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
@@ -1167,7 +1167,7 @@ fn use_field_without_self() {
 
 #[test]
 fn field_with_same_name_as_param() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
 
     let mut answ = p
         .parse(
@@ -1202,7 +1202,7 @@ fn field_override_errors() {
             }
             ";
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
@@ -1229,7 +1229,7 @@ fn method_incorrect_override() {
             }
             ";
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
@@ -1257,7 +1257,7 @@ fn method_incorrect_override_diferent_amount() {
             ";
 
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
@@ -1275,7 +1275,7 @@ fn method_incorrect_override_diferent_amount() {
 
 #[test]
 fn method_override_variant_1() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
 
     let mut answ = p
         .parse(
@@ -1301,7 +1301,7 @@ fn method_override_variant_1() {
 
 #[test]
 fn method_override_variant_2() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
 
     let mut answ = p
         .parse(
@@ -1327,7 +1327,7 @@ fn method_override_variant_2() {
 
 #[test]
 fn method_override_variant_3() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
 
     let mut answ = p
         .parse(
@@ -1358,7 +1358,7 @@ fn field_override_should_fail() {
         type B inherits A { x = 2; }
     "#;
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
@@ -1388,7 +1388,7 @@ fn method_override_wrong_arg_count() {
         }
     ";
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
@@ -1422,7 +1422,7 @@ fn method_override_wrong_return_covariance() {
     "#;
 
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
@@ -1452,7 +1452,7 @@ fn complicated_inheritance_chain() {
     ";
 
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
@@ -1470,7 +1470,7 @@ fn complicated_inheritance_chain() {
 
 #[test]
 fn complicated_inheritance_cycle_should_fail() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p
         .parse(
             r#"
@@ -1506,7 +1506,7 @@ fn override_from_far_ancestor() {
             ";
 
     let mut error_handler = ErrorHandler::new(program);
-    let p = Parser::new();
+    let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();
     semantic_analyzer
