@@ -36,6 +36,12 @@ impl CodeGenerator {
             let definition_result = definition.accept(&mut generator);
             definitions_code += &definition_result.preamble;
         }
+        
+        let mut structs_code = String::new();
+        for code in generator.general_definitions.iter(){
+            structs_code += code;
+            structs_code += "\n";
+        }
 
         let mut expressions_code = String::new();
         if !node.expressions.is_empty() {
@@ -51,6 +57,7 @@ impl CodeGenerator {
         }
         let global_str: &str = global_string.as_str();
         program += global_str;
+        program += &structs_code;
         program += &definitions_code;
         program += "define i32 @main() {\nentry:\n";
         program += &expressions_code;

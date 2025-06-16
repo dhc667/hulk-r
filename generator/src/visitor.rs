@@ -131,6 +131,9 @@ pub struct GeneratorVisitor {
 
     pub(crate) functions_args_types: HashMap<String, Vec<String>>,
 
+    pub(crate) general_definitions: Vec<String>,
+
+    constants: Vec<String>
 }
 
 pub struct GlobalDefinitionVisitor {
@@ -219,6 +222,8 @@ impl GeneratorVisitor {
             tmp_counter: Cell::new(0),
             function_member_signature_types: HashMap::new(),
             functions_args_types: HashMap::new(),
+            general_definitions: Vec::new(),
+            constants: Vec::new()
         }
     }
 
@@ -1240,10 +1245,12 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
         };
         let mut preamble = String::new();
         // VTable
-        preamble += &generate_vtable_type(self, node);
+        let struct_vtable = generate_vtable_type(self, node);
+        self.general_definitions.push(struct_vtable);
         // Struct
         let struct_str = generate_object_struct_type(self, node);
-        preamble += &struct_str;
+        self.general_definitions.push(struct_str);
+
         // Collect field types for constructor
         let _type_name = &node.name.id;
 
@@ -1459,6 +1466,8 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
             }
             _ => panic!("Unsuported type")
         }
+
+        self.constants.push(constant_name.clone());
 
         VisitorResult {
             preamble,
