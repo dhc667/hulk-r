@@ -1,4 +1,4 @@
-use crate::error::error::{HulkError, HulkErrorTrait};
+use crate::error::{error::{HulkError, HulkErrorTrait}, semantic::semantic_error::SemanticError};
 
 pub struct ErrorHandler {
     program_text: String,
@@ -67,6 +67,10 @@ impl ErrorHandler {
     }
 
     fn format_message(&self, error: &HulkError) -> String {
+        if let HulkError::SemanticError(SemanticError::InheritanceCycle(semantic_error)) = error {
+            return semantic_error.to_string();
+        }
+
         let pos = error.get_position();
         let line_number = self.get_line_number(pos);
         let line_start = self.line_breaks[line_number];
