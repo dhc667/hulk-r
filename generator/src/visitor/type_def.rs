@@ -7,6 +7,7 @@
 //   - generate_constructor: Generates the LLVM constructor function for the type, handling field initialization and parent constructor calls.
 //   - generate_method_definitions: Generates LLVM function definitions for all methods of the type.
 
+use std::collections::HashMap;
 use crate::llvm_types::LlvmType;
 use crate::visitor::GeneratorVisitor;
 use ast;
@@ -30,12 +31,13 @@ pub fn generate_vtable_type(visitor: &mut GeneratorVisitor, node: &mut ast::Type
     // The string that will accumulate the LLVM IR output
     let mut preamble = String::new();
     preamble += &format!("{} = type {{", vtable_type_name);
-
+    let mut function_member_names2: HashMap<(String, String), String> = HashMap::new();
     let mut max_father_i = 0;
     // --- Inheritance: Copy parent vtable methods if any ---
     // If this type inherits from a parent, copy the parent's vtable entries
     if let Some(inheritance) = &node.inheritance_indicator {
         let parent = &inheritance.parent_name.id;
+
         // Check if the parent has any function member definitions
         if visitor
             .function_member_def_from_type_and_name
@@ -53,6 +55,11 @@ pub fn generate_vtable_type(visitor: &mut GeneratorVisitor, node: &mut ast::Type
                     parent_methods.push(((method_name.clone(), i.clone()), arg_types.clone()));
                 }
             }
+            print!("parent methods:");
+            for ((method_name, i), arg_types) in parent_methods.clone() {
+                print!("{} {} ", method_name, i);
+            }
+            println!();
             parent_methods.sort_by_key(|((_, i), _)| i.clone());
 
             for ((method_name, i), arg_types) in parent_methods {
@@ -98,6 +105,10 @@ pub fn generate_vtable_type(visitor: &mut GeneratorVisitor, node: &mut ast::Type
                         (type_name.clone(), method_name.clone()),
                         (vtable_initializers.len() - 1).to_string(),
                     );
+                    function_member_names2.insert(
+                        (type_name.clone(), method_name.clone()),
+                        (vtable_initializers.len() - 1).to_string(),
+                    );
                     // Record the original type for this method definition
                     visitor
                         .original_type_for_definition
@@ -115,14 +126,14 @@ pub fn generate_vtable_type(visitor: &mut GeneratorVisitor, node: &mut ast::Type
                     println!("type method: {} {}", type_name, method_name);
                     // Use the original defining type's mangled function name
                     let mangled_func_name = format!("{}_{}", original_type_for_def, method_name);
-                    
+
                     // Fix: Get the actual return type for inherited methods
                     let ret_type_str = visitor.function_member_signature_types.get(&(original_type_for_def.clone(),method_name.clone())).cloned().unwrap_or_else(|| panic!("error searching return type for parent method"));
-                    
+
                     // Build the correct signature for the inherited method
                     let mut param_types_for_cast = vec![format!("%{}_type*", original_type_for_def)];
                     param_types_for_cast.extend(arg_types.clone());
-                    
+
                     vtable_fn_ptr_types.push("i8*".to_string());
                     vtable_initializers.push(format!(
                         "i8* bitcast ({} ({})* @{} to i8*)",
@@ -130,7 +141,12 @@ pub fn generate_vtable_type(visitor: &mut GeneratorVisitor, node: &mut ast::Type
                         param_types_for_cast.join(", "),
                         mangled_func_name
                     ));
+
                     visitor.function_member_names.insert(
+                        (type_name.clone(), method_name.clone()),
+                        (vtable_initializers.len() - 1).to_string(),
+                    );
+                    function_member_names2.insert(
                         (type_name.clone(), method_name.clone()),
                         (vtable_initializers.len() - 1).to_string(),
                     );
@@ -142,7 +158,7 @@ pub fn generate_vtable_type(visitor: &mut GeneratorVisitor, node: &mut ast::Type
                         (type_name.clone(), method_name.clone()),
                         ret_type_str.clone(),
                     );
-                    
+
                 }
             }
         }
@@ -152,8 +168,7 @@ pub fn generate_vtable_type(visitor: &mut GeneratorVisitor, node: &mut ast::Type
     // Add this type's own methods to the vtable
     for func_def in node.function_member_defs.iter() {
         // Skip if this method is already in the vtable (i.e., it overrides a parent method and was already handled)
-        if visitor
-            .function_member_names
+        if function_member_names2
             .contains_key(&(type_name.clone(), func_def.identifier.id.clone()))
         {
             continue;
@@ -170,7 +185,7 @@ pub fn generate_vtable_type(visitor: &mut GeneratorVisitor, node: &mut ast::Type
                 None => "void".to_string(),
             },
         );
-        
+
         let mangled_func_name = format!("{}_{}", type_name, func_def.identifier.id);
         let ret_type_str = match &func_def.identifier.info.ty {
             Some(ty) => visitor.llvm_type_str_from_ast_type(ty),
@@ -210,15 +225,15 @@ pub fn generate_vtable_type(visitor: &mut GeneratorVisitor, node: &mut ast::Type
             (vtable_initializers.len() - 1).to_string(),
         );
     }
-    //
-    // // Debug: Print function_member_names values for this type
-    // println!("function_member_names:");
-    // for ((type_name, method_name), index) in &visitor.function_member_names {
-    //     println!(
-    //         "  (type: {}, method: {}) => vtable index {}",
-    //         type_name, method_name, index
-    //     );
-    // }
+
+    // Debug: Print function_member_names values for this type
+    println!("function_member_names:");
+    for ((type_name, method_name), index) in &visitor.function_member_names {
+        println!(
+            "  (type: {}, method: {}) => vtable index {}",
+            type_name, method_name, index
+        );
+    }
     // Emit the vtable struct type
     if !vtable_fn_ptr_types.is_empty() {
         preamble += &format!("\n  {}\n", vtable_fn_ptr_types.join(",\n  "));
@@ -226,7 +241,7 @@ pub fn generate_vtable_type(visitor: &mut GeneratorVisitor, node: &mut ast::Type
         preamble += "\n  i8* ; Empty vtable placeholder\n";
     }
     preamble += "}\n\n";
-    
+
     // Emit the global vtable instance
     let global_vtable_name = format!("@{}_vtable", type_name);
     if !vtable_initializers.is_empty() {
@@ -292,7 +307,7 @@ pub fn generate_object_struct_type(
                     panic!("Could not find type for parent member {}.{}, using double", parent, member_name);
 
                 });
-            
+
             // Add to field list
             field_llvm_types_str.push(member_llvm_type_str.clone());
             // Map the member name in child type to the current index

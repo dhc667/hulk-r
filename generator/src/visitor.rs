@@ -106,30 +106,97 @@ pub struct GeneratorVisitor {
     variable_ids: HashMap<String, u32>,
 
     /// Maps (type_name, member_name) to the member index in the struct.
-    type_members_ids: HashMap<(String, String), u32>,
+    pub(crate) type_members_ids: HashMap<(String, String), u32>,
     /// Maps (type_name, member_name) to the member's type as a string.
-    type_members_types: HashMap<(String, String), String>,
+    pub(crate) type_members_types: HashMap<(String, String), String>,
     /// Maps (type_name, function_name) to the LLVM function name in the vtable.
-    function_member_names: HashMap<(String, String), String>,
+    pub(crate) function_member_names: HashMap<(String, String), String>,
     /// Maps type_name to its parent type (for inheritance).
-    inherits: HashMap<String, String>,
+    pub(crate) inherits: HashMap<String, String>,
     /// Maps type_name to the types of its constructor arguments.
-    constructor_args_types: HashMap<String, Vec<String>>,
+    pub(crate) constructor_args_types: HashMap<String, Vec<String>>,
     /// Maps string literals to their LLVM global names.
     pub(crate) string_constants: Vec<String>,
     /// Counter for generating unique string constant names.
     _string_counter: u32,
     /// Maps (type_name, function_name) to the argument types for the function member.
-    function_member_def_from_type_and_name: HashMap<(String, String, i32), Vec<String>>,
+    pub(crate) function_member_def_from_type_and_name: HashMap<(String, String, i32), Vec<String>>,
     /// Stores global string definitions for emission at the top of the LLVM IR.
     _global_string_definitions: Vec<String>,
     /// Maps (type_name, member_name) to the original type for the definition (for type resolution).
-    original_type_for_definition: HashMap<(String, String), String>,
+    pub(crate) original_type_for_definition: HashMap<(String, String), String>,
 
     /// Maps (type_name, function_name) to the LLVM function signature.
-    function_member_signature_types: HashMap<(String, String), String>,
+    pub(crate) function_member_signature_types: HashMap<(String, String), String>,
 
-    functions_args_types: HashMap<String, Vec<String>>,
+    pub(crate) functions_args_types: HashMap<String, Vec<String>>,
+
+}
+
+pub struct GlobalDefinitionVisitor {
+    /// Stores the names of the LLVM registers that store the pointers to the values of the variables defined in a given context.
+    ///
+    /// ## Warning
+    /// To define variables, use the define_or_shadow method of this class
+    context: Context<Variable>,
+
+    /// Used to generate unique ids for temporary variables, irrespective of context.
+    /// This way we don't need to worry about LLVM's requirement that %N names be sequential starting at 0 within the same context.
+    tmp_variable_id: u32,
+    tmp_counter: Cell<usize>,
+
+    /// Allows shadowing variables or defining variables with the same name in different contexts.
+    variable_ids: HashMap<String, u32>,
+
+    /// Maps (type_name, member_name) to the member index in the struct.
+    pub(crate) type_members_ids: HashMap<(String, String), u32>,
+    /// Maps (type_name, member_name) to the member's type as a string.
+    pub(crate) type_members_types: HashMap<(String, String), String>,
+    /// Maps (type_name, function_name) to the LLVM function name in the vtable.
+    pub(crate) function_member_names: HashMap<(String, String), String>,
+    /// Maps type_name to its parent type (for inheritance).
+    pub(crate) inherits: HashMap<String, String>,
+    /// Maps type_name to the types of its constructor arguments.
+    pub(crate) constructor_args_types: HashMap<String, Vec<String>>,
+    /// Maps string literals to their LLVM global names.
+    string_constants: Vec<String>,
+    /// Counter for generating unique string constant names.
+    _string_counter: u32,
+    /// Maps (type_name, function_name) to the argument types for the function member.
+    pub(crate) function_member_def_from_type_and_name: HashMap<(String, String, i32), Vec<String>>,
+    /// Stores global string definitions for emission at the top of the LLVM IR.
+    _global_string_definitions: Vec<String>,
+    /// Maps (type_name, member_name) to the original type for the definition (for type resolution).
+    pub(crate) original_type_for_definition: HashMap<(String, String), String>,
+
+    /// Maps (type_name, function_name) to the LLVM function signature.
+    pub(crate) function_member_signature_types: HashMap<(String, String), String>,
+
+    pub(crate) functions_args_types: HashMap<String, Vec<String>>,
+
+}
+
+impl GlobalDefinitionVisitor {
+    pub fn new() -> Self {
+        GlobalDefinitionVisitor {
+            context: Context::new_one_frame(),
+            tmp_variable_id: 0,
+            variable_ids: HashMap::new(),
+            type_members_ids: HashMap::new(),
+            type_members_types: HashMap::new(),
+            function_member_names: HashMap::new(),
+            inherits: HashMap::new(),
+            constructor_args_types: HashMap::new(),
+            string_constants: Vec::new(),
+            _string_counter: 0,
+            _global_string_definitions: Vec::new(),
+            function_member_def_from_type_and_name: HashMap::new(),
+            original_type_for_definition: HashMap::new(),
+            tmp_counter: Cell::new(0),
+            function_member_signature_types: HashMap::new(),
+            functions_args_types: HashMap::new(),
+        }
+    }
 }
 
 impl GeneratorVisitor {
@@ -569,6 +636,16 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
         &mut self,
         node: &mut ast::FunctionMemberAccess,
     ) -> VisitorResult {
+
+        for ((type_name, function_name), member_name) in &self.function_member_names {
+            println!(
+                "type: {}, function: {}, member name: {}",
+                type_name, function_name, member_name
+            );
+        }
+
+        println!("Function member access: {:?}", node.member.identifier.id);
+
         let mut preamble = String::new();
 
         let object_result = node.object.accept(self);
@@ -831,13 +908,32 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
     }
 
     fn visit_string_literal(&mut self, node: &mut ast::StringLiteral) -> VisitorResult {
-        let value = node.string.clone();
-        let a = self.generate_tmp_variable();
-        let tmp_var = &a[1..]; // Remove the % prefix for global name
-        let global_str_name = format!("{}_str", tmp_var);
-        let str_len = value.len();
+        fn llvm_escape_string(input: &str) -> String {
+            let mut escaped = String::with_capacity(input.len());
+            for b in input.bytes() {
+                match b {
+                    // Escape backslash and double quote.
+                    b'\\' => escaped.push_str(r"\5C"),
+                    b'"'  => escaped.push_str(r"\22"),
+                    // ASCII printable (except \ and ")
+                    0x20..=0x21 | 0x23..=0x5B | 0x5D..=0x7E => escaped.push(b as char),
+                    // Everything else: escape as two-digit hex.
+                    _ => escaped.push_str(&format!("\\{:02X}", b)),
+                }
+            }
+            escaped
+        }
 
-        // Define the global string constant (with null terminator)
+
+        let original = node.string.clone();
+
+        let value = llvm_escape_string(original.as_str());
+        println!("String literal: {}", value);
+        let a = self.generate_tmp_variable();
+        let tmp_var = &a[1..];
+        let global_str_name = format!("{}_str", tmp_var);
+        let str_len = original.len();
+        
         let global_str_code = format!(
             "@{} = private unnamed_addr constant [{} x i8] c\"{}\\00\", align 1\n",
             global_str_name,
@@ -1414,6 +1510,422 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
         }
     }
 }
+
+impl DefinitionVisitor<VisitorResult> for GlobalDefinitionVisitor {
+    fn visit_definition(&mut self, node: &mut Definition) -> VisitorResult {
+        node.accept(self)
+    }
+
+    fn visit_type_def(&mut self, node: &mut ast::TypeDef) -> VisitorResult {
+        // Update context with inheritance info
+        let type_name = &node.name.id;
+        // The LLVM type name for the vtable struct
+        let vtable_type_name = format!("%{}_vtable_type", type_name);
+        // List of function pointer types for the vtable struct
+        let mut vtable_fn_ptr_types = Vec::new();
+        // List of initializers for the vtable global instance
+        let mut vtable_initializers = Vec::new();
+        // The string that will accumulate the LLVM IR output
+        let mut preamble = String::new();
+        preamble += &format!("{} = type {{", vtable_type_name);
+
+        let mut max_father_i = 0;
+        let mut function_member_names2: HashMap<(String, String), String> = HashMap::new();
+        // --- Inheritance: Copy parent vtable methods if any ---
+        // If this type inherits from a parent, copy the parent's vtable entries
+        if let Some(inheritance) = &node.inheritance_indicator {
+            let parent = &inheritance.parent_name.id;
+
+            // Check if the parent has any function member definitions
+            if self
+                .function_member_def_from_type_and_name
+                .iter()
+                .any(|((parent_type, _, _), _)| parent_type == parent)
+            {
+                // Collect all parent's methods (name and argument types)
+                let mut parent_methods: Vec<_> = Vec::new();
+
+                // Copy parent's method tuples (name/index/args) to avoid borrowing during later mutation
+                for ((parent_type, method_name, i), arg_types) in
+                    self.function_member_def_from_type_and_name.iter()
+                {
+                    if parent_type == parent {
+                        parent_methods.push(((method_name.clone(), i.clone()), arg_types.clone()));
+                    }
+                }
+                print!("parent methods:");
+                for ((method_name, i), arg_types) in parent_methods.clone() {
+                    print!("{} {} ", method_name, i);
+                }
+                println!();
+                parent_methods.sort_by_key(|((_, i), _)| i.clone());
+
+                for ((method_name, i), arg_types) in parent_methods {
+                    max_father_i = i.clone();
+                    // Check if the child overrides this method
+                    let overridden = node
+                        .function_member_defs
+                        .iter()
+                        .find(|f| &f.identifier.id == &method_name);
+                    if let Some(definition) = overridden {
+                        println!("type method: {} {}", type_name, method_name);
+                        // If overridden, insert the child's method into the vtable
+                        self.function_member_def_from_type_and_name.insert(
+                            (type_name.clone(), method_name.clone(), i.clone()),
+                            arg_types.clone(),
+                        );
+                        // Use the child's mangled function name and correct signature
+                        let mangled_func_name = format!("{}_{}", type_name, method_name);
+                        let ret_type_str = match &definition.identifier.info.ty {
+                            Some(ty) => self.llvm_type_str_from_ast_type(ty),
+                            None => "void".to_string(),
+                        };
+                        // The first parameter is always a pointer to the type (self)
+                        let mut param_llvm_types_for_sig = vec![format!("%{}_type*", type_name)];
+                        for param_ast in &definition.parameters {
+                            let llvm_type_str = match &param_ast.info.ty {
+                                Some(ty) => self.llvm_type_str_from_ast_type(ty),
+                                None => "i8*".to_string(),
+                            };
+                            param_llvm_types_for_sig.push(llvm_type_str);
+                        }
+                        // All vtable entries are stored as i8* for uniformity
+                        let fn_ptr_type_str = "i8*";
+                        vtable_fn_ptr_types.push(fn_ptr_type_str.to_string());
+                        vtable_initializers.push(format!(
+                            "i8* bitcast ({} ({})* @{} to i8*)",
+                            ret_type_str,
+                            param_llvm_types_for_sig.join(", "),
+                            mangled_func_name
+                        ));
+                        // Map the method to its vtable index
+                        self.function_member_names.insert(
+                            (type_name.clone(), method_name.clone()),
+                            (vtable_initializers.len() - 1).to_string(),
+                        );
+                        function_member_names2.insert(
+                            (type_name.clone(), method_name.clone()),
+                            (vtable_initializers.len() - 1).to_string(),
+                        );
+                        // Record the original type for this method definition
+                        self
+                            .original_type_for_definition
+                            .insert((type_name.clone(), method_name.clone()), type_name.clone());
+                    } else {
+                        // If not overridden, copy the parent's vtable entry
+                        let original_type_for_def = self
+                            .original_type_for_definition
+                            .get(&(parent.clone(), method_name.clone()))
+                            .unwrap_or_else(|| panic!("error searching original type for parent method"));
+                        self.function_member_def_from_type_and_name.insert(
+                            (type_name.clone(), method_name.clone(), i.clone()),
+                            arg_types.clone(),
+                        );
+                        println!("type method: {} {}", type_name, method_name);
+                        // Use the original defining type's mangled function name
+                        let mangled_func_name = format!("{}_{}", original_type_for_def, method_name);
+
+                        // Fix: Get the actual return type for inherited methods
+                        let ret_type_str = self.function_member_signature_types.get(&(original_type_for_def.clone(),method_name.clone())).cloned().unwrap_or_else(|| panic!("error searching return type for parent method"));
+
+                        // Build the correct signature for the inherited method
+                        let mut param_types_for_cast = vec![format!("%{}_type*", original_type_for_def)];
+                        param_types_for_cast.extend(arg_types.clone());
+
+                        vtable_fn_ptr_types.push("i8*".to_string());
+                        vtable_initializers.push(format!(
+                            "i8* bitcast ({} ({})* @{} to i8*)",
+                            ret_type_str,
+                            param_types_for_cast.join(", "),
+                            mangled_func_name
+                        ));
+
+                        self.function_member_names.insert(
+                            (type_name.clone(), method_name.clone()),
+                            (vtable_initializers.len() - 1).to_string(),
+                        );
+                        function_member_names2.insert(
+                            (type_name.clone(), method_name.clone()),
+                            (vtable_initializers.len() - 1).to_string(),
+                        );
+                        self.original_type_for_definition.insert(
+                            (type_name.clone(), method_name.clone()),
+                            original_type_for_def.clone(),
+                        );
+                        self.function_member_signature_types.insert(
+                            (type_name.clone(), method_name.clone()),
+                            ret_type_str.clone(),
+                        );
+
+                    }
+                }
+            }
+        }
+        // --- End inheritance ---
+
+        // Add this type's own methods to the vtable
+        for func_def in node.function_member_defs.iter() {
+            // Skip if this method is already in the vtable (i.e., it overrides a parent method and was already handled)
+            if function_member_names2
+                .contains_key(&(type_name.clone(), func_def.identifier.id.clone()))
+            {
+                continue;
+            }
+            // Record the original type for this method
+            self.original_type_for_definition.insert(
+                (type_name.clone(), func_def.identifier.id.clone()),
+                type_name.clone(),
+            );
+            self.function_member_signature_types.insert(
+                (type_name.clone(), func_def.identifier.id.clone()),
+                match &func_def.identifier.info.ty {
+                    Some(ty) => self.llvm_type_str_from_ast_type(ty),
+                    None => "void".to_string(),
+                },
+            );
+
+            let mangled_func_name = format!("{}_{}", type_name, func_def.identifier.id);
+            let ret_type_str = match &func_def.identifier.info.ty {
+                Some(ty) => self.llvm_type_str_from_ast_type(ty),
+                None => "void".to_string(),
+            };
+            // The first parameter is always a pointer to the type (self)
+            let mut param_llvm_types_for_sig = vec![format!("%{}_type*", type_name)];
+            let mut arg_types = Vec::new();
+            for param_ast in &func_def.parameters {
+                let llvm_type_str = match &param_ast.info.ty {
+                    Some(ty) => self.llvm_type_str_from_ast_type(ty),
+                    None => "i8*".to_string(),
+                };
+                param_llvm_types_for_sig.push(llvm_type_str.clone());
+                arg_types.push(llvm_type_str);
+            }
+            // Map the method signature for later lookup
+            self.function_member_def_from_type_and_name.insert(
+                (
+                    type_name.clone(),
+                    func_def.identifier.id.clone(),
+                    max_father_i + 1,
+                ),
+                arg_types,
+            );
+            max_father_i += 1;
+            let fn_ptr_type_str = format!("i8*");
+            vtable_fn_ptr_types.push(fn_ptr_type_str.clone());
+            vtable_initializers.push(format!(
+                "i8* bitcast ({} ({})* @{} to i8*)",
+                ret_type_str,
+                param_llvm_types_for_sig.join(", "),
+                mangled_func_name
+            ));
+            self.function_member_names.insert(
+                (type_name.clone(), func_def.identifier.id.clone()),
+                (vtable_initializers.len() - 1).to_string(),
+            );
+        }
+
+        let vtable_type_name = format!("%{}_vtable_type", type_name);
+        // List of LLVM type strings for each field in the struct
+        let mut field_llvm_types_str = Vec::new();
+        // The index for the next member (starts at 1 because 0 is the vtable pointer)
+        let mut member_index = 1;
+
+        // --- Inheritance: Copy parent data members if any ---
+        // If this type inherits from a parent, copy the parent's data members
+        if let Some(inheritance) = &node.inheritance_indicator {
+            let parent = &inheritance.parent_name.id;
+            // Get all parent's data members from type_members_ids
+            let parent_members: Vec<_> = self
+                .type_members_ids
+                .iter()
+                .filter(|((type_name, _), _)| type_name == parent)
+                .collect();
+            // Sort parent members by their member index to preserve order
+            let mut sorted_parent_members: Vec<_> = parent_members
+                .into_iter()
+                .map(|((_, member_name), &index)| (member_name.clone(), index))
+                .collect();
+            sorted_parent_members.sort_by_key(|(_, index)| *index);
+            // For each parent member, add it to the child's fields and maintain index mapping
+            for (member_name, _parent_index) in sorted_parent_members {
+                // Fix: Get the actual type from the parent's type registry
+                let member_llvm_type_str = self
+                    .type_members_types
+                    .get(&(parent.clone(), member_name.clone()))
+                    .cloned()
+                    .unwrap_or_else(|| {
+                        panic!("Could not find type for parent member {}.{}, using double", parent, member_name);
+
+                    });
+
+                // Add to field list
+                field_llvm_types_str.push(member_llvm_type_str.clone());
+                // Map the member name in child type to the current index
+                self
+                    .type_members_ids
+                    .insert((type_name.clone(), member_name.clone()), member_index);
+                // Increment member index for the child's own members
+                member_index += 1;
+                // Record the LLVM type for this member in the child
+                self.type_members_types.insert(
+                    (type_name.clone(), member_name.clone()),
+                    member_llvm_type_str.clone(),
+                );
+            }
+        }
+        // --- End inheritance ---
+
+        // Add this type's own data members
+        for data_member in node.data_member_defs.iter() {
+            let member_llvm_type_str = match data_member.identifier.info.ty.clone() {
+                Some(ty) => self.llvm_type_str_from_ast_type(&ty),
+                None => "i8*".to_string(),
+            };
+            field_llvm_types_str.push(member_llvm_type_str.clone());
+            self.type_members_ids.insert(
+                (type_name.clone(), data_member.identifier.id.clone()),
+                member_index,
+            );
+            member_index += 1;
+            self.type_members_types.insert(
+                (type_name.clone(), data_member.identifier.id.clone()),
+                member_llvm_type_str.clone(),
+            );
+        }
+
+        let mut preamble = String::new();
+        preamble += &format!("define %{}_type* @{}_new(", type_name, type_name);
+
+        // Collect constructor parameter definitions and types
+        let mut ctor_param_defs = Vec::new();
+        let mut ctor_param_types = Vec::new();
+        for param_ast in node.parameter_list.iter() {
+            let param_llvm_type = match &param_ast.info.ty {
+                Some(ty) => self.llvm_type_str_from_ast_type(ty),
+                None => "i8*".to_string(),
+            };
+            ctor_param_defs.push(format!("{} %{}", param_llvm_type, param_ast.id));
+            ctor_param_types.push(param_llvm_type);
+        }
+        // Store constructor argument types for later use (e.g., inheritance)
+        self
+            .constructor_args_types
+            .insert(type_name.clone(), ctor_param_types);
+
+        // No IR emitted in global visitor
+        VisitorResult { preamble: String::new(), result_handle: None }
+    }
+
+    fn visit_function_def(&mut self, node: &mut ast::GlobalFunctionDef) -> VisitorResult {
+        let mut preamble = String::new();
+
+
+        let mut param_type_vec:Vec<String> = Vec::new();
+
+        for (i, param) in node.function_def.parameters.iter().enumerate() {
+            if i > 0 {
+                preamble += ", ";
+            }
+            let llvm_type = match param.info.ty.clone() {
+                Some(ty) => match ty {
+                    ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Number) => {
+                        "double".to_string()
+                    }
+                    ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Bool) => "i1".to_string(),
+                    ast::typing::Type::BuiltIn(ast::typing::BuiltInType::String) => {
+                        "i8*".to_string()
+                    }
+                    ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Object) => {
+                        "i8*".to_string()
+                    }
+                    ast::typing::Type::Defined(name) => format!("%{}_type*", name.id.clone()),
+                    _ => "i8*".to_string(),
+                },
+                None => "i8*".to_string(),
+            };
+            preamble += &format!("{} %{}", llvm_type, param.id);
+            param_type_vec.push(llvm_type);
+
+        }
+
+        self.functions_args_types.insert(node.function_def.identifier.id.clone(), param_type_vec);
+
+        VisitorResult {
+            preamble,
+            result_handle: None,
+        }
+    }
+
+    fn visit_constant_def(&mut self, _node: &mut ast::ConstantDef) -> VisitorResult {
+        // pass
+        VisitorResult { preamble: String::new(), result_handle: None }
+    }
+
+    fn visit_protocol_def(&mut self, _node: &mut ast::ProtocolDef) -> VisitorResult {
+        // pass
+        VisitorResult { preamble: String::new(), result_handle: None }
+    }
+}
+impl GlobalDefinitionVisitor {
+fn llvm_type_from_ast_type(&self, ast_type: &ast::typing::Type) -> LlvmType {
+        match ast_type {
+            ast::typing::Type::BuiltIn(bt) => match bt {
+                ast::typing::BuiltInType::Number => LlvmType::F64,
+                ast::typing::BuiltInType::Bool => LlvmType::I1,
+                ast::typing::BuiltInType::String => LlvmType::String,
+                ast::typing::BuiltInType::Object => LlvmType::Object,
+            },
+            ast::typing::Type::Defined(_type_name) => LlvmType::Object,
+            ast::typing::Type::Iterable(_inner_type_box) => LlvmType::Object,
+            ast::typing::Type::Functor(_functor_type) => LlvmType::Object,
+        }
+    }
+
+    fn llvm_type_str_from_ast_type(&self, ast_type: &ast::typing::Type) -> String {
+        match ast_type {
+            ast::typing::Type::BuiltIn(bt) => match bt {
+                ast::typing::BuiltInType::Number => "double".to_string(),
+                ast::typing::BuiltInType::Bool => "i1".to_string(),
+                ast::typing::BuiltInType::String => "i8*".to_string(),
+                ast::typing::BuiltInType::Object => "i8*".to_string(),
+            },
+            ast::typing::Type::Defined(type_name) => {
+                format!("%{}_type*", type_name.id)
+            }
+            ast::typing::Type::Iterable(inner_type_box) => {
+                format!(
+                    "{}",
+                    self.llvm_type_str_from_ast_type(inner_type_box.as_ref())
+                )
+            }
+            _ => panic!("NO implemented type"),
+        }
+    }
+
+    // Helper to get LLVM type size (for struct size calculation)
+    fn llvm_type_size(&self, llvm_type: &str) -> usize {
+        match llvm_type {
+            "double" => 8,
+            "i32" => 4,
+            "i1" => 1,
+            "i8*" => 8,
+            _ if llvm_type.ends_with("*") => 8,
+            _ => 8,
+        }
+    }
+    // Helper to get LLVM type alignment
+    fn _llvm_type_align(&self, llvm_type: &str) -> usize {
+        match llvm_type {
+            "double" => 8,
+            "i32" => 4,
+            "i1" => 1,
+            "i8*" => 8,
+            _ if llvm_type.ends_with("*") => 8,
+            _ => 8,
+        }
+    }
+}
+
 
 // === GeneratorVisitor Helper Methods ===
 // Provides helpers for type conversion, LLVM type string generation, and type size/alignment.
