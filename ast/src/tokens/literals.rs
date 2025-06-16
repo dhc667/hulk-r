@@ -67,7 +67,9 @@ impl StringLiteral {
                 .expect("String literals must start with '\"' character: parser problem")
                 .strip_suffix("\"")
                 .expect("String literals must end with '\"' character: parser problem")
-                .replace("\\\"", "\""),
+                .replace("\\\"", "\"")
+                .replace("\\n", "\n")
+                .replace("\\t", "\t")
         }
     }
 }

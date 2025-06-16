@@ -1,6 +1,198 @@
-constant EPSILON: Number = 0.00000001;
-constant PI: Number = 3.141592653589793;
+// constant EPSILON: Number = 0.00000001; // 1E-8
+// constant PI: Number = 3.141592653589793;
 
-function foo(): Number => EPSILON;
+// BASIC MATH
+function abs(x: Number): Number => if (x > 0) x else (-x);
+function integer_pow(base: Number, exponent: Number): Number {
+	let x = 0, answ = 1 in {
+		while (x < exponent) {
+			answ := answ * base;
+			x := x + 1;
+		};
+		return answ;
+	};
+}
+function sqrt(x: Number): Number {
+	let 
+		xn = x,
+		xn_prev = x - 1 // difference > EPSILON
+	in {
+		while(abs(xn - xn_prev) < 0.00000001) { // TODO:  EPSILON
+			xn_prev := xn;
+			xn := 0.5 * (xn + x / xn);
+		};
 
-print(foo());
+		xn;
+	};
+}
+function exp(x: Number): Number {
+	let 
+		running_factorial = 1, // 1!
+		last_factor_of_factorial = 1,
+		answ = 1,
+		last_term = 1
+	in {
+		while(last_term > 0.00000001) { // TODO: change for EPSILON
+			last_term := integer_pow(x, last_factor_of_factorial) / running_factorial;
+
+			answ := answ + last_term;
+
+			last_factor_of_factorial := last_factor_of_factorial + 1;
+			running_factorial := running_factorial*last_factor_of_factorial;
+		};
+
+		answ;
+	};
+}
+function ln(x: Number): Number {
+	if (x <= 0) {
+		0;
+	} else {
+		let 
+			int_part = 0,
+			temp = x 
+		in {
+			while (temp >= 10) {
+				temp := temp / 10;
+				int_part := int_part + 1;
+			};
+		    while (temp < 1) {
+				temp := temp * 10;
+				int_part := int_part - 1;
+		    };
+
+		    let 
+				y = (temp - 1) / (temp + 1),
+		    	y2 = y * y,
+		    	frac = 0.0,
+				term = y,
+				n = 0,
+				epsilon = 0.00000001,
+				max_iter = 10000000
+			in {
+				while ((abs(term) >= epsilon) && (n < max_iter)) {
+					frac := frac + term;
+					n := n + 1;
+					term := term * y2 * (2 * n - 1) / (2 * n + 1);
+				};
+
+				2 * frac + int_part * 2.302585092994046;
+		    };
+		};
+	};
+}
+function log(x: Number, base: Number): Number => ln(x)/ln(base);
+function pow(base: Number, exponent: Number): Number => exp(exponent * ln(base));
+function floor(x: Number): Number {
+	let neg = x < 0, n = x, lower_bound = 1, answ = 0 in {
+		while (lower_bound * 2 <= n) {
+			lower_bound := lower_bound * 2;
+		};
+		while (lower_bound >= 1) {
+			if (n >= lower_bound) {
+				n := n - lower_bound;
+				answ := answ + lower_bound;;
+			} else { 0;; };
+
+			lower_bound := lower_bound / 2;
+		};
+
+
+		if (!neg) answ else {
+			if (-answ == x) (-answ)
+			else (-answ - 1);
+		};
+	};
+}
+
+// TRIGONOMETRIC FUNCTIONS
+function sin(x: Number): Number {
+	let 
+		running_factorial = 6, // 3!
+		last_factor_of_factorial = 3,
+		PI = 3.141592653589793,
+		x = x - floor(x / PI / 2)*PI * 2,
+		answ = x, 
+		last_term = x,
+		add = false
+	in {
+		// print("start" @@ x);
+		while(last_term > 0.0000000001) { // TODO: change for EPSILON
+			last_term := integer_pow(x, last_factor_of_factorial) / running_factorial;
+
+			answ := answ + if (add) last_term else (-last_term);
+			add := !add;
+
+			last_factor_of_factorial := last_factor_of_factorial + 1;
+			running_factorial := running_factorial*last_factor_of_factorial;
+
+			last_factor_of_factorial := last_factor_of_factorial + 1;
+			running_factorial := running_factorial*last_factor_of_factorial;
+		};
+
+		answ;
+	};
+	
+}
+function cos(x: Number): Number => sin(3.141592653589793/2 + x);
+function tan(x: Number): Number => sin(x) / cos(x);
+
+let PI = 3.141592653589793, E = 2.718281828459045 in {
+print("pow");
+print(integer_pow(3, 3) - 27);
+print(pow(3, 3) - 27);
+print("");
+
+print("exp");
+print(exp(2) - 7.3890560989306495);
+print(exp(20) - 485165195.40978974);
+print(exp(-10));
+print("");
+
+print("floor");
+print(floor(2.6) - 2);
+print(floor(3000) - 3000);
+print(floor(124.321) - 124);
+print(floor(12345.1212424) - 12345);
+print("");
+
+
+print("ln");
+print(ln(E) - 1);
+print(ln(E*E) - 2);
+print(ln(E*E*E*E) - 4);
+print(ln(20000000) - 16.811242831518264);
+print(ln(0.000002) - -13.122363377404328);
+print("");
+
+print("log");
+
+print("sin");
+print(sin(PI/3) - sqrt(3)/2);
+print(sin(PI/6) - 0.5);
+print(sin(PI) - 0);
+print(sin(PI/2) - 1);
+print(sin(300) - -0.9997558399011495);
+print("");
+
+print("cos");
+print(cos(PI) + 1);
+let x = PI in print(integer_pow(sin(x), 2) + integer_pow(cos(x), 2) - 1);
+let x = PI/4 in print(integer_pow(sin(x), 2) + integer_pow(cos(x), 2) - 1);
+let x = 300 in print(integer_pow(sin(x), 2) + integer_pow(cos(x), 2) - 1);
+print("");
+
+print("tan");
+print(tan(PI/4) - 1);
+print("");
+
+print("sqrt");
+print(sqrt(4) - 2);
+print(sqrt(1024) - 32);
+print(sin(PI/3) - sqrt(3)/2);
+print(sin(PI/4) - 1/sqrt(2));
+print("");
+};
+
+
+

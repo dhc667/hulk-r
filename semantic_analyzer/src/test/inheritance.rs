@@ -314,7 +314,7 @@ fn redeclare_object() {
 
 #[test]
 fn sort_definitions() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
 
     let mut answ = p
         .parse(
@@ -349,7 +349,7 @@ fn sort_definitions() {
 
 #[test]
 fn sort_definitions2() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
 
     let mut answ = p
         .parse(
@@ -386,7 +386,7 @@ fn sort_definitions2() {
 
 #[test]
 fn sort_definitions3() {
-    let p = Parser::new();
+    let p = ProgramParser::new();
 
     let mut answ = p
         .parse(
