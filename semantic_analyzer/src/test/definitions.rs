@@ -3,7 +3,7 @@ use error_handler::error_handler::ErrorHandler;
 use generated_parser::ProgramParser;
 
 fn analyze_and_get_errors(program: &str) -> Vec<String> {
-    let mut error_handler = ErrorHandler::new(program);
+    let mut error_handler = ErrorHandler::new(program, 0);
     let p = ProgramParser::new();
     let mut answ = p.parse(program).unwrap();
     let mut semantic_analyzer = SemanticAnalyzer::new();

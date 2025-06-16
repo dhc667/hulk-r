@@ -5,7 +5,7 @@ use error_handler::error_handler::ErrorHandler;
 use crate::parser::Parser;
 
 fn parse_and_get_errors(input: &str) -> Vec<String> {
-    let mut error_handler = ErrorHandler::new(input);
+    let mut error_handler = ErrorHandler::new(input, 0);
     let parser = Parser::new();
     match parser.parse(input) {
         Ok(_) => vec![],
