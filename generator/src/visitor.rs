@@ -925,7 +925,7 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
         let original = node.string.clone();
 
         let value = llvm_escape_string(original.as_str());
-        println!("String literal: {}", value);
+
         let a = self.generate_tmp_variable();
         let tmp_var = &a[1..];
         let global_str_name = format!("{}_str", tmp_var);
