@@ -30,6 +30,7 @@ impl<'a> SemanticVisitor<'a> {
             Some(Type::BuiltIn(BuiltInType::String)),
             Some(Type::BuiltIn(BuiltInType::Number)),
             Some(Type::BuiltIn(BuiltInType::Bool)),
+            None,
         ]
         .contains(&arg_type)
         {
