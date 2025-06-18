@@ -12,7 +12,6 @@ impl GeneratorVisitor {
         rhs_result: VisitorResult,
         op: &BinaryOperator,
     ) -> VisitorResult {
-
         if let At(_) | AtAt(_) = op {
             return self.get_string_bin_op_visitor_result(op, lhs_result, rhs_result);
         }
@@ -174,11 +173,12 @@ impl GeneratorVisitor {
         let result_handle = self.generate_tmp_variable();
 
         let operation = match op {
-             At(_) => {
+            At(_) => {
                 // String concatenation implementation with type coercion
                 // Convert lhs operand to string if needed
                 let (lhs_str, lhs_conv) = match lhs_handle.handle_type {
-                    HandleType::Literal(LlvmType::String) | HandleType::Register(LlvmType::String) => {
+                    HandleType::Literal(LlvmType::String)
+                    | HandleType::Register(LlvmType::String) => {
                         (lhs_handle.llvm_name.clone(), String::new())
                     }
                     HandleType::Literal(LlvmType::I1) | HandleType::Register(LlvmType::I1) => {
@@ -225,7 +225,8 @@ impl GeneratorVisitor {
                 };
                 // Convert rhs operand to string if needed
                 let (rhs_str, rhs_conv) = match rhs_handle.handle_type {
-                    HandleType::Literal(LlvmType::String) | HandleType::Register(LlvmType::String) => {
+                    HandleType::Literal(LlvmType::String)
+                    | HandleType::Register(LlvmType::String) => {
                         (rhs_handle.llvm_name.clone(), String::new())
                     }
                     HandleType::Literal(LlvmType::I1) | HandleType::Register(LlvmType::I1) => {
@@ -276,31 +277,34 @@ impl GeneratorVisitor {
                 let total = self.generate_tmp_variable();
                 let total_plus_one = self.generate_tmp_variable();
                 let result_ptr = self.generate_tmp_variable();
-                lhs_conv + &rhs_conv + &format!(
-                    // Get lengths and allocate + concatenate as before
-                    "{len1} = call i32 @strlen(i8* {lhs})\n\
+                lhs_conv
+                    + &rhs_conv
+                    + &format!(
+                        // Get lengths and allocate + concatenate as before
+                        "{len1} = call i32 @strlen(i8* {lhs})\n\
                      {len2} = call i32 @strlen(i8* {rhs})\n\
                      {total} = add i32 {len1}, {len2}\n\
                      {total_plus_one} = add i32 {total}, 1\n\
                      {result_ptr} = call i8* @malloc(i32 {total_plus_one})\n\
                      call i8* @strcpy(i8* {result_ptr}, i8* {lhs})\n\
                      {res} = call i8* @strcat(i8* {result_ptr}, i8* {rhs})\n",
-                    len1 = len1,
-                    len2 = len2,
-                    total = total,
-                    total_plus_one = total_plus_one,
-                    result_ptr = result_ptr,
-                    lhs = lhs_str,
-                    rhs = rhs_str,
-                    res = result_handle
-                )
-            },
+                        len1 = len1,
+                        len2 = len2,
+                        total = total,
+                        total_plus_one = total_plus_one,
+                        result_ptr = result_ptr,
+                        lhs = lhs_str,
+                        rhs = rhs_str,
+                        res = result_handle
+                    )
+            }
 
             AtAt(_) => {
                 // String concatenation implementation with type coercion
                 // Convert lhs operand to string if needed
                 let (lhs_str, lhs_conv) = match lhs_handle.handle_type {
-                    HandleType::Literal(LlvmType::String) | HandleType::Register(LlvmType::String) => {
+                    HandleType::Literal(LlvmType::String)
+                    | HandleType::Register(LlvmType::String) => {
                         (lhs_handle.llvm_name.clone(), String::new())
                     }
                     HandleType::Literal(LlvmType::I1) | HandleType::Register(LlvmType::I1) => {
@@ -347,7 +351,8 @@ impl GeneratorVisitor {
                 };
                 // Convert rhs operand to string if needed
                 let (rhs_str, rhs_conv) = match rhs_handle.handle_type {
-                    HandleType::Literal(LlvmType::String) | HandleType::Register(LlvmType::String) => {
+                    HandleType::Literal(LlvmType::String)
+                    | HandleType::Register(LlvmType::String) => {
                         (rhs_handle.llvm_name.clone(), String::new())
                     }
                     HandleType::Literal(LlvmType::I1) | HandleType::Register(LlvmType::I1) => {
@@ -399,9 +404,11 @@ impl GeneratorVisitor {
                 let total_plus_one = self.generate_tmp_variable();
                 let result_ptr = self.generate_tmp_variable();
                 let space_ptr = self.generate_tmp_variable();
-                lhs_conv + &rhs_conv + &format!(
-                    // Get lengths and allocate + concatenate with space in the middle
-                    "{len1} = call i32 @strlen(i8* {lhs})\n\
+                lhs_conv
+                    + &rhs_conv
+                    + &format!(
+                        // Get lengths and allocate + concatenate with space in the middle
+                        "{len1} = call i32 @strlen(i8* {lhs})\n\
                      {len2} = call i32 @strlen(i8* {rhs})\n\
                      {total} = add i32 {len1}, {len2}\n\
                      {total_plus_one} = add i32 {total}, 1\n\
@@ -410,18 +417,18 @@ impl GeneratorVisitor {
                      {space_ptr} = getelementptr [2 x i8], [2 x i8]* @.space_str, i32 0, i32 0\n\
                      call i8* @strcat(i8* {result_ptr}, i8* {space_ptr})\n\
                      {res} = call i8* @strcat(i8* {result_ptr}, i8* {rhs})\n",
-                    len1 = len1,
-                    len2 = len2,
-                    total = total,
-                    total_plus_one = total_plus_one,
-                    result_ptr = result_ptr,
-                    lhs = lhs_str,
-                    space_ptr = space_ptr,
-                    res = result_handle,
-                    rhs = rhs_str
-                )
-            },
-            
+                        len1 = len1,
+                        len2 = len2,
+                        total = total,
+                        total_plus_one = total_plus_one,
+                        result_ptr = result_ptr,
+                        lhs = lhs_str,
+                        space_ptr = space_ptr,
+                        res = result_handle,
+                        rhs = rhs_str
+                    )
+            }
+
             EqualEqual(_) => format!(
                 "{} = fcmp oeq double {}, {}",
                 result_handle, lhs_handle.llvm_name, rhs_handle.llvm_name

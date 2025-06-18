@@ -1,13 +1,12 @@
 use super::{GeneratorVisitor, VisitorResult};
-use crate::llvm_types::{LlvmType};
 use ast;
 
 impl GeneratorVisitor {
-    pub(crate) fn handle_for(
+    pub(crate) fn _handle_for(
         &mut self,
-        element_name: &str,
-        iterable_result: VisitorResult,
-        node: &mut ast::For,
+        _element_name: &str,
+        _iterable_result: VisitorResult,
+        _node: &mut ast::For,
     ) -> VisitorResult {
         todo!()
     }

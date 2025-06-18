@@ -28,11 +28,13 @@ impl ProgramParser {
             let mut errors = Vec::new();
             let position = match err {
                 ParseError::UnexpectedToken { loc, .. } => loc,
-                ParseError::UnexpectedEof => if input.is_empty() {
-                    0
-                } else {
-                    input.len() -1
-                },
+                ParseError::UnexpectedEof => {
+                    if input.is_empty() {
+                        0
+                    } else {
+                        input.len() - 1
+                    }
+                }
             };
             errors.push(UserError::new(err.to_string(input), position).into());
 

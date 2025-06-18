@@ -34,7 +34,6 @@ impl<TokenType: Debug> ParseError<TokenType> {
             }
         };
 
-
         format!("Unexpected token {:?} at {}:{}", ty, line, column)
     }
 }

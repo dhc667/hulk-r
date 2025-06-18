@@ -27,7 +27,7 @@ impl GeneratorVisitor {
             HandleType::Literal(LlvmType::Object) | HandleType::Register(LlvmType::Object) => {
                 self.get_object_un_op_visitor_result(op, inner_result)
             }
-            _ => panic!("Unsupported operand type for unary operator"),       
+            _ => panic!("Unsupported operand type for unary operator"),
         }
     }
 
@@ -75,7 +75,10 @@ impl GeneratorVisitor {
                 let tmp_variable = self.generate_tmp_variable();
                 let preamble = inner_result.preamble
                     + "\n"
-                    + &format!("{} = xor i1 {}, true\n", tmp_variable, inner_handle.llvm_name);
+                    + &format!(
+                        "{} = xor i1 {}, true\n",
+                        tmp_variable, inner_handle.llvm_name
+                    );
 
                 return VisitorResult {
                     preamble,

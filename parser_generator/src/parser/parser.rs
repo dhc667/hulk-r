@@ -15,7 +15,7 @@ use crate::{TerminalId, Token};
 
 pub struct Parser<TokenType: Eq + Hash + Debug + Copy, R> {
     action_table: HashMap<(StateId, TerminalId), Action>,
-    symbols: HashMap<SymbolId, Option<String>>,
+    _symbols: HashMap<SymbolId, Option<String>>,
     productions: HashMap<ProductionId, Production>,
     production_computes: HashMap<ProductionId, ProductionCompute<R>>,
     terminal_computes: HashMap<TerminalId, TerminalCompute<TokenType, R>>,
@@ -38,7 +38,7 @@ impl<'a, TokenType: Eq + Hash + Copy + Debug, R> Parser<TokenType, R> {
     ) -> Self {
         Self {
             action_table,
-            symbols,
+            _symbols: symbols,
             production_computes,
             productions,
             terminal_computes,
@@ -145,11 +145,11 @@ impl<'a, TokenType: Eq + Hash + Copy + Debug, R> Parser<TokenType, R> {
         #[cfg(test)]
         eprintln!(
             "Parsed {} -> {}",
-            get_name_or_default(&SymbolId::from(production.lhs), &self.symbols),
+            get_name_or_default(&SymbolId::from(production.lhs), &self._symbols),
             production
                 .rhs
                 .iter()
-                .map(|s| get_name_or_default(s, &self.symbols))
+                .map(|s| get_name_or_default(s, &self._symbols))
                 .collect::<Vec<_>>()
                 .join(" ")
         )

@@ -159,14 +159,24 @@ impl GeneratorVisitor {
     // FIXED: Changed parameter type from i8* to %string_type*
     fn print_string(&mut self, handle: &str) -> String {
         let tmp_var = self.generate_tmp_variable();
-        format!("{} = getelementptr inbounds [4 x i8], [4 x i8]* @.fmt, i64 0, i64 0\n", tmp_var)
-            + &format!("call i32 (i8*, ...) @printf(i8* {}, i8* {})\n", tmp_var,handle)
+        format!(
+            "{} = getelementptr inbounds [4 x i8], [4 x i8]* @.fmt, i64 0, i64 0\n",
+            tmp_var
+        ) + &format!(
+            "call i32 (i8*, ...) @printf(i8* {}, i8* {})\n",
+            tmp_var, handle
+        )
     }
 
     // FIXED: Changed parameter type from i8* to %string_type*
     fn print_object(&mut self, handle: &str) -> String {
         let tmp_var = self.generate_tmp_variable();
-        format!("{} = getelementptr inbounds [4 x i8], [4 x i8]* @.fmt, i64 0, i64 0\n", tmp_var)
-            + &format!("call i32 (i8*, ...) @printf(i8* {}, i8* {})\n", tmp_var,handle)
+        format!(
+            "{} = getelementptr inbounds [4 x i8], [4 x i8]* @.fmt, i64 0, i64 0\n",
+            tmp_var
+        ) + &format!(
+            "call i32 (i8*, ...) @printf(i8* {}, i8* {})\n",
+            tmp_var, handle
+        )
     }
 }
