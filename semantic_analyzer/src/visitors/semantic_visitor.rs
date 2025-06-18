@@ -25,6 +25,7 @@ use error_handler::error::semantic::member_access::{
     AccessingPrivateMember, FieldNotFound, MethodNotFound,
 };
 use error_handler::error::semantic::override_error::{FieldOverride, InvalidMethodOverride};
+use error_handler::error::semantic::variable_definition::VarAlreadyDefined;
 use error_handler::error::{
     error::HulkError, semantic::destructive_assignment::InvalidReassigmentExpression,
 };
@@ -519,8 +520,30 @@ impl<'a> DefinitionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
     }
 
     fn visit_constant_def(&mut self, node: &mut ConstantDef) -> TypeAnnotation {
+        // we close the contexts to make sure that constants only take built-in types
+        self.var_definitions.push_closed_frame();
+        self.func_definitions.push_closed_frame();
+        self.type_definitions.push_closed_frame();
+
         let right_type = node.initializer_expression.accept(self);
-        self.handle_var_definition(&mut node.identifier, right_type, false)
+
+        self.var_definitions.pop_frame();
+        self.func_definitions.pop_frame();
+        self.type_definitions.pop_frame();
+
+        if self.var_definitions.is_defined(&node.identifier.id) {
+            let error =
+                VarAlreadyDefined::new(node.identifier.id.clone(), node.identifier.position.start);
+            self.errors.push(error.into());
+        } else {
+            let var_info =
+                VarInfo::new_constant_from_identifier(&node.identifier, true, right_type.clone());
+            self.var_definitions
+                .define(node.identifier.id.clone(), var_info);
+        }
+        node.identifier.set_type_if_none(right_type.clone());
+        node.identifier.info.definition_pos = Some(node.identifier.position.clone());
+        None
     }
 
     fn visit_protocol_def(&mut self, _node: &mut ProtocolDef) -> TypeAnnotation {
