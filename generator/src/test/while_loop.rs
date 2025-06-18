@@ -24,7 +24,7 @@ fn simple_while() {
 //         for (x in [1,2,3]) {
 //             print(x);
 //         };
-        
+
 //         ",
 //     );
 
@@ -46,9 +46,10 @@ fn simple_while_2() {
     );
 
     println!("{}", llvm);
-    assert_eq!(lli_string(&llvm).unwrap(), "1.000000
+    assert_eq!(
+        lli_string(&llvm).unwrap(),
+        "1.000000
 2.000000
-3.000000");
+3.000000"
+    );
 }
-
-

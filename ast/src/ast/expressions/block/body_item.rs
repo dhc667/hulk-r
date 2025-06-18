@@ -2,7 +2,6 @@ use crate::{Expression, ExpressionVisitor, VisitableExpression};
 
 use super::return_statement::ReturnStatement;
 
-
 #[derive(Debug)]
 pub enum BlockBodyItem {
     Expression(Expression),

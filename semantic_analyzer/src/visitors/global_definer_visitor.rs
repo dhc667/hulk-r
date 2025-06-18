@@ -1,5 +1,6 @@
 use ast::{
-    typing::{BuiltInType, Type, TypeAnnotation}, DefinitionVisitor, TypeName, VisitableDefinition
+    DefinitionVisitor, TypeName, VisitableDefinition,
+    typing::{BuiltInType, Type, TypeAnnotation},
 };
 use error_handler::error::{
     error::HulkError,

@@ -1,6 +1,5 @@
 use crate::{Keyword, TypeName};
 
-
 #[derive(Debug)]
 pub struct ExtensionIndicator {
     pub extends_token: Keyword,

@@ -29,8 +29,7 @@ impl From<TerminalId> for SymbolId {
     }
 }
 
-pub type TerminalCompute<TokenType, R> =
-    Box<dyn for<'a> Fn(&'a Token<TokenType>) -> R>;
+pub type TerminalCompute<TokenType, R> = Box<dyn for<'a> Fn(&'a Token<TokenType>) -> R>;
 
 #[derive(Debug, Hash, Clone, Copy, PartialEq, Eq)]
 pub struct TerminalId(usize);

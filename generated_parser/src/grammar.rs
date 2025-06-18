@@ -1,7 +1,7 @@
 use ast::{
     ArrowExpression, ArrowOperator, Assignment, Block, BlockBodyItem, ConstantDef,
     DataMemberAccess, DataMemberDef, Definition, DestructiveAssignment, DotOperator, Expression,
-    For, FunctionBody, FunctionCall, FunctionDef, FunctionMemberAccess, GlobalFunctionDef,
+    FunctionBody, FunctionCall, FunctionDef, FunctionMemberAccess, GlobalFunctionDef,
     GroupingOperator, IfElse, InheritanceIndicator, Keyword, LetIn, ListIndexing, ListLiteral,
     NewExpr, ReturnStatement, UnOp, While,
     typing::{self, BuiltInType},

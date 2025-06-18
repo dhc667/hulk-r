@@ -7,11 +7,11 @@
 //   - generate_constructor: Generates the LLVM constructor function for the type, handling field initialization and parent constructor calls.
 //   - generate_method_definitions: Generates LLVM function definitions for all methods of the type.
 
-use std::collections::HashMap;
 use crate::llvm_types::LlvmType;
 use crate::visitor::GeneratorVisitor;
 use ast;
 use ast::{ExpressionVisitor, VisitableExpression};
+use std::collections::HashMap;
 
 /// Generates the LLVM vtable type and global vtable instance for a type.
 /// Handles inheritance by copying parent vtable entries and supports method overriding.
@@ -66,7 +66,6 @@ pub fn generate_vtable_type(visitor: &mut GeneratorVisitor, node: &mut ast::Type
                     .iter()
                     .find(|f| &f.identifier.id == &method_name);
                 if let Some(definition) = overridden {
-
                     // If overridden, insert the child's method into the vtable
                     visitor.function_member_def_from_type_and_name.insert(
                         (type_name.clone(), method_name.clone(), i.clone()),
@@ -114,7 +113,9 @@ pub fn generate_vtable_type(visitor: &mut GeneratorVisitor, node: &mut ast::Type
                     let original_type_for_def = visitor
                         .original_type_for_definition
                         .get(&(parent.clone(), method_name.clone()))
-                        .unwrap_or_else(|| panic!("error searching original type for parent method"));
+                        .unwrap_or_else(|| {
+                            panic!("error searching original type for parent method")
+                        });
                     visitor.function_member_def_from_type_and_name.insert(
                         (type_name.clone(), method_name.clone(), i.clone()),
                         arg_types.clone(),
@@ -124,10 +125,15 @@ pub fn generate_vtable_type(visitor: &mut GeneratorVisitor, node: &mut ast::Type
                     let mangled_func_name = format!("{}_{}", original_type_for_def, method_name);
 
                     // Fix: Get the actual return type for inherited methods
-                    let ret_type_str = visitor.function_member_signature_types.get(&(original_type_for_def.clone(),method_name.clone())).cloned().unwrap_or_else(|| panic!("error searching return type for parent method"));
+                    let ret_type_str = visitor
+                        .function_member_signature_types
+                        .get(&(original_type_for_def.clone(), method_name.clone()))
+                        .cloned()
+                        .unwrap_or_else(|| panic!("error searching return type for parent method"));
 
                     // Build the correct signature for the inherited method
-                    let mut param_types_for_cast = vec![format!("%{}_type*", original_type_for_def)];
+                    let mut param_types_for_cast =
+                        vec![format!("%{}_type*", original_type_for_def)];
                     param_types_for_cast.extend(arg_types.clone());
 
                     vtable_fn_ptr_types.push("i8*".to_string());
@@ -154,7 +160,6 @@ pub fn generate_vtable_type(visitor: &mut GeneratorVisitor, node: &mut ast::Type
                         (type_name.clone(), method_name.clone()),
                         ret_type_str.clone(),
                     );
-
                 }
             }
         }
@@ -164,8 +169,7 @@ pub fn generate_vtable_type(visitor: &mut GeneratorVisitor, node: &mut ast::Type
     // Add this type's own methods to the vtable
     for func_def in node.function_member_defs.iter() {
         // Skip if this method is already in the vtable (i.e., it overrides a parent method and was already handled)
-        if function_member_names2
-            .contains_key(&(type_name.clone(), func_def.identifier.id.clone()))
+        if function_member_names2.contains_key(&(type_name.clone(), func_def.identifier.id.clone()))
         {
             continue;
         }
@@ -242,8 +246,7 @@ pub fn generate_vtable_type(visitor: &mut GeneratorVisitor, node: &mut ast::Type
     } else {
         preamble += &format!(
             "{} = private unnamed_addr constant {} {{ i8* null }}, align 8\n\n",
-            global_vtable_name,
-            vtable_type_name
+            global_vtable_name, vtable_type_name
         );
     }
     preamble
@@ -292,8 +295,10 @@ pub fn generate_object_struct_type(
                 .get(&(parent.clone(), member_name.clone()))
                 .cloned()
                 .unwrap_or_else(|| {
-                    panic!("Could not find type for parent member {}.{}, using double", parent, member_name);
-
+                    panic!(
+                        "Could not find type for parent member {}.{}, using double",
+                        parent, member_name
+                    );
                 });
 
             // Add to field list
@@ -422,7 +427,7 @@ pub fn generate_constructor(visitor: &mut GeneratorVisitor, node: &mut ast::Type
         .filter(|((name, _), _)| name == type_name)
         .map(|((_, member_name), member_type)| (member_name.clone(), member_type.clone()))
         .collect();
-    for (member_name, member_type) in type_members {
+    for (_member_name, member_type) in type_members {
         // println!("member_name: {} type {:?}", member_name, member_type);
         field_llvm_types_str.push(member_type);
     }
@@ -580,7 +585,9 @@ pub fn generate_constructor(visitor: &mut GeneratorVisitor, node: &mut ast::Type
         // Use default value expression
         let default_result = data_member.default_value.accept(visitor);
         preamble += &default_result.preamble;
-        let default_handle = default_result.result_handle.expect("Default value must produce a result");
+        let default_handle = default_result
+            .result_handle
+            .expect("Default value must produce a result");
 
         let member_type = visitor
             .type_members_types
@@ -657,8 +664,10 @@ pub fn generate_method_definitions(
         // Allocate and store the self pointer - FIXED: Use correct type
         let self_alloca = visitor.generate_tmp_variable();
         preamble += &format!("  {} = alloca %{}_type*, align 8\n", self_alloca, type_name);
-        preamble += &format!("  store %{}_type* %self, %{}_type** {}, align 8\n",
-                             type_name, type_name, self_alloca);
+        preamble += &format!(
+            "  store %{}_type* %self, %{}_type** {}, align 8\n",
+            type_name, type_name, self_alloca
+        );
 
         visitor.context.define(
             "self".to_string(),
@@ -727,7 +736,8 @@ pub fn generate_method_definitions(
                             );
                         }
                         _ => {
-                            preamble += &format!("  ret {} {}\n", ret_type_str, res_handle.llvm_name);
+                            preamble +=
+                                &format!("  ret {} {}\n", ret_type_str, res_handle.llvm_name);
                         }
                     }
                 } else {

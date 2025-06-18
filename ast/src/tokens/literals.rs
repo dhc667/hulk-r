@@ -2,7 +2,6 @@ use std::{fmt::Display, usize};
 
 use super::*;
 
-
 #[derive(Debug)]
 pub struct NumberLiteral {
     pub position: TokenPosition,
@@ -69,7 +68,7 @@ impl StringLiteral {
                 .expect("String literals must end with '\"' character: parser problem")
                 .replace("\\\"", "\"")
                 .replace("\\n", "\n")
-                .replace("\\t", "\t")
+                .replace("\\t", "\t"),
         }
     }
 }
