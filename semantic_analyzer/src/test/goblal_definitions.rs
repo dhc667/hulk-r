@@ -455,3 +455,76 @@ fn member_of_an_unresolved_variable() {
         vec!["Semantic Error: Variable `a` is not defined."]
     );
 }
+
+#[test]
+fn constant_closed_context1() {
+    let program = "
+        constant x: Number = y;
+        constant y: Number = x;
+    ";
+
+    let mut error_handler = ErrorHandler::new(program, 0);
+    let p = ProgramParser::new();
+    let mut answ = p.parse(program).unwrap();
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
+
+    assert_eq!(
+        error_handler.get_raw_errors(),
+        vec![
+            "Semantic Error: Variable `y` is not defined.",
+            "Semantic Error: Variable `x` is not defined."
+        ]
+    );
+}
+
+#[test]
+fn constant_closed_context2() {
+    let program = "
+        function f(): Number {
+            return 3;
+        }
+        constant x: Number = f();
+    ";
+
+    let mut error_handler = ErrorHandler::new(program, 0);
+    let p = ProgramParser::new();
+    let mut answ = p.parse(program).unwrap();
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
+
+    assert_eq!(
+        error_handler.get_raw_errors(),
+        vec!["Semantic Error: Function `f` is not defined."]
+    );
+}
+
+#[test]
+fn constant_closed_context3() {
+    let program = "
+        type A() {
+            f() => 3;
+        }
+        constant x: Number = new A();
+    ";
+
+    let mut error_handler = ErrorHandler::new(program, 0);
+    let p = ProgramParser::new();
+    let mut answ = p.parse(program).unwrap();
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
+
+    assert_eq!(
+        error_handler.get_raw_errors(),
+        vec!["Semantic Error: Type `A` is not defined."]
+    );
+}
