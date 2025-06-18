@@ -259,8 +259,14 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
         let member_name = node.member.id.clone();
         let ty = node.object.accept(self);
 
+        // does'nt make sense to find member info of an unresolved type,
+        // return None to avoid propagating errors
+        let Some(ty) = ty else {
+            return None;
+        };
+
         // Resolve the member info
-        let member_info = self.find_member_info(member_name.clone(), &ty);
+        let member_info = self.find_member_info(member_name.clone(), &Some(ty.clone()));
         let Some(member_info) = member_info.cloned() else {
             self.errors.push(
                 FieldNotFound::new(node.member.id.clone(), node.member.position.start).into(),
@@ -271,7 +277,7 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
         // Annotate identifier
         node.member.set_type_if_none(member_info.ty.clone());
         // Annotate expr
-        node.obj_type = ty.clone();
+        node.obj_type = Some(ty.clone());
 
         // Check if expresion is self
         let id_info = node
@@ -284,8 +290,12 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
             }
         }
         self.errors.push(
-            AccessingPrivateMember::new(member_name, to_string(&ty), node.member.position.start)
-                .into(),
+            AccessingPrivateMember::new(
+                member_name,
+                to_string(&Some(ty)),
+                node.member.position.start,
+            )
+            .into(),
         );
         member_info.ty.clone()
     }
@@ -294,10 +304,16 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
         let func_name = node.member.identifier.id.clone();
         let ty = node.object.accept(self);
 
-        // annotate object
-        node.obj_type = ty.clone();
+        // does'nt make sense to find member info of an unresolved type,
+        // return None to avoid propagating errors
+        let Some(ty) = ty else {
+            return None;
+        };
 
-        let func_info = self.find_method_info(func_name.clone(), &ty);
+        // annotate object
+        node.obj_type = Some(ty.clone());
+
+        let func_info = self.find_method_info(func_name.clone(), &Some(ty));
         let Some(func_info) = func_info else {
             self.errors
                 .push(MethodNotFound::new(func_name, node.member.identifier.position.start).into());
@@ -434,10 +450,6 @@ impl<'a> DefinitionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
             }
         }
 
-        // Define Reference to self
-        self.var_definitions
-            .define("self".to_string(), VarInfo::new_self_instance(&node.name));
-
         // Define the data members
         for member in &mut node.data_member_defs {
             let member_type = member.default_value.accept(self);
@@ -477,7 +489,10 @@ impl<'a> DefinitionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
 
         //Define the methods
         for method in &mut node.function_member_defs {
-            self.var_definitions.push_open_frame();
+            self.var_definitions.push_closed_frame();
+            // Define Reference to self
+            self.var_definitions
+                .define("self".to_string(), VarInfo::new_self_instance(&node.name));
             if !self.check_method_override(&method.identifier.id, &node.name.id) {
                 self.errors.push(
                     InvalidMethodOverride::new(
