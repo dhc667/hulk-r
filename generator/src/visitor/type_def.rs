@@ -615,17 +615,21 @@ pub fn generate_method_definitions(
     let type_name = &node.name.id;
     // The string that will accumulate the LLVM IR output
     let mut preamble = String::new();
+
     // For each method defined in this type
     for func_def_ast in &mut node.function_member_defs {
         // Mangle the function name to include the type name
         let mangled_func_name = format!("{}_{}", type_name, func_def_ast.identifier.id);
+
         // Determine the LLVM return type string
         let ret_type_str = match &func_def_ast.identifier.info.ty {
             Some(ty) => visitor.llvm_type_str_from_ast_type(ty),
             None => "void".to_string(),
         };
+
         // The first parameter is always a pointer to the type (self)
         let mut method_param_defs = vec![format!("%{}_type* %self", type_name)];
+
         // Add all user-defined parameters
         for param_ast in &func_def_ast.parameters {
             let param_llvm_type = match &param_ast.info.ty {
@@ -634,6 +638,7 @@ pub fn generate_method_definitions(
             };
             method_param_defs.push(format!("{} %{}", param_llvm_type, param_ast.id));
         }
+
         // Emit the function definition header
         preamble += &format!(
             "define {} @{}({}) {{\n",
@@ -642,19 +647,24 @@ pub fn generate_method_definitions(
             method_param_defs.join(", ")
         );
         preamble += "entry:\n";
+
         // Set up a new context frame for method parameters
         let old_context = std::mem::replace(
             &mut visitor.context,
             crate::context::Context::new_one_frame(),
         );
-        // Allocate and store the self pointer
+
+        // Allocate and store the self pointer - FIXED: Use correct type
         let self_alloca = visitor.generate_tmp_variable();
-        preamble += &visitor.alloca_statement(&self_alloca, &LlvmType::Object);
-        preamble += &visitor.store_statement(&"%self".to_string(), &self_alloca, &LlvmType::Object);
+        preamble += &format!("  {} = alloca %{}_type*, align 8\n", self_alloca, type_name);
+        preamble += &format!("  store %{}_type* %self, %{}_type** {}, align 8\n",
+                             type_name, type_name, self_alloca);
+
         visitor.context.define(
             "self".to_string(),
             crate::visitor::Variable::new_object(self_alloca),
         );
+
         // Allocate and store all user-defined parameters
         for param_ast in &func_def_ast.parameters {
             let param_name = param_ast.id.clone();
@@ -665,12 +675,14 @@ pub fn generate_method_definitions(
                 .expect("Param type must be known");
             let llvm_param_type_enum = visitor.llvm_type_from_ast_type(ast_param_type);
             let param_alloca = visitor.generate_tmp_variable();
+
             preamble += &visitor.alloca_statement(&param_alloca, &llvm_param_type_enum);
             preamble += &visitor.store_statement(
                 &format!("%{}", param_name),
                 &param_alloca,
                 &llvm_param_type_enum,
             );
+
             // Define the parameter in the context for later lookup
             match llvm_param_type_enum {
                 LlvmType::F64 => visitor
@@ -690,22 +702,34 @@ pub fn generate_method_definitions(
                 _ => panic!("Invalid LLVM type for method parameter"),
             }
         }
+
         // Generate the function body (either an arrow expression or a block)
         let body_result = match &mut func_def_ast.body {
             ast::FunctionBody::ArrowExpression(arrow_exp) => arrow_exp.expression.accept(visitor),
             ast::FunctionBody::Block(block) => visitor.visit_block(block),
         };
         preamble += &body_result.preamble;
-        // Emit the return statement
+
+        // Emit the return statement - FIXED: Handle return values correctly
         if ret_type_str != "void" {
             if let Some(res_handle) = body_result.result_handle {
-                // Patch: If the return type is i8* and the result is a pointer to a field, emit a load
-                if ret_type_str == "i8*" && res_handle.llvm_name.starts_with("%") {
-                    let load_var = visitor.generate_tmp_variable();
-                    preamble += &format!(
-                        "  {} = load i8*, i8** {}, align 8\n  ret i8* {}\n",
-                        load_var, res_handle.llvm_name, load_var
-                    );
+                // If the return type is i8* and the result is a register (pointer), emit a load
+                if ret_type_str == "i8*" {
+                    use crate::llvm_types::HandleType;
+                    match res_handle.handle_type {
+                        HandleType::Register(crate::llvm_types::LlvmType::Object)
+                        | HandleType::Register(crate::llvm_types::LlvmType::String)
+                        | HandleType::Register(crate::llvm_types::LlvmType::List) => {
+                            let load_var = visitor.generate_tmp_variable();
+                            preamble += &format!(
+                                "  {} = load i8*, i8** {}, align 8\n  ret i8* {}\n",
+                                load_var, res_handle.llvm_name, load_var
+                            );
+                        }
+                        _ => {
+                            preamble += &format!("  ret {} {}\n", ret_type_str, res_handle.llvm_name);
+                        }
+                    }
                 } else {
                     preamble += &format!("  ret {} {}\n", ret_type_str, res_handle.llvm_name);
                 }

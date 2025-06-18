@@ -964,9 +964,10 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
             local_str_var, global_ptr_var
         );
 
+
         VisitorResult {
             preamble: malloc_code + &global_gep_code + &strcpy_code,
-            result_handle: Some(LlvmHandle::new_string_register(local_str_var)), // Return pointer to heap string
+            result_handle: Some(LlvmHandle::new_string_literal(local_str_var)), // Return pointer to heap string
         }
     }
     fn visit_list_literal(&mut self, node: &mut ast::ListLiteral) -> VisitorResult {
