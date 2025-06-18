@@ -360,3 +360,98 @@ fn unknown_annotation_in_constant_definition() {
         vec!["Semantic Error: Type or protocol `Boniato` is not defined.".to_string(),]
     );
 }
+
+#[test]
+fn using_type_arg_in_method() {
+    let program = "
+        type A(n: Number) {
+            get() => n;
+        }
+    ";
+
+    let mut error_handler = ErrorHandler::new(program, 0);
+    let p = ProgramParser::new();
+    let mut answ = p.parse(program).unwrap();
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
+
+    assert_eq!(
+        error_handler.get_raw_errors(),
+        vec!["Semantic Error: Variable `n` is not defined."]
+    );
+}
+
+#[test]
+fn using_other_param_in_attribute() {
+    let program = "
+        type A() {
+            x = 3;
+            y = self;
+        }
+    ";
+
+    let mut error_handler = ErrorHandler::new(program, 0);
+    let p = ProgramParser::new();
+    let mut answ = p.parse(program).unwrap();
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
+
+    assert_eq!(
+        error_handler.get_raw_errors(),
+        vec!["Semantic Error: Variable `self` is not defined."]
+    );
+}
+
+#[test]
+fn using_other_param_in_attribute2() {
+    let program = "
+        type A() {
+            x = 3;
+            y = self.x;
+        }
+    ";
+
+    let mut error_handler = ErrorHandler::new(program, 0);
+    let p = ProgramParser::new();
+    let mut answ = p.parse(program).unwrap();
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
+
+    assert_eq!(
+        error_handler.get_raw_errors(),
+        vec!["Semantic Error: Variable `self` is not defined."]
+    );
+}
+
+#[test]
+fn member_of_an_unresolved_variable() {
+    let program = "
+        type A() {
+            get() => 3;
+        }
+        print(a.get());
+    ";
+
+    let mut error_handler = ErrorHandler::new(program, 0);
+    let p = ProgramParser::new();
+    let mut answ = p.parse(program).unwrap();
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
+
+    assert_eq!(
+        error_handler.get_raw_errors(),
+        vec!["Semantic Error: Variable `a` is not defined."]
+    );
+}
