@@ -7,6 +7,7 @@ impl GeneratorVisitor {
     pub fn generate_tmp_variable(&self) -> String {
         let current = self.tmp_counter.get();
         self.tmp_counter.set(current + 1);
+        
         format!("%tmp{}", current)
     }
 

@@ -49,9 +49,11 @@ impl GeneratorVisitor {
             id = *self.variable_ids.get(&name).unwrap_or(&0);
         }
         self.variable_ids.insert(name.clone(), id + 1);
-
-        let llvm_name = format!("%{}.{}", name, id);
-
+        let mut llvm_name = format!("%{}.{}", name, id);
+        if(self.is_global){
+            llvm_name= format!("@{}", name);;
+        }
+        
         match handle_type {
             LlvmType::F64 => {
                 self.context
