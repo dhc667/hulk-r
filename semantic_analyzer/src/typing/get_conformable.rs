@@ -22,10 +22,8 @@ pub trait GetConformable {
             return Err(ObjectAnnotationError::new(position).into());
         }
         //TODO: we probably need to do something generic for this
-        let ty = if let Type::Iterable(inner) = ty {
-            inner.as_ref()
-        } else {
-            ty
+        if let Type::Iterable(inner) = ty {
+            return self.get_conformable(&Some(inner.as_ref().clone()), position);
         };
 
         if self.is_type_defined(&ty) {
