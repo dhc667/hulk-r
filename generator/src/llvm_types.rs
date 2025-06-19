@@ -1,25 +1,25 @@
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub enum LlvmType {
     F64,
     I1,
     String, // Now represents %string_type*
     Object,
-    List,
+    List(Box<LlvmType>),
 }
 
 impl LlvmType {
-    pub fn llvm_type_str(&self) -> &str {
+    pub fn llvm_type_str(&self) -> String {
         match self {
-            LlvmType::F64 => "double",
-            LlvmType::I1 => "i1",
-            LlvmType::String => "%i8*",
-            LlvmType::Object => "i8*",
-            LlvmType::List => "i8*",
+            LlvmType::F64 => "double".to_string(),
+            LlvmType::I1 => "i1".to_string(),
+            LlvmType::String => "i8*".to_string(),
+            LlvmType::Object => "i8*".to_string(),
+            LlvmType::List(inner) => format!("{}*", inner.llvm_type_str()),
         }
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub enum HandleType {
     Literal(LlvmType),
     Register(LlvmType),
@@ -50,29 +50,17 @@ impl HandleType {
     pub fn register_object() -> HandleType {
         HandleType::Register(LlvmType::Object)
     }
-    pub fn literal_list() -> HandleType {
-        HandleType::Literal(LlvmType::List)
+    pub fn literal_list(inner: LlvmType) -> HandleType {
+        HandleType::Literal(LlvmType::List(Box::new(inner)))
+    }
+    pub fn register_list(inner: LlvmType) -> HandleType {
+        HandleType::Register(LlvmType::List(Box::new(inner)))
     }
 
-    pub fn register_list() -> HandleType {
-        HandleType::Register(LlvmType::List)
-    }
 
     pub fn inner_type(&self) -> LlvmType {
         match self {
-            HandleType::Register(LlvmType::F64) | HandleType::Literal(LlvmType::F64) => {
-                LlvmType::F64
-            }
-            HandleType::Register(LlvmType::I1) | HandleType::Literal(LlvmType::I1) => LlvmType::I1,
-            HandleType::Register(LlvmType::String) | HandleType::Literal(LlvmType::String) => {
-                LlvmType::String
-            }
-            HandleType::Register(LlvmType::Object) | HandleType::Literal(LlvmType::Object) => {
-                LlvmType::Object
-            }
-            HandleType::Register(LlvmType::List) | HandleType::Literal(LlvmType::List) => {
-                LlvmType::List
-            }
+            HandleType::Register(t) | HandleType::Literal(t) => t.clone(),
         }
     }
 }
@@ -142,11 +130,11 @@ impl LlvmHandle {
         LlvmHandle::new(HandleType::register_object(), name)
     }
 
-    pub fn new_list_literal(value: String) -> LlvmHandle {
-        LlvmHandle::new(HandleType::literal_list(), value)
+    pub fn new_list_literal(inner: LlvmType, value: String) -> LlvmHandle {
+        LlvmHandle::new(HandleType::literal_list(inner), value)
     }
 
-    pub fn new_list_register(name: String) -> LlvmHandle {
-        LlvmHandle::new(HandleType::register_list(), name)
+    pub fn new_list_register(inner: LlvmType, name: String) -> LlvmHandle {
+        LlvmHandle::new(HandleType::register_list(inner), name)
     }
 }

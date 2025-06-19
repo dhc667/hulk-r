@@ -590,3 +590,31 @@ fn constant()
     let result = lli_string(&llvm).unwrap();
     assert_eq!(result, "hello world");
 }
+
+#[test]
+fn function_returning_list_of_list_of_strings()
+{
+    let llvm = generate_code(
+        r#"
+            function a(): String** => [["hello world"]];
+print(let x = a() in x[0][0]);
+            "#,
+    );
+    println!("{}", llvm);
+    let result = lli_string(&llvm).unwrap();
+    assert_eq!(result, "hello world");
+}
+
+#[test]
+fn function_returning_string_of_list_of_list_of_strings()
+{
+    let llvm = generate_code(
+        r#"
+            function a(x:String*): String => x[0];
+print(let x = a(["hello world"]) in x);
+            "#,
+    );
+    println!("{}", llvm);
+    let result = lli_string(&llvm).unwrap();
+    assert_eq!(result, "hello world");
+}

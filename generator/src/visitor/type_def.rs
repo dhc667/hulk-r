@@ -724,20 +724,31 @@ pub fn generate_method_definitions(
             if let Some(res_handle) = body_result.result_handle {
                 // If the return type is i8* and the result is a register (pointer), emit a load
                 if ret_type_str == "i8*" {
-                    use crate::llvm_types::HandleType;
-                    match res_handle.handle_type {
-                        HandleType::Register(crate::llvm_types::LlvmType::Object)
-                        | HandleType::Register(crate::llvm_types::LlvmType::String)
-                        | HandleType::Register(crate::llvm_types::LlvmType::List) => {
+                    use crate::llvm_types::{HandleType, LlvmType};
+                    match &res_handle.handle_type {
+                        HandleType::Register(LlvmType::Object) => {
                             let load_var = visitor.generate_tmp_variable();
                             preamble += &format!(
                                 "  {} = load i8*, i8** {}, align 8\n  ret i8* {}\n",
                                 load_var, res_handle.llvm_name, load_var
                             );
                         }
+                        HandleType::Register(LlvmType::String) => {
+                            let load_var = visitor.generate_tmp_variable();
+                            preamble += &format!(
+                                "  {} = load i8*, i8** {}, align 8\n  ret i8* {}\n",
+                                load_var, res_handle.llvm_name, load_var
+                            );
+                        }
+                        HandleType::Register(LlvmType::List(inner)) => {
+                            let load_var = visitor.generate_tmp_variable();
+                            preamble += &format!(
+                                "  {} = load {}*, {}** {}, align 8\n  ret {}* {}\n",
+                                load_var,inner.llvm_type_str(),inner.llvm_type_str(), res_handle.llvm_name,inner.llvm_type_str(), load_var
+                            );
+                        }
                         _ => {
-                            preamble +=
-                                &format!("  ret {} {}\n", ret_type_str, res_handle.llvm_name);
+                            preamble += &format!("  ret {} {}\n", ret_type_str, res_handle.llvm_name);
                         }
                     }
                 } else {

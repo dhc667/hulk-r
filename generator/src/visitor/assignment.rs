@@ -71,9 +71,9 @@ impl GeneratorVisitor {
                 self.context
                     .define(name, Variable::new_object(llvm_name.clone()));
             }
-            LlvmType::List => {
+            LlvmType::List(inner) => {
                 self.context
-                    .define(name, Variable::new_list(llvm_name.clone()));
+                    .define(name, Variable::new_list_with_inner(llvm_name.clone(), *inner));
             }
         }
 

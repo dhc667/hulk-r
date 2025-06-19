@@ -78,9 +78,9 @@ impl Variable {
         }
     }
 
-    pub fn new_list(llvm_name: String) -> Variable {
+    pub fn new_list_with_inner(llvm_name: String, inner: LlvmType) -> Variable {
         Variable {
-            var_type: LlvmType::List,
+            var_type: LlvmType::List(Box::new(inner)),
             llvm_name,
         }
     }
@@ -341,13 +341,7 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
                     // Store the new value to the member
                     let member_type = data_member_access.member.info.ty.clone();
                     let llvm_type = match &member_type {
-                        Some(ty) => match ty {
-                            ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Number) => LlvmType::F64,
-                            ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Bool) => LlvmType::I1,
-                            ast::typing::Type::BuiltIn(ast::typing::BuiltInType::String) => LlvmType::String,
-                            ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Object) => LlvmType::Object,
-                            _ => LlvmType::Object,
-                        },
+                        Some(ty) => self.llvm_type_from_ast_type(ty),
                         None => LlvmType::Object,
                     };
 
@@ -560,13 +554,7 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
         let member_type = node.member.info.ty.clone();
 
         let llvm_type = match &member_type {
-            Some(ty) => match ty {
-                ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Number) => LlvmType::F64,
-                ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Bool) => LlvmType::I1,
-                ast::typing::Type::BuiltIn(ast::typing::BuiltInType::String) => LlvmType::String,
-                ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Object) => LlvmType::Object,
-                _ => LlvmType::Object,
-            },
+            Some(ty) => self.llvm_type_from_ast_type(ty),
             None => LlvmType::Object,
         };
         // println!("{}", member_type.unwrap().to_string());
@@ -828,16 +816,7 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
         }
 
         let ret_type = match &node.identifier.info.ty {
-            Some(ty) => match ty {
-                ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Number) => {
-                    "double".to_string()
-                }
-                ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Bool) => "i1".to_string(),
-                ast::typing::Type::BuiltIn(ast::typing::BuiltInType::String) => "i8*".to_string(),
-                ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Object) => "i8*".to_string(),
-                ast::typing::Type::Defined(name) => format!("%{}_type*", name.id.clone()),
-                _ => "i8*".to_string(),
-            },
+            Some(ty) => self.llvm_type_str_from_ast_type(ty),
             None => "i8*".to_string(),
         };
 
@@ -975,11 +954,12 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
         }
     }
     fn visit_list_literal(&mut self, node: &mut ast::ListLiteral) -> VisitorResult {
-        let type_name = match &node.list_type {
-            Some(ty) => to_string(&Some(ty.clone())),
-            None => panic!("Object type not found for data member access"),
+        let ast_type = node.list_type.as_ref().expect("Object type not found for data member access");
+        let llvm_list_type = self.llvm_type_from_ast_type(ast_type); // returns LlvmType
+        let llvm_elem_type = match llvm_list_type {
+            LlvmType::List(inner) => *inner,
+            _ => panic!("List type not found for data member access"),
         };
-
         let mut preamble = String::new();
         let mut element_handles = Vec::new();
 
@@ -995,14 +975,10 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
         let tmp_var_id = self.tmp_counter.get();
         self.tmp_counter.set(tmp_var_id + 1);
 
-        let llvm_elem_type = match &node.list_type {
-            Some(ast_type) => self.llvm_type_str_from_ast_type(ast_type),
-            None => "i64".to_string(), // fallback, though shouldn't happen
-        };
+        let llvm_elem_type_str = llvm_elem_type.llvm_type_str();
 
         // Allocate memory for the array using malloc
-        // e.g., %list_ptr = call i8* @malloc(i64 size)
-        let type_size = self.llvm_type_size(&llvm_elem_type);
+        let type_size = self.llvm_type_size(&llvm_elem_type_str);
         let total_size = type_size * list_len + 8;
         let ptr_var = format!("%list_ptr_{}", tmp_var_id);
         preamble += &format!(
@@ -1015,37 +991,36 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
             "{array_ptr} = bitcast i8* {ptr_var} to {elem_type}*\n",
             ptr_var=ptr_var,
             array_ptr=array_ptr,
-            elem_type=llvm_elem_type
+            elem_type=llvm_elem_type_str
         );
-        
+
         // Store the length of the array at index 0
         let length_ptr = format!("%length_ptr_{}", tmp_var_id);
         let length_value = format!("%length_val_{}", tmp_var_id);
         preamble += &format!(
             "{length_value} = add i64 {}, 0\n",
-            element_handles.len()
+            list_len
         );
         preamble += &format!(
             "{length_ptr} = getelementptr inbounds {elem_type}, {elem_type}* {array_ptr}, i64 0\n",
             length_ptr=length_ptr,
-            elem_type=llvm_elem_type,
+            elem_type=llvm_elem_type_str,
             array_ptr=array_ptr
         );
-        
+
         // Always store length as i64 to ensure consistency, converting if needed
-        if llvm_elem_type == "i64" {
+        if llvm_elem_type_str == "i64" {
             preamble += &format!(
                 "store i64 {length_value}, i64* {length_ptr}\n",
                 length_value=length_value,
                 length_ptr=length_ptr
             );
         } else {
-            // If the element type is not i64, we need to bitcast the pointer
             let casted_length_ptr = format!("%casted_length_ptr_{}", tmp_var_id);
             preamble += &format!(
                 "{casted_length_ptr} = bitcast {elem_type}* {length_ptr} to i64*\n",
                 casted_length_ptr=casted_length_ptr,
-                elem_type=llvm_elem_type,
+                elem_type=llvm_elem_type_str,
                 length_ptr=length_ptr
             );
             preamble += &format!(
@@ -1061,13 +1036,13 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
             preamble += &format!(
                 "{elem_ptr} = getelementptr inbounds {elem_type}, {elem_type}* {array_ptr}, i64 {idx}\n",
                 elem_ptr=elem_ptr,
-                elem_type=llvm_elem_type,
+                elem_type=llvm_elem_type_str,
                 array_ptr=array_ptr,
                 idx=i+1
             );
             preamble += &format!(
                 "store {elem_type} {value}, {elem_type}* {elem_ptr}\n",
-                elem_type=llvm_elem_type,
+                elem_type=llvm_elem_type_str,
                 value=handle.llvm_name
             );
         }
@@ -1076,6 +1051,7 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
         VisitorResult {
             preamble,
             result_handle: Some(crate::llvm_types::LlvmHandle::new_list_register(
+                llvm_elem_type.clone(),
                 array_ptr,
             )),
         }
@@ -1169,10 +1145,17 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
             None => panic!("Expected handle for index expression"),
         };
 
-        let elem_type = match &node.list_type {
-            Some(ast_type) => self.llvm_type_str_from_ast_type(ast_type),
+        let list_type = match &node.list_type {
+            Some(ast_type) => self.llvm_type_from_ast_type(ast_type),
             None => panic!("Expected list type for list indexing"),
         };
+
+        let elem_type = match list_type {
+            LlvmType::List(inner) => inner.llvm_type_str(),
+            _ => panic!("List type not found for data member access"),
+        };
+
+        println!("elemnt type {}", elem_type);
 
         let tmp_var_id = self.tmp_counter.get();
         self.tmp_counter.set(tmp_var_id + 1);
@@ -1187,24 +1170,24 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
             );
             casted_ptr
         };
-        
+
         // Compute pointer to the indexed element
         let elem_ptr = format!("%elem_ptr_{}", tmp_var_id);
-        
+
         // Cast the index to i64
         let casted_index = format!("%casted_index_{}", tmp_var_id);
         preamble += &format!(
-            "  {} = fptosi {} {} to i64\n", 
+            "  {} = fptosi {} {} to i64\n",
             casted_index, "double", index_handle.llvm_name
         );
-        
+
         // Create a new temporary variable for the adjusted index
         let adjusted_index = format!("%adjusted_index_{}", tmp_var_id);
         preamble += &format!(
             "  {} = add i64 {}, 1\n",
             adjusted_index, casted_index
         );
-        
+
         preamble += &format!(
             "  {} = getelementptr inbounds {}, {}* {}, i64 {}\n",
             elem_ptr, elem_type, elem_type, casted_list_ptr, adjusted_index
@@ -1216,7 +1199,7 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
             "  {} = load {}, {}* {}\n",
             loaded_val, elem_type, elem_type, elem_ptr
         );
-        
+
         // Create the appropriate handle type based on the element type
         let handle_type = match elem_type.as_str() {
             "double" => HandleType::Register(LlvmType::F64),
@@ -1283,16 +1266,7 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
         let func_name = &node.function_def.identifier.id;
 
         let return_type = match &node.function_def.identifier.info.ty {
-            Some(ty) => match ty {
-                ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Number) => {
-                    "double".to_string()
-                }
-                ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Bool) => "i1".to_string(),
-                ast::typing::Type::BuiltIn(ast::typing::BuiltInType::String) => "i8*".to_string(),
-                ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Object) => "i8*".to_string(),
-                ast::typing::Type::Defined(name) => format!("%{}_type*", name.id.clone()),
-                _ => "void".to_string(),
-            },
+            Some(ty) => self.llvm_type_str_from_ast_type(ty),
             None => "void".to_string(),
         };
 
@@ -1305,20 +1279,7 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
                 preamble += ", ";
             }
             let llvm_type = match param.info.ty.clone() {
-                Some(ty) => match ty {
-                    ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Number) => {
-                        "double".to_string()
-                    }
-                    ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Bool) => "i1".to_string(),
-                    ast::typing::Type::BuiltIn(ast::typing::BuiltInType::String) => {
-                        "i8*".to_string()
-                    }
-                    ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Object) => {
-                        "i8*".to_string()
-                    }
-                    ast::typing::Type::Defined(name) => format!("%{}_type*", name.id.clone()),
-                    _ => "i8*".to_string(),
-                },
+                Some(ty) => self.llvm_type_str_from_ast_type(&ty),
                 None => "i8*".to_string(),
             };
             preamble += &format!("{} %{}", llvm_type, param.id);
@@ -1336,24 +1297,13 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
 
         for param in &node.function_def.parameters {
             let llvm_type = match param.info.ty.clone() {
-                Some(ty) => match ty {
-                    ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Number) => LlvmType::F64,
-                    ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Bool) => LlvmType::I1,
-                    ast::typing::Type::BuiltIn(ast::typing::BuiltInType::String) => {
-                        LlvmType::String
-                    }
-                    ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Object) => {
-                        LlvmType::Object
-                    }
-                    ast::typing::Type::Defined(_) => LlvmType::Object,
-                    _ => LlvmType::Object,
-                },
+                Some(ty) => self.llvm_type_from_ast_type(&ty),
                 None => LlvmType::Object,
             };
             let param_ptr = self.generate_tmp_variable();
             preamble += &self.alloca_statement(&param_ptr, &llvm_type);
             preamble += &self.store_statement(&format!("%{}", param.id), &param_ptr, &llvm_type);
-            match llvm_type {
+            match &llvm_type {
                 LlvmType::F64 => self
                     .context
                     .define(param.id.clone(), Variable::new_f64(param_ptr)),
@@ -1366,7 +1316,9 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
                 LlvmType::Object => self
                     .context
                     .define(param.id.clone(), Variable::new_object(param_ptr)),
-                _ => panic!("Unsuported type")
+                LlvmType::List(inner) => self
+                    .context
+                    .define(param.id.clone(), Variable::new_list_with_inner(param_ptr, *inner.clone())),
             };
         }
 
@@ -1382,7 +1334,7 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
         };
 
         preamble += &body_result.preamble;
-
+        print!("return type {}\n",return_type);
         if return_type != "void" {
             if let Some(result_handle) = &body_result.result_handle {
                 // if return_type == "i8*" && result_handle.llvm_name.starts_with("%") {
@@ -1431,7 +1383,7 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
             .expect("Constant initializer must have a result");
 
         let preamble_code = match ty {
-            Some(ref t) => match self.llvm_type_from_ast_type(t) {
+            Some(ref ty) => match self.llvm_type_from_ast_type(ty) {
                 LlvmType::F64 => format!(
                     "@{} = global double null, align 8\n\n",
                     constant_name
@@ -1440,9 +1392,14 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
                     "@{} = global i1 null, align 1\n\n",
                     constant_name
                 ),
-                LlvmType::String | LlvmType::Object | LlvmType::List => format!(
+                LlvmType::String | LlvmType::Object => format!(
                     "@{} = global i8* null, align 8\n\n",
                     constant_name
+                ),
+                LlvmType::List(inner) => format!(
+                    "@{} = global {} null, align 8\n\n",
+                    constant_name,
+                    LlvmType::List(inner).llvm_type_str()
                 ),
             },
             _ => panic!("Unsupported type"),
@@ -1817,20 +1774,7 @@ impl DefinitionVisitor<VisitorResult> for GlobalDefinitionVisitor {
                 preamble += ", ";
             }
             let llvm_type = match param.info.ty.clone() {
-                Some(ty) => match ty {
-                    ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Number) => {
-                        "double".to_string()
-                    }
-                    ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Bool) => "i1".to_string(),
-                    ast::typing::Type::BuiltIn(ast::typing::BuiltInType::String) => {
-                        "i8*".to_string()
-                    }
-                    ast::typing::Type::BuiltIn(ast::typing::BuiltInType::Object) => {
-                        "i8*".to_string()
-                    }
-                    ast::typing::Type::Defined(name) => format!("%{}_type*", name.id.clone()),
-                    _ => "i8*".to_string(),
-                },
+                Some(ty) => self.llvm_type_str_from_ast_type(&ty),
                 None => "i8*".to_string(),
             };
             preamble += &format!("{} %{}", llvm_type, param.id);
@@ -1884,7 +1828,7 @@ fn llvm_type_from_ast_type(&self, ast_type: &ast::typing::Type) -> LlvmType {
             }
             ast::typing::Type::Iterable(inner_type_box) => {
                 format!(
-                    "{}",
+                    "{}*",
                     self.llvm_type_str_from_ast_type(inner_type_box.as_ref())
                 )
             }
@@ -1929,7 +1873,9 @@ impl GeneratorVisitor {
                 ast::typing::BuiltInType::Object => LlvmType::Object,
             },
             ast::typing::Type::Defined(_type_name) => LlvmType::Object,
-            ast::typing::Type::Iterable(_inner_type_box) => LlvmType::Object,
+            ast::typing::Type::Iterable(inner_type_box) => {
+                LlvmType::List(Box::new(self.llvm_type_from_ast_type(inner_type_box.as_ref())))
+            }
             ast::typing::Type::Functor(_functor_type) => LlvmType::Object,
         }
     }
@@ -1946,10 +1892,7 @@ impl GeneratorVisitor {
                 format!("%{}_type*", type_name.id)
             }
             ast::typing::Type::Iterable(inner_type_box) => {
-                format!(
-                    "{}",
-                    self.llvm_type_str_from_ast_type(inner_type_box.as_ref())
-                )
+                format!("{}*", self.llvm_type_str_from_ast_type(inner_type_box.as_ref()))
             }
             _ => panic!("NO implemented type"),
         }
