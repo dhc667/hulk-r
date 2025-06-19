@@ -1,10 +1,10 @@
 use ast::{
     DefinitionVisitor, Expression, ExpressionVisitor, Identifier, ListLiteral, VisitableDefinition,
-    VisitableExpression, token_position::TokenPositionTrait,
+    VisitableExpression, token_position::TokenPositionTrait, typing::to_string,
 };
 use error_handler::error::{
     error::HulkError,
-    semantic::type_errors::{NeedsAnAnnotation, UnknownListType},
+    semantic::type_errors::{NeedsAnAnnotation, NeedsMoreSpecificType, UnknownListType},
 };
 
 pub struct TypeVisitor<'a> {
@@ -20,6 +20,17 @@ impl<'a> TypeVisitor<'a> {
         if id.info.ty.is_none() {
             self.errors
                 .push(NeedsAnAnnotation::new(id.id.clone(), id.position.start).into());
+            return;
+        }
+        if !id.info.ty.as_ref().unwrap().is_specific() {
+            self.errors.push(
+                NeedsMoreSpecificType::new(
+                    id.id.clone(),
+                    to_string(&id.info.ty),
+                    id.position.start,
+                )
+                .into(),
+            );
         }
     }
     fn handle_list_dec(&mut self, id: &Identifier, list: &mut ListLiteral) {
@@ -146,6 +157,9 @@ impl<'a> DefinitionVisitor<()> for TypeVisitor<'a> {
         });
         node.data_member_defs.iter_mut().for_each(|x| {
             self.handle_identifier(&x.identifier);
+            if let Some(list) = x.default_value.as_list_literal_mut() {
+                self.handle_list_dec(&x.identifier, list);
+            }
             x.default_value.accept(self);
         });
     }

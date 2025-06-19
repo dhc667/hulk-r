@@ -111,6 +111,7 @@ pub fn simple_inference_test() {
     assert_eq!(
         error_handler.get_raw_errors(),
         vec![
+            "Semantic Error: Variable `x` needs a more specific type than `Object`",
             "Semantic Error: If-else expresssion must have a more specific type than `Object`.",
             "Semantic Error: Cannot apply `+` to operands of type `Object` and `Number`."
         ]
@@ -244,7 +245,10 @@ pub fn list_typing_3() {
 
     assert_eq!(
         error_handler.get_raw_errors(),
-        vec!["Semantic Error: List literal must have a more specific type than `Object`."]
+        vec![
+            "Semantic Error: Variable `x` needs a more specific type than `Object*`",
+            "Semantic Error: List literal must have a more specific type than `Object`."
+        ]
     );
     assert_eq!(
         dec.info.ty,
@@ -533,6 +537,8 @@ pub fn unknown_annotation_in_constructor_called() {
         error_handler.get_raw_errors(),
         vec![
             "Semantic Error: Type or protocol `Bool` is not defined.",
+            "Semantic Error: Type of `b` could not be resolved",
+            "Semantic Error: Type of `y` could not be resolved",
             "Semantic Error: Cannot access member `y` of type `Point`. Properties are private, even to inherited types."
         ]
     )
@@ -558,6 +564,7 @@ pub fn unknown_annotation_in_func_called() {
         error_handler.get_raw_errors(),
         vec![
             "Semantic Error: Type or protocol `Bool` is not defined.",
+            "Semantic Error: Type of `b` could not be resolved",
             "Semantic Error: Cannot apply `+` to operands of type `Number` and `Boolean`."
         ]
     )
@@ -585,6 +592,7 @@ pub fn unknown_annotation_in_method_called() {
         error_handler.get_raw_errors(),
         vec![
             "Semantic Error: Type or protocol `Bool` is not defined.",
+            "Semantic Error: Type of `x` could not be resolved",
             "Semantic Error: Cannot apply `+` to operands of type `Number` and `Boolean`."
         ]
     )
@@ -732,7 +740,8 @@ fn object_params() {
         error_handler.get_raw_errors(),
         vec![
             "Semantic Error: Annotations must be of a more specific type than `Object`.",
-            "Semantic Error: Annotations must be of a more specific type than `Object`."
+            "Semantic Error: Annotations must be of a more specific type than `Object`.",
+            "Semantic Error: Type of `x` could not be resolved"
         ]
     );
 }

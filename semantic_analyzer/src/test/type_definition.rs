@@ -1065,8 +1065,10 @@ fn unknown_annotation_in_method_param() {
     assert_eq!(
         error_handler.get_raw_errors(),
         vec![
-            "Semantic Error: Type or protocol `Boniato` is not defined.".to_string(),
-            "Semantic Error: Type or protocol `Malanga` is not defined.".to_string()
+            "Semantic Error: Type or protocol `Boniato` is not defined.",
+            "Semantic Error: Type of `y` could not be resolved",
+            "Semantic Error: Type or protocol `Malanga` is not defined.",
+            "Semantic Error: Type of `z` could not be resolved"
         ]
     );
 }
@@ -1111,7 +1113,10 @@ fn unknown_annotation_in_type_arg() {
 
     assert_eq!(
         error_handler.get_raw_errors(),
-        vec!["Semantic Error: Type or protocol `Boniato` is not defined.".to_string(),]
+        vec![
+            "Semantic Error: Type or protocol `Boniato` is not defined.",
+            "Semantic Error: Type of `x` could not be resolved"
+        ]
     );
 }
 

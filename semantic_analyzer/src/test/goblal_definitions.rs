@@ -337,7 +337,10 @@ fn unknown_annotation_in_global_function_param() {
 
     assert_eq!(
         error_handler.get_raw_errors(),
-        vec!["Semantic Error: Type or protocol `Boniato` is not defined.".to_string(),]
+        vec![
+            "Semantic Error: Type or protocol `Boniato` is not defined.",
+            "Semantic Error: Type of `y` could not be resolved"
+        ]
     );
 }
 
@@ -404,7 +407,10 @@ fn using_other_param_in_attribute() {
 
     assert_eq!(
         error_handler.get_raw_errors(),
-        vec!["Semantic Error: Variable `self` is not defined."]
+        vec![
+            "Semantic Error: Type of `y` could not be resolved",
+            "Semantic Error: Variable `self` is not defined.",
+        ]
     );
 }
 
@@ -428,7 +434,10 @@ fn using_other_param_in_attribute2() {
 
     assert_eq!(
         error_handler.get_raw_errors(),
-        vec!["Semantic Error: Variable `self` is not defined."]
+        vec![
+            "Semantic Error: Type of `y` could not be resolved",
+            "Semantic Error: Variable `self` is not defined."
+        ]
     );
 }
 
