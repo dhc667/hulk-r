@@ -250,7 +250,7 @@ impl<'a> ExpressionVisitor<TypeAnnotation> for SemanticVisitor<'a> {
                 node.list_type = list_type.clone();
                 list_type
             }
-            None => todo!("We need a way to handle unknown list types"),
+            None => None,
         }
     }
 

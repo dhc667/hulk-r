@@ -738,6 +738,24 @@ fn object_params() {
 }
 
 #[test]
+fn unkown_type_for_list() {
+    let program = r#"[];"#;
+    let mut error_handler = ErrorHandler::new(program, 0);
+    let p = ProgramParser::new();
+    let mut answ = p.parse(program).unwrap();
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    semantic_analyzer
+        .analyze_program_ast(&mut answ)
+        .expect_err("Should return an error");
+    error_handler.extend_errors(semantic_analyzer.errors);
+
+    assert_eq!(
+        error_handler.get_raw_errors(),
+        vec!["Semantic Error: Unknown type for list"]
+    );
+}
+
+#[test]
 fn matrix_typing() {
     let program = r"
         function a(): Number** => [[2]];

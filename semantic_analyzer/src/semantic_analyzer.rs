@@ -9,6 +9,7 @@ use crate::def_info::{FuncInfo, TypeInfo, VarInfo};
 
 use crate::graph_utils::dfs::get_cycle;
 use crate::typing::sort_definitions::sort_definitions;
+use crate::visitors::type_visitor::TypeVisitor;
 use crate::visitors::{
     AnnotationVisitor, GlobalDefinerVisitor, InheritanceVisitor, SemanticVisitor,
 };
@@ -115,6 +116,16 @@ impl SemanticAnalyzer {
         for expression in &mut program.expressions {
             expression.accept(&mut semantic_visitor);
         }
+
+        let mut type_visitor = TypeVisitor::new(&mut self.errors);
+        program
+            .definitions
+            .iter_mut()
+            .for_each(|x| x.accept(&mut type_visitor));
+        program
+            .expressions
+            .iter_mut()
+            .for_each(|x| x.accept(&mut type_visitor));
 
         if self.errors.len() > 0 {
             return Err(self.errors.clone());

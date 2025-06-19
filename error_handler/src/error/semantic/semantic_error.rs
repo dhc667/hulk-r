@@ -24,6 +24,7 @@ use crate::error::{
         override_error::{FieldOverride, InvalidMethodOverride},
         type_constructor::{TypeParamInvalidType, TypeParamsInvalidAmount},
         type_definition::{TypeMemberAlreadyDefined, TypeOrProtocolAlreadyDefined},
+        type_errors::{NeedsAnAnnotation, UnknownListType},
         variable_definition::{VarAlreadyDefined, VarDefinitionTypeMismatch},
     },
 };
@@ -31,7 +32,8 @@ use crate::error::{
 #[derive(Debug, Clone)]
 pub enum SemanticError {
     // Type errors
-
+    NeedsAnAnnotation(NeedsAnAnnotation),
+    UnknownListType(UnknownListType),
     // operator
     BinOpInvalidOperands(BinOpError), // "Type mismatch: Cannot apply {} to operands of type {} and {}",
     UnOpInvalidOperands(UnOpError),   //"Type mismatch: Cannot apply {} to operand of type {}",
@@ -122,6 +124,8 @@ impl Display for SemanticError {
             SemanticError::MethodNotFound(e) => format!("{}", e),
             SemanticError::FieldOverride(e) => format!("{}", e),
             SemanticError::InvalidMethodOverride(e) => format!("{}", e),
+            SemanticError::NeedsAnAnnotation(e) => format!("{}", e),
+            SemanticError::UnknownListType(e) => format!("{}", e),
         };
         write!(f, "Semantic Error: {}", suffix)
     }
@@ -168,6 +172,8 @@ impl HulkErrorTrait for SemanticError {
             SemanticError::MethodNotFound(e) => e.get_position(),
             SemanticError::FieldOverride(e) => e.get_position(),
             SemanticError::InvalidMethodOverride(e) => e.get_position(),
+            SemanticError::NeedsAnAnnotation(e) => e.get_position(),
+            SemanticError::UnknownListType(e) => e.get_position(),
         }
     }
 }

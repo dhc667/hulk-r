@@ -9,3 +9,5 @@ pub(crate) use semantic_visitor::SemanticVisitor;
 
 pub mod annotation_visitor;
 pub use annotation_visitor::AnnotationVisitor;
+
+pub mod type_visitor;
