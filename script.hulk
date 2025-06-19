@@ -1,0 +1,4 @@
+function a(): Number** => [[2]];
+
+
+print(let x = a() in x[0][0]);

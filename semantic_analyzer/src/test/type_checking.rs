@@ -736,3 +736,20 @@ fn object_params() {
         ]
     );
 }
+
+#[test]
+fn matrix_typing() {
+    let program = r"
+        function a(): Number** => [[2]];
+        
+        print(let x = a() in x[0][0]);
+    ";
+    let mut error_handler = ErrorHandler::new(program, 0);
+    let p = ProgramParser::new();
+    let mut answ = p.parse(program).unwrap();
+    let mut semantic_analyzer = SemanticAnalyzer::new();
+    let result = semantic_analyzer.analyze_program_ast(&mut answ);
+    error_handler.extend_errors(semantic_analyzer.errors);
+
+    assert!(result.is_ok(), "Errors: {:?}", result.unwrap_err())
+}
