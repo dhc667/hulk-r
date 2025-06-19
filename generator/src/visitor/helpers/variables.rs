@@ -7,6 +7,7 @@ impl GeneratorVisitor {
     pub fn generate_tmp_variable(&self) -> String {
         let current = self.tmp_counter.get();
         self.tmp_counter.set(current + 1);
+
         format!("%tmp{}", current)
     }
 
@@ -43,7 +44,7 @@ impl GeneratorVisitor {
             LlvmType::I1 => LlvmHandle::new_i1_register(target_register_name),
             LlvmType::String => LlvmHandle::new_string_register(target_register_name),
             LlvmType::Object => LlvmHandle::new_object_register(target_register_name),
-            LlvmType::List => LlvmHandle::new_list_register(target_register_name),
+            LlvmType::List(inner) => LlvmHandle::new_list_register(*inner.clone(), target_register_name),
         };
 
         (preamble, result_handle)
@@ -62,13 +63,13 @@ impl GeneratorVisitor {
         )
     }
 
-    pub(crate) fn type_name_and_align_size(&self, llvm_type: &LlvmType) -> (&str, u32) {
+    pub(crate) fn type_name_and_align_size(&self, llvm_type: &LlvmType) -> (String, u32) {
         match llvm_type {
-            LlvmType::F64 => ("double", 8),
-            LlvmType::I1 => ("i1", 1),
-            LlvmType::String => ("i8*", 8),
-            LlvmType::Object => ("i8*", 8),
-            LlvmType::List => ("i8*", 8),
+            LlvmType::F64 => ("double".to_string(), 8),
+            LlvmType::I1 => ("i1".to_string(), 1),
+            LlvmType::String => ("i8*".to_string(), 8),
+            LlvmType::Object => ("i8*".to_string(), 8),
+            LlvmType::List(inner) => (format!("{}*", inner.llvm_type_str()), 8),
         }
     }
 }

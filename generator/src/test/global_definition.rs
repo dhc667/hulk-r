@@ -1,6 +1,6 @@
-use super::generate_code;
-use crate::test::lli_interface::lli_string;
 use crate::test::lli_interface::{lli_f64, lli_i1};
+use crate::test::lli_interface::lli_string;
+use super::generate_code;
 
 #[test]
 fn data_access() {
@@ -48,6 +48,7 @@ fn data_access_bool() {
 
     assert_eq!(lli_f64(&llvm).unwrap(), 5.0);
 }
+
 
 #[test]
 fn function_definition() {
@@ -373,6 +374,7 @@ fn nested_type_instantiation_and_method_calls() {
     assert_eq!(result, 21.0);
 }
 
+
 #[test]
 fn mutate_fields_and_verify() {
     let llvm = generate_code(
@@ -412,6 +414,7 @@ fn complex_string_manipulation_2() {
     let result = lli_string(&llvm).unwrap();
     assert_eq!(result, "foobabaz");
 }
+
 
 #[test]
 fn x1() {
@@ -463,6 +466,7 @@ fn interleaved_number_and_string_operations_with_numbers() {
     assert_eq!(result, "1.000000 is the answer and not 20.000000");
 }
 
+
 #[test]
 fn simple_while_2() {
     let llvm = generate_code(
@@ -481,9 +485,7 @@ fn simple_while_2() {
     );
 
     println!("{}", llvm);
-    assert_eq!(
-        lli_string(&llvm).unwrap(),
-        "hello world
+    assert_eq!(lli_string(&llvm).unwrap(), "hello world
 1.000000
 hello world
 2.000000
@@ -492,9 +494,9 @@ hello world
 hello world
 4.000000
 hello world
-5.000000"
-    );
+5.000000");
 }
+
 
 #[test]
 fn list_of_numbers() {
@@ -535,6 +537,7 @@ fn list_of_strings_with_indexing() {
     assert_eq!(result, "hello world");
 }
 
+
 #[test]
 fn list_of_types() {
     let llvm = generate_code(
@@ -555,7 +558,8 @@ fn list_of_types() {
 }
 
 #[test]
-fn factorial() {
+fn factorial()
+{
     let llvm = generate_code(
         r#"
             function factorial(n: Number): Number {
@@ -571,4 +575,46 @@ fn factorial() {
     println!("{}", llvm);
     let result = lli_f64(&llvm).unwrap();
     assert_eq!(result, 120.0);
+}
+
+#[test]
+fn constant()
+{
+    let llvm = generate_code(
+        r#"
+            constant y :String = "hello world";
+            let x = y in print(x);
+            "#,
+    );
+    println!("{}", llvm);
+    let result = lli_string(&llvm).unwrap();
+    assert_eq!(result, "hello world");
+}
+
+#[test]
+fn function_returning_list_of_list_of_strings()
+{
+    let llvm = generate_code(
+        r#"
+            function a(): String** => [["hello world"]];
+print(let x = a() in x[0][0]);
+            "#,
+    );
+    println!("{}", llvm);
+    let result = lli_string(&llvm).unwrap();
+    assert_eq!(result, "hello world");
+}
+
+#[test]
+fn function_returning_string_of_list_of_list_of_strings()
+{
+    let llvm = generate_code(
+        r#"
+            function a(x:String*): String => x[0];
+print(let x = a(["hello world"]) in x);
+            "#,
+    );
+    println!("{}", llvm);
+    let result = lli_string(&llvm).unwrap();
+    assert_eq!(result, "hello world");
 }

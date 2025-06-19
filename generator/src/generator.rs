@@ -1,6 +1,7 @@
-use ast::{VisitableDefinition, VisitableExpression};
-
+use std::fmt::format;
+use ast::{Definition, VisitableDefinition, VisitableExpression};
 use crate::visitor::{GeneratorVisitor, GlobalDefinitionVisitor};
+
 
 pub struct CodeGenerator {}
 
@@ -13,37 +14,59 @@ impl CodeGenerator {
         let mut generator = GeneratorVisitor::new();
         let mut global_definition_visitor = GlobalDefinitionVisitor::new();
         let mut program = generator.instantiate_global_print_helpers();
-
+        
         for definition in &mut node.definitions {
-            let _definition_result = definition.accept(&mut global_definition_visitor);
+            let definition_result = definition.accept(&mut global_definition_visitor);
         }
-
+        
         generator.functions_args_types = global_definition_visitor.functions_args_types.clone();
         generator.inherits = global_definition_visitor.inherits.clone();
         generator.type_members_types = global_definition_visitor.type_members_types.clone();
-        generator.function_member_def_from_type_and_name = global_definition_visitor
-            .function_member_def_from_type_and_name
-            .clone();
+        generator.function_member_def_from_type_and_name = global_definition_visitor.function_member_def_from_type_and_name.clone();
         generator.constructor_args_types = global_definition_visitor.constructor_args_types.clone();
         generator.function_member_names = global_definition_visitor.function_member_names.clone();
-        generator.original_type_for_definition = global_definition_visitor
-            .original_type_for_definition
-            .clone();
+        generator.original_type_for_definition = global_definition_visitor.original_type_for_definition.clone();
         generator.type_members_ids = global_definition_visitor.type_members_ids.clone();
-        generator.function_member_signature_types = global_definition_visitor
-            .function_member_signature_types
-            .clone();
+        generator.function_member_signature_types = global_definition_visitor.function_member_signature_types.clone();
 
+
+        
+        let mut definitions_code = String::new();
+        generator.is_global = true;
         let mut definitions_code = String::new();
         for definition in &mut node.definitions {
-            let definition_result = definition.accept(&mut generator);
-            definitions_code += &definition_result.preamble;
+            match definition {
+                Definition::ConstantDef(_) => {
+                    let definition_result = definition.accept(&mut generator);
+                    definitions_code += &definition_result.preamble;
+                }
+                _ => {}
+            }
         }
-
+        generator.is_global = false;
+        for definition in &mut node.definitions {
+            match definition {
+                Definition::TypeDef(_) | Definition::FunctionDef(_) | Definition::ProtocolDef(_) => {
+                    let definition_result = definition.accept(&mut generator);
+                    definitions_code += &definition_result.preamble;
+                }
+                _ => {}
+            }
+        }
+        
         let mut structs_code = String::new();
-        for code in generator.general_definitions.iter() {
+        for code in generator.general_definitions.iter(){
             structs_code += code;
             structs_code += "\n";
+        }
+        
+        
+        
+        let constants_code_vec = generator.constants.clone();
+        let mut constants_code = String::new();
+
+        for c in constants_code_vec {
+            constants_code += format!("{} \n",c).as_str();
         }
 
         let mut expressions_code = String::new();
@@ -63,6 +86,7 @@ impl CodeGenerator {
         program += &structs_code;
         program += &definitions_code;
         program += "define i32 @main() {\nentry:\n";
+        program += &constants_code;
         program += &expressions_code;
         program += "\nret i32 0\n}\n";
 
