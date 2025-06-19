@@ -25,7 +25,6 @@ use ast::{
     VisitableDefinition, VisitableExpression,
 };
 
-
 pub struct VisitorResult {
     pub result_handle: Option<LlvmHandle>,
     pub preamble: String,
@@ -135,9 +134,8 @@ pub struct GeneratorVisitor {
 
     pub(crate) constants: Vec<String>,
 
-    pub(crate) is_global:bool
+    pub(crate) is_global: bool,
 }
-
 
 pub struct GlobalDefinitionVisitor {
     /// Stores the names of the LLVM registers that store the pointers to the values of the variables defined in a given context.
@@ -179,7 +177,6 @@ pub struct GlobalDefinitionVisitor {
     pub(crate) function_member_signature_types: HashMap<(String, String), String>,
 
     pub(crate) functions_args_types: HashMap<String, Vec<String>>,
-
 }
 
 impl GlobalDefinitionVisitor {
@@ -227,7 +224,7 @@ impl GeneratorVisitor {
             functions_args_types: HashMap::new(),
             general_definitions: Vec::new(),
             constants: Vec::new(),
-            is_global:false,
+            is_global: false,
         }
     }
 
@@ -311,7 +308,7 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
                 // Handle data member assignment
                 let object_result = data_member_access.object.accept(self);
                 preamble += &object_result.preamble;
-                
+
                 let object_ptr = object_result
                     .result_handle
                     .expect("Object must have a result")
@@ -329,7 +326,7 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
                     .get(&(type_name.clone(), member_id.clone()))
                 {
                     let field_index = idx.clone();
-                    
+
                     // Get pointer to the member field
                     let member_ptr = self.generate_tmp_variable();
                     let gep_instr = format!(
@@ -417,59 +414,58 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
         let element_id = node.element.id.clone();
         let body_result = node.body.accept(self);
 
-
         let iterable_result_handle = iterable_result
             .result_handle
             .expect("Expected a result handle for iterable expression of for loop");
 
         let index_var = self.generate_tmp_variable();
-        let init_code = format!("  {} = alloca i64\n  store i64 0, i64* {}\n", index_var, index_var);
+        let init_code = format!(
+            "  {} = alloca i64\n  store i64 0, i64* {}\n",
+            index_var, index_var
+        );
 
         let length_ptr = self.generate_tmp_variable();
         let length_var = self.generate_tmp_variable();
 
         let llvm_elem_type = "i64";
 
-        let length_ptr_code = format!("  {} = getelementptr inbounds {}, {}* {}, i64 0\n",
-                                      length_ptr, llvm_elem_type, llvm_elem_type,
-                                      iterable_result_handle.llvm_name);
+        let length_ptr_code = format!(
+            "  {} = getelementptr inbounds {}, {}* {}, i64 0\n",
+            length_ptr, llvm_elem_type, llvm_elem_type, iterable_result_handle.llvm_name
+        );
 
-        let length_code = format!("  {} = load {}, {}* {}\n",
-                                  length_var, llvm_elem_type, llvm_elem_type, length_ptr);
+        let length_code = format!(
+            "  {} = load {}, {}* {}\n",
+            length_var, llvm_elem_type, llvm_elem_type, length_ptr
+        );
 
         let condition_name = self.generate_tmp_variable();
 
-        let condition_code = format!("{cond} = icmp slt i32 %{index}, %{length}",
-                                     cond = condition_name,
-                                     index = index_var,
-                                     length = length_var
+        let condition_code = format!(
+            "{cond} = icmp slt i32 %{index}, %{length}",
+            cond = condition_name,
+            index = index_var,
+            length = length_var
         );
 
-        
-        
         let (loop_label, body_label, loop_exit_label) = self.generate_loop_labels();
 
         let loop_setup = init_code.to_string()
-                + length_ptr_code.as_str()
-                + length_code.as_str()
-                + self.branch_jump_statement(&loop_label).as_str()
-                + &self.block_start(&loop_label)
-                + condition_code.as_str()
-                + &self.branch_choice_statement(
-                &condition_name,
-                &body_label,
-                &loop_exit_label,
-        );
-
+            + length_ptr_code.as_str()
+            + length_code.as_str()
+            + self.branch_jump_statement(&loop_label).as_str()
+            + &self.block_start(&loop_label)
+            + condition_code.as_str()
+            + &self.branch_choice_statement(&condition_name, &body_label, &loop_exit_label);
 
         let body_code = self.block_start(&body_label)
             + &body_result.preamble
             + &self.branch_jump_statement(&loop_label);
-    
+
         let exit_code = self.block_start(&loop_exit_label);
-    
+
         let preamble = loop_setup + &body_code + &exit_code;
-    
+
         VisitorResult {
             preamble,
             result_handle: None,
@@ -633,8 +629,6 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
         &mut self,
         node: &mut ast::FunctionMemberAccess,
     ) -> VisitorResult {
-
-
         let mut preamble = String::new();
 
         let object_result = node.object.accept(self);
@@ -669,7 +663,8 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
         // call_args_values_with_llvm_types.push(format!("i8* {}", object_ptr_name));
         // Instead, use the correct type for self pointer
         call_param_llvm_types_for_sig.push(format!("%{}_type*", current_type));
-        call_args_values_with_llvm_types.push(format!("%{}_type* {}", current_type, object_ptr_name));
+        call_args_values_with_llvm_types
+            .push(format!("%{}_type* {}", current_type, object_ptr_name));
 
         // Look up argument types from the context map
         let mut arg_types: Vec<String> = Vec::new();
@@ -732,7 +727,9 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
                 vtable_type_name,
                 vtable_type_name,
                 vtable_ptr,
-                self.function_member_names.get(&(current_type.clone(), func_name_in_ast.clone())).unwrap()
+                self.function_member_names
+                    .get(&(current_type.clone(), func_name_in_ast.clone()))
+                    .unwrap()
             );
             let loaded_func_ptr = self.generate_tmp_variable();
             preamble += &format!(
@@ -771,9 +768,7 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
                     .as_ref()
                     .expect("Return type must be known for non-void");
                 Some(LlvmHandle {
-                    handle_type: HandleType::Register(
-                        self.llvm_type_from_ast_type(ast_ret_type),
-                    ),
+                    handle_type: HandleType::Register(self.llvm_type_from_ast_type(ast_ret_type)),
                     llvm_name: result_reg,
                 })
             } else {
@@ -796,7 +791,6 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
         let mut preamble = String::new();
         let mut arg_values = Vec::new();
 
-
         let arg_types = {
             // Clone so we don't hold the borrow on self while mutably borrowing self in the loop
             self.functions_args_types
@@ -812,7 +806,6 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
                 .result_handle
                 .expect("Function argument must have a result");
             arg_values.push(handle.llvm_name);
-
         }
 
         let ret_type = match &node.identifier.info.ty {
@@ -894,7 +887,7 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
                 match b {
                     // Escape backslash and double quote.
                     b'\\' => escaped.push_str(r"\5C"),
-                    b'"'  => escaped.push_str(r"\22"),
+                    b'"' => escaped.push_str(r"\22"),
                     // ASCII printable (except \ and ")
                     0x20..=0x21 | 0x23..=0x5B | 0x5D..=0x7E => escaped.push(b as char),
                     // Everything else: escape as two-digit hex.
@@ -904,7 +897,6 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
             escaped
         }
 
-
         let original = node.string.clone();
 
         let value = llvm_escape_string(original.as_str());
@@ -913,7 +905,7 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
         let tmp_var = &a[1..];
         let global_str_name = format!("{}_str", tmp_var);
         let str_len = original.len();
-        
+
         let global_str_code = format!(
             "@{} = private unnamed_addr constant [{} x i8] c\"{}\\00\", align 1\n",
             global_str_name,
@@ -947,14 +939,16 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
             local_str_var, global_ptr_var
         );
 
-
         VisitorResult {
             preamble: malloc_code + &global_gep_code + &strcpy_code,
             result_handle: Some(LlvmHandle::new_string_literal(local_str_var)), // Return pointer to heap string
         }
     }
     fn visit_list_literal(&mut self, node: &mut ast::ListLiteral) -> VisitorResult {
-        let ast_type = node.list_type.as_ref().expect("Object type not found for data member access");
+        let ast_type = node
+            .list_type
+            .as_ref()
+            .expect("Object type not found for data member access");
         let llvm_list_type = self.llvm_type_from_ast_type(ast_type); // returns LlvmType
         let llvm_elem_type = match llvm_list_type {
             LlvmType::List(inner) => *inner,
@@ -981,52 +975,46 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
         let type_size = self.llvm_type_size(&llvm_elem_type_str);
         let total_size = type_size * list_len + 8;
         let ptr_var = format!("%list_ptr_{}", tmp_var_id);
-        preamble += &format!(
-            "{ptr_var} = call i8* @malloc(i64 {})\n",
-            total_size
-        );
+        preamble += &format!("{ptr_var} = call i8* @malloc(i64 {})\n", total_size);
         // Bitcast to the appropriate pointer type
         let array_ptr = format!("%casted_list_ptr_{}", tmp_var_id);
         preamble += &format!(
             "{array_ptr} = bitcast i8* {ptr_var} to {elem_type}*\n",
-            ptr_var=ptr_var,
-            array_ptr=array_ptr,
-            elem_type=llvm_elem_type_str
+            ptr_var = ptr_var,
+            array_ptr = array_ptr,
+            elem_type = llvm_elem_type_str
         );
 
         // Store the length of the array at index 0
         let length_ptr = format!("%length_ptr_{}", tmp_var_id);
         let length_value = format!("%length_val_{}", tmp_var_id);
-        preamble += &format!(
-            "{length_value} = add i64 {}, 0\n",
-            list_len
-        );
+        preamble += &format!("{length_value} = add i64 {}, 0\n", list_len);
         preamble += &format!(
             "{length_ptr} = getelementptr inbounds {elem_type}, {elem_type}* {array_ptr}, i64 0\n",
-            length_ptr=length_ptr,
-            elem_type=llvm_elem_type_str,
-            array_ptr=array_ptr
+            length_ptr = length_ptr,
+            elem_type = llvm_elem_type_str,
+            array_ptr = array_ptr
         );
 
         // Always store length as i64 to ensure consistency, converting if needed
         if llvm_elem_type_str == "i64" {
             preamble += &format!(
                 "store i64 {length_value}, i64* {length_ptr}\n",
-                length_value=length_value,
-                length_ptr=length_ptr
+                length_value = length_value,
+                length_ptr = length_ptr
             );
         } else {
             let casted_length_ptr = format!("%casted_length_ptr_{}", tmp_var_id);
             preamble += &format!(
                 "{casted_length_ptr} = bitcast {elem_type}* {length_ptr} to i64*\n",
-                casted_length_ptr=casted_length_ptr,
-                elem_type=llvm_elem_type_str,
-                length_ptr=length_ptr
+                casted_length_ptr = casted_length_ptr,
+                elem_type = llvm_elem_type_str,
+                length_ptr = length_ptr
             );
             preamble += &format!(
                 "store i64 {length_value}, i64* {casted_length_ptr}\n",
-                length_value=length_value,
-                casted_length_ptr=casted_length_ptr
+                length_value = length_value,
+                casted_length_ptr = casted_length_ptr
             );
         }
 
@@ -1035,15 +1023,15 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
             let elem_ptr = format!("%elem_ptr_{}_{}", tmp_var_id, i);
             preamble += &format!(
                 "{elem_ptr} = getelementptr inbounds {elem_type}, {elem_type}* {array_ptr}, i64 {idx}\n",
-                elem_ptr=elem_ptr,
-                elem_type=llvm_elem_type_str,
-                array_ptr=array_ptr,
-                idx=i+1
+                elem_ptr = elem_ptr,
+                elem_type = llvm_elem_type_str,
+                array_ptr = array_ptr,
+                idx = i + 1
             );
             preamble += &format!(
                 "store {elem_type} {value}, {elem_type}* {elem_ptr}\n",
-                elem_type=llvm_elem_type_str,
-                value=handle.llvm_name
+                elem_type = llvm_elem_type_str,
+                value = handle.llvm_name
             );
         }
 
@@ -1056,7 +1044,6 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
             )),
         }
     }
-
 
     fn visit_empty_expression(&mut self) -> VisitorResult {
         VisitorResult {
@@ -1083,10 +1070,7 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
         let mut arg_handles = Vec::new();
         let mut arg_types = Vec::new();
         // Use constructor_args_types to get the expected types for the constructor
-        let expected_types = self
-            .constructor_args_types
-            .get(&node.type_name)
-            .cloned();
+        let expected_types = self.constructor_args_types.get(&node.type_name).cloned();
         for (i, arg) in node.arguments.iter_mut().enumerate() {
             let arg_result = arg.accept(self);
             preamble += &arg_result.preamble;
@@ -1155,7 +1139,7 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
             _ => panic!("List type not found for data member access"),
         };
 
-        println!("elemnt type {}", elem_type);
+        // println!("elemnt type {}", elem_type);
 
         let tmp_var_id = self.tmp_counter.get();
         self.tmp_counter.set(tmp_var_id + 1);
@@ -1183,10 +1167,7 @@ impl ExpressionVisitor<VisitorResult> for GeneratorVisitor {
 
         // Create a new temporary variable for the adjusted index
         let adjusted_index = format!("%adjusted_index_{}", tmp_var_id);
-        preamble += &format!(
-            "  {} = add i64 {}, 1\n",
-            adjusted_index, casted_index
-        );
+        preamble += &format!("  {} = add i64 {}, 1\n", adjusted_index, casted_index);
 
         preamble += &format!(
             "  {} = getelementptr inbounds {}, {}* {}, i64 {}\n",
@@ -1271,8 +1252,8 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
         };
 
         preamble += &format!("define {} @{}(", return_type, func_name);
-        
-        let mut param_type_vec:Vec<String> = Vec::new();
+
+        let mut param_type_vec: Vec<String> = Vec::new();
 
         for (i, param) in node.function_def.parameters.iter().enumerate() {
             if i > 0 {
@@ -1284,11 +1265,10 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
             };
             preamble += &format!("{} %{}", llvm_type, param.id);
             param_type_vec.push(llvm_type);
-
         }
-        
-        self.functions_args_types.insert(node.function_def.identifier.id.clone(), param_type_vec);
 
+        self.functions_args_types
+            .insert(node.function_def.identifier.id.clone(), param_type_vec);
 
         preamble += ") {\n";
         preamble += "entry:\n";
@@ -1316,9 +1296,10 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
                 LlvmType::Object => self
                     .context
                     .define(param.id.clone(), Variable::new_object(param_ptr)),
-                LlvmType::List(inner) => self
-                    .context
-                    .define(param.id.clone(), Variable::new_list_with_inner(param_ptr, *inner.clone())),
+                LlvmType::List(inner) => self.context.define(
+                    param.id.clone(),
+                    Variable::new_list_with_inner(param_ptr, *inner.clone()),
+                ),
             };
         }
 
@@ -1334,7 +1315,6 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
         };
 
         preamble += &body_result.preamble;
-        print!("return type {}\n",return_type);
         if return_type != "void" {
             if let Some(result_handle) = &body_result.result_handle {
                 // if return_type == "i8*" && result_handle.llvm_name.starts_with("%") {
@@ -1384,18 +1364,11 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
 
         let preamble_code = match ty {
             Some(ref ty) => match self.llvm_type_from_ast_type(ty) {
-                LlvmType::F64 => format!(
-                    "@{} = global double null, align 8\n\n",
-                    constant_name
-                ),
-                LlvmType::I1 => format!(
-                    "@{} = global i1 null, align 1\n\n",
-                    constant_name
-                ),
-                LlvmType::String | LlvmType::Object => format!(
-                    "@{} = global i8* null, align 8\n\n",
-                    constant_name
-                ),
+                LlvmType::F64 => format!("@{} = global double null, align 8\n\n", constant_name),
+                LlvmType::I1 => format!("@{} = global i1 null, align 1\n\n", constant_name),
+                LlvmType::String | LlvmType::Object => {
+                    format!("@{} = global i8* null, align 8\n\n", constant_name)
+                }
                 LlvmType::List(inner) => format!(
                     "@{} = global {} null, align 8\n\n",
                     constant_name,
@@ -1411,7 +1384,15 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
             self.define_or_shadow(constant_name.clone(), self.llvm_type_from_ast_type(t));
             let type_name = self.llvm_type_str_from_ast_type(t);
             let align_size = self._llvm_type_align(type_name.clone().as_str());
-            preamble += format!("store {} {}, {}* @{},align {}",type_name, init_value.llvm_name.clone(),type_name,constant_name,align_size).as_str();
+            preamble += format!(
+                "store {} {}, {}* @{},align {}",
+                type_name,
+                init_value.llvm_name.clone(),
+                type_name,
+                constant_name,
+                align_size
+            )
+            .as_str();
         } else {
             panic!("Constant type not found");
         }
@@ -1420,7 +1401,7 @@ impl DefinitionVisitor<VisitorResult> for GeneratorVisitor {
         self.constants.push(preamble);
 
         VisitorResult {
-            preamble:preamble_code,
+            preamble: preamble_code,
             result_handle: None,
         }
     }
@@ -1504,7 +1485,7 @@ impl DefinitionVisitor<VisitorResult> for GlobalDefinitionVisitor {
                         parent_methods.push(((method_name.clone(), i.clone()), arg_types.clone()));
                     }
                 }
-                
+
                 parent_methods.sort_by_key(|((_, i), _)| i.clone());
 
                 for ((method_name, i), arg_types) in parent_methods {
@@ -1555,28 +1536,37 @@ impl DefinitionVisitor<VisitorResult> for GlobalDefinitionVisitor {
                             (vtable_initializers.len() - 1).to_string(),
                         );
                         // Record the original type for this method definition
-                        self
-                            .original_type_for_definition
+                        self.original_type_for_definition
                             .insert((type_name.clone(), method_name.clone()), type_name.clone());
                     } else {
                         // If not overridden, copy the parent's vtable entry
                         let original_type_for_def = self
                             .original_type_for_definition
                             .get(&(parent.clone(), method_name.clone()))
-                            .unwrap_or_else(|| panic!("error searching original type for parent method"));
+                            .unwrap_or_else(|| {
+                                panic!("error searching original type for parent method")
+                            });
                         self.function_member_def_from_type_and_name.insert(
                             (type_name.clone(), method_name.clone(), i.clone()),
                             arg_types.clone(),
                         );
                         println!("type method: {} {}", type_name, method_name);
                         // Use the original defining type's mangled function name
-                        let mangled_func_name = format!("{}_{}", original_type_for_def, method_name);
+                        let mangled_func_name =
+                            format!("{}_{}", original_type_for_def, method_name);
 
                         // Fix: Get the actual return type for inherited methods
-                        let ret_type_str = self.function_member_signature_types.get(&(original_type_for_def.clone(),method_name.clone())).cloned().unwrap_or_else(|| panic!("error searching return type for parent method"));
+                        let ret_type_str = self
+                            .function_member_signature_types
+                            .get(&(original_type_for_def.clone(), method_name.clone()))
+                            .cloned()
+                            .unwrap_or_else(|| {
+                                panic!("error searching return type for parent method")
+                            });
 
                         // Build the correct signature for the inherited method
-                        let mut param_types_for_cast = vec![format!("%{}_type*", original_type_for_def)];
+                        let mut param_types_for_cast =
+                            vec![format!("%{}_type*", original_type_for_def)];
                         param_types_for_cast.extend(arg_types.clone());
 
                         vtable_fn_ptr_types.push("i8*".to_string());
@@ -1603,7 +1593,6 @@ impl DefinitionVisitor<VisitorResult> for GlobalDefinitionVisitor {
                             (type_name.clone(), method_name.clone()),
                             ret_type_str.clone(),
                         );
-
                     }
                 }
             }
@@ -1701,15 +1690,16 @@ impl DefinitionVisitor<VisitorResult> for GlobalDefinitionVisitor {
                     .get(&(parent.clone(), member_name.clone()))
                     .cloned()
                     .unwrap_or_else(|| {
-                        panic!("Could not find type for parent member {}.{}, using double", parent, member_name);
-
+                        panic!(
+                            "Could not find type for parent member {}.{}, using double",
+                            parent, member_name
+                        );
                     });
 
                 // Add to field list
                 field_llvm_types_str.push(member_llvm_type_str.clone());
                 // Map the member name in child type to the current index
-                self
-                    .type_members_ids
+                self.type_members_ids
                     .insert((type_name.clone(), member_name.clone()), member_index);
                 // Increment member index for the child's own members
                 member_index += 1;
@@ -1755,19 +1745,20 @@ impl DefinitionVisitor<VisitorResult> for GlobalDefinitionVisitor {
             ctor_param_types.push(param_llvm_type);
         }
         // Store constructor argument types for later use (e.g., inheritance)
-        self
-            .constructor_args_types
+        self.constructor_args_types
             .insert(type_name.clone(), ctor_param_types);
 
         // No IR emitted in global visitor
-        VisitorResult { preamble: String::new(), result_handle: None }
+        VisitorResult {
+            preamble: String::new(),
+            result_handle: None,
+        }
     }
 
     fn visit_function_def(&mut self, node: &mut ast::GlobalFunctionDef) -> VisitorResult {
         let mut preamble = String::new();
 
-
-        let mut param_type_vec:Vec<String> = Vec::new();
+        let mut param_type_vec: Vec<String> = Vec::new();
 
         for (i, param) in node.function_def.parameters.iter().enumerate() {
             if i > 0 {
@@ -1779,10 +1770,10 @@ impl DefinitionVisitor<VisitorResult> for GlobalDefinitionVisitor {
             };
             preamble += &format!("{} %{}", llvm_type, param.id);
             param_type_vec.push(llvm_type);
-
         }
 
-        self.functions_args_types.insert(node.function_def.identifier.id.clone(), param_type_vec);
+        self.functions_args_types
+            .insert(node.function_def.identifier.id.clone(), param_type_vec);
 
         VisitorResult {
             preamble,
@@ -1792,16 +1783,22 @@ impl DefinitionVisitor<VisitorResult> for GlobalDefinitionVisitor {
 
     fn visit_constant_def(&mut self, _node: &mut ast::ConstantDef) -> VisitorResult {
         // pass
-        VisitorResult { preamble: String::new(), result_handle: None }
+        VisitorResult {
+            preamble: String::new(),
+            result_handle: None,
+        }
     }
 
     fn visit_protocol_def(&mut self, _node: &mut ast::ProtocolDef) -> VisitorResult {
         // pass
-        VisitorResult { preamble: String::new(), result_handle: None }
+        VisitorResult {
+            preamble: String::new(),
+            result_handle: None,
+        }
     }
 }
 impl GlobalDefinitionVisitor {
-fn llvm_type_from_ast_type(&self, ast_type: &ast::typing::Type) -> LlvmType {
+    fn llvm_type_from_ast_type(&self, ast_type: &ast::typing::Type) -> LlvmType {
         match ast_type {
             ast::typing::Type::BuiltIn(bt) => match bt {
                 ast::typing::BuiltInType::Number => LlvmType::F64,
@@ -1860,7 +1857,6 @@ fn llvm_type_from_ast_type(&self, ast_type: &ast::typing::Type) -> LlvmType {
     }
 }
 
-
 // === GeneratorVisitor Helper Methods ===
 // Provides helpers for type conversion, LLVM type string generation, and type size/alignment.
 impl GeneratorVisitor {
@@ -1873,9 +1869,9 @@ impl GeneratorVisitor {
                 ast::typing::BuiltInType::Object => LlvmType::Object,
             },
             ast::typing::Type::Defined(_type_name) => LlvmType::Object,
-            ast::typing::Type::Iterable(inner_type_box) => {
-                LlvmType::List(Box::new(self.llvm_type_from_ast_type(inner_type_box.as_ref())))
-            }
+            ast::typing::Type::Iterable(inner_type_box) => LlvmType::List(Box::new(
+                self.llvm_type_from_ast_type(inner_type_box.as_ref()),
+            )),
             ast::typing::Type::Functor(_functor_type) => LlvmType::Object,
         }
     }
@@ -1892,7 +1888,10 @@ impl GeneratorVisitor {
                 format!("%{}_type*", type_name.id)
             }
             ast::typing::Type::Iterable(inner_type_box) => {
-                format!("{}*", self.llvm_type_str_from_ast_type(inner_type_box.as_ref()))
+                format!(
+                    "{}*",
+                    self.llvm_type_str_from_ast_type(inner_type_box.as_ref())
+                )
             }
             _ => panic!("NO implemented type"),
         }

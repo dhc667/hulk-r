@@ -66,6 +66,21 @@ impl Type {
             None
         }
     }
+
+    pub fn is_specific(&self) -> bool {
+        match self {
+            Type::BuiltIn(built_in_type) => match built_in_type {
+                BuiltInType::Object => false,
+                BuiltInType::Number | BuiltInType::String | BuiltInType::Bool => true,
+            },
+            Type::Functor(functor_type) => functor_type
+                .parameter_types
+                .iter()
+                .all(|x| x.as_ref().map(|x| x.is_specific()).unwrap_or(true)),
+            Type::Defined(_) => true,
+            Type::Iterable(it) => it.as_ref().is_specific(),
+        }
+    }
 }
 
 impl Display for Type {

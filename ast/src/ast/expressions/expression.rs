@@ -226,6 +226,13 @@ impl Expression {
         }
     }
 
+    pub fn as_list_literal_mut(&mut self) -> Option<&mut ListLiteral> {
+        if let Self::ListLiteral(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
     pub fn as_function_call(&self) -> Option<&FunctionCall> {
         if let Self::FunctionCall(v) = self {
             Some(v)

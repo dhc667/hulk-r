@@ -10,4 +10,5 @@ pub mod operator;
 pub mod override_error;
 pub mod type_constructor;
 pub mod type_definition;
+pub mod type_errors;
 pub mod variable_definition;

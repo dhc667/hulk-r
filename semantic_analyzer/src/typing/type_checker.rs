@@ -154,6 +154,26 @@ impl TypeChecker {
             (None, _) => return b.clone(),
             (_, None) => return a.clone(),
             (Some(a), Some(b)) => {
+                match (a, b) {
+                    (Type::Iterable(it_a), Type::Iterable(it_b)) => {
+                        let common = self.get_common_supertype(
+                            &Some(it_a.as_ref().clone()),
+                            &Some(it_b.as_ref().clone()),
+                        );
+                        if let Some(common) = common {
+                            return Some(Type::Iterable(Box::new(common)));
+                        }
+                        return None;
+                    }
+                    (Type::Functor(_), _)
+                    | (_, Type::Functor(_))
+                    | (_, Type::Iterable(_))
+                    | (Type::Iterable(_), _) => {
+                        return Some(Type::BuiltIn(BuiltInType::Object));
+                    }
+                    _ => {}
+                }
+
                 let a_id = self.type_to_id(a);
                 let b_id = self.type_to_id(b);
                 let common = self.lca.get_lca(a_id, b_id);
